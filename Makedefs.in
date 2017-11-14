@@ -1,0 +1,43 @@
+#
+# Common moauth makefile definitions
+#
+# Copyright © 2017 by Michael R Sweet
+#
+# Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+#
+
+# Programs and options...
+AR		=	@AR@
+ARFLAGS		=	@ARFLAGS@
+CC		=	@CC@
+CFLAGS		=	-I.. @CFLAGS@
+INSTALL		=	@INSTALL@
+LDFLAGS		=	-L../moauth @LDFLAGS@
+LIBS		=	$(LIBS)
+MKDIR           =       @MKDIR@ -p
+RANLIB		=	@RANLIB@
+RM		=	@RM@ -f
+RMDIR		=	@RMDIR@
+SHELL		=	/bin/sh
+
+# Directories...
+bindir		=	@bindir@
+datadir		=	@datadir@
+datarootdir	=	@datarootdir@
+exec_prefix	=	@exec_prefix@
+includedir	=	@includedir@
+infodir		=	@infodir@
+libdir		=	@libdir@
+libexecdir	=	@libexecdir@
+localstatedir	=	@localstatedir@
+mandir		=	@mandir@
+oldincludedir	=	@oldincludedir@
+prefix		=	@prefix@
+privateinclude	=	@privateinclude@
+sbindir		=	@sbindir@
+sharedstatedir	=	@sharedstatedir@
+srcdir		=	@srcdir@
+sysconfdir	=	@sysconfdir@
+top_srcdir	=	@top_srcdir@
+
+BUILDROOT	=	$(DSTROOT)$(RPM_BUILD_ROOT)$(DESTDIR)

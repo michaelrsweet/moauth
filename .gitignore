@@ -1,0 +1,8 @@
+*.a
+*.o
+/autom4te.cache
+/config.h
+/config.status
+moauth/libmoauth.a
+moauth/testmoauth
+
