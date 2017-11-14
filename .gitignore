@@ -2,7 +2,9 @@
 *.o
 /autom4te.cache
 /config.h
+/config.log
 /config.status
+/Makedefs
 moauth/libmoauth.a
 moauth/testmoauth
 
