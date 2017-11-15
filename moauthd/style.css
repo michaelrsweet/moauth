@@ -1,0 +1,48 @@
+/*
+ * Stylesheet for moauth daemon web interface
+ *
+ * Copyright © 2017 by Michael R Sweet
+ *
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ */
+
+body {
+  background: white;
+  color: black;
+  font-family: sans-serif;
+}
+
+input[type="text"], input[type="email"], input[type="password"] {
+  font-family: monospace;
+}
+
+/* Logical row */
+.row {
+  width: 100%;
+  *zoom: 1;
+}
+.row:after {
+  clean: both;
+}
+
+/* Logical columns (12 column grid) */
+.row .col-6 {
+  float: left;
+  margin-left: 0.5%;
+  margin-right: 0;
+  width: 49.75%;
+}
+.row .col-6:first-child {
+  margin-left: 0;
+}
+
+/* iPhone/iPod touch overrides */
+@media only screen and (min-device-width: 320px) and (max-device-width: 480px),
+       only screen and (min-device-width: 320px) and (max-device-width: 568px) {
+  /* 6-column layout becomes 12-columns */
+  .row .col-6 {
+    float: none;
+    margin: 0;
+    width: 100%;
+  }
+}

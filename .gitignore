@@ -7,4 +7,4 @@
 /Makedefs
 moauth/libmoauth.a
 moauth/testmoauth
-
+moauthd/moauthd

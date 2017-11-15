@@ -6,6 +6,9 @@
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
 #
 
+# Be silent...
+.SILENT:
+
 # Programs and options...
 AR		=	@AR@
 ARFLAGS		=	@ARFLAGS@
@@ -41,3 +44,8 @@ sysconfdir	=	@sysconfdir@
 top_srcdir	=	@top_srcdir@
 
 BUILDROOT	=	$(DSTROOT)$(RPM_BUILD_ROOT)$(DESTDIR)
+
+# Build commands...
+.c.o:
+	echo Compiling $<...
+	$(CC) $(CFLAGS) -c -o $@ $<

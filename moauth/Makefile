@@ -40,11 +40,13 @@ test:	testmoauth
 
 # Unit test program...
 testmoauth:	testmoauth.o libmoauth.a
+	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ testmoauth.o libmoauth.a $(LIBS)
 
 
 # moauth library...
 libmoauth.a:	$(LIBOBJS)
+	echo Creating static library $@...
 	$(RM) $@
 	$(AR) $(ARFLAGS) $@ $(LIBOBJS)
 	$(RANLIB) $@

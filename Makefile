@@ -11,31 +11,31 @@ include Makedefs
 
 
 # Subdirectories...
-SUBDIRS	=	moauth
+SUBDIRS	=	moauth moauthd
 
 
 # Make everything...
 all:
 	for dir in $(SUBDIRS); do \
-		(cd $$dir; $(MAKE) $(MAKEFLAGS) all || exit 1); \
+		(cd $$dir; $(MAKE) $(MFLAGS) all || exit 1); \
 	done
 
 # Clean everything...
 clean:
 	for dir in $(SUBDIRS); do \
-		(cd $$dir; $(MAKE) $(MAKEFLAGS) clean || exit 1); \
+		(cd $$dir; $(MAKE) $(MFLAGS) clean || exit 1); \
 	done
 
 
 # Install everything...
 install:	all
 	for dir in $(SUBDIRS); do \
-		(cd $$dir; $(MAKE) $(MAKEFLAGS) install || exit 1); \
+		(cd $$dir; $(MAKE) $(MFLAGS) install || exit 1); \
 	done
 
 
 # Test everything...
 test:
 	for dir in $(SUBDIRS); do \
-		(cd $$dir; $(MAKE) $(MAKEFLAGS) test || exit 1); \
+		(cd $$dir; $(MAKE) $(MFLAGS) test || exit 1); \
 	done
