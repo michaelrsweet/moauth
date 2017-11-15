@@ -16,6 +16,7 @@
  */
 
 static const char *decode_string(const char *data, char term, char *buffer, size_t bufsize);
+static char *encode_string(const char *s, char *bufptr, char *bufend);
 
 
 /*
@@ -97,10 +98,38 @@ char *					/* O - Encoded data or @code NULL@ on error */
 moauthFormEncode(int           num_vars,/* I - Number of form variables */
                  cups_option_t *vars)	/* I - Form variables */
 {
-  (void)num_vars;
-  (void)vars;
+  char  buffer[65536],                  /* Temporary buffer */
+        *bufptr = buffer,               /* Current position in buffer */
+        *bufend = buffer + sizeof(buffer) - 1;
+                                        /* End of buffer */
 
-  return (NULL);
+
+  while (num_vars > 0)
+  {
+    bufptr = encode_string(vars->name, bufptr, bufend);
+
+    if (bufptr >= bufend)
+      return (NULL);
+
+    *bufptr++ = '=';
+
+    bufptr = encode_string(vars->value, bufptr, bufend);
+
+    num_vars --;
+    vars ++;
+
+    if (num_vars > 0)
+    {
+      if (bufptr >= bufend)
+        return (NULL);
+
+      *bufptr++ = '&';
+    }
+  }
+
+  *bufptr = '\0';
+
+  return (strdup(buffer));
 }
 
 
@@ -160,4 +189,76 @@ decode_string(const char *data,         /* I - Pointer into data string */
   *ptr = '\0';
 
   return (data);
+}
+
+
+/*
+ * 'encode_string()' - URL-encode a string.
+ *
+ * The new buffer pointer can go past bufend, but we don't write past there...
+ */
+
+static char *                           /* O - New buffer pointer */
+encode_string(const char *s,            /* I - String to encode */
+              char       *bufptr,       /* I - Pointer into buffer */
+              char       *bufend)       /* I - End of buffer */
+{
+  static const char *hex = "0123456789ABCDEF";
+                                        /* Hex digits */
+
+
+  while (*s && bufptr < bufend)
+  {
+    if (*s == ' ')
+    {
+      *bufptr++ = '+';
+    }
+    else if (*s == '\n')
+    {
+      *bufptr++ = '%';
+      if (bufptr < bufend)
+        *bufptr++ = '0';
+      else
+        bufptr ++;
+      if (bufptr < bufend)
+        *bufptr++ = 'D';
+      else
+        bufptr ++;
+      if (bufptr < bufend)
+        *bufptr++ = '%';
+      else
+        bufptr ++;
+      if (bufptr < bufend)
+        *bufptr++ = '0';
+      else
+        bufptr ++;
+      if (bufptr < bufend)
+        *bufptr++ = 'A';
+      else
+        bufptr ++;
+    }
+    else if (*s < ' ' || *s == '&' || *s == '%' || *s == '=' || *s == '+' || *s == '\"')
+    {
+      *bufptr++ = '%';
+      if (bufptr < bufend)
+        *bufptr++ = hex[(*s >> 4) & 15];
+      else
+        bufptr ++;
+      if (bufptr < bufend)
+        *bufptr++ = hex[*s & 15];
+      else
+        bufptr ++;
+    }
+    else
+      *bufptr++ = *s;
+
+    s ++;
+  }
+
+  if (bufptr <= bufend)
+    *bufptr = '\0';
+  else
+    *bufend = '\0';
+
+  return (bufptr);
 }
