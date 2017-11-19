@@ -1,13 +1,20 @@
-moauth - A Basic OAuth2 Client/Server Implementation
-====================================================
+mOAuth - A Basic OAuth 2.0 Client/Server Implementation
+=======================================================
 
-`moauth` is a new project that will implement:
+mOAuth is a basic OAuth 2.0 client/server implementation that is geared towards
+testing and development of OAuth-based services.  The client library supports
+authorization of native macOS, iOS, and Linux applications with PKCE.
 
-- An OAuth2 authorization server against local user accounts or a separate
-  password and group data store.
-- A simple OAuth2 client library for applications or services to support OAuth2.
-- A PAM module to support authorization and access control using an OAuth2
-  server.
+The server is both an Authorization Server and a Resource Server that supports:
 
-My primary goal for this project is development and testing of applications and
-services that use or support OAuth2.
+- User account authentication/authorization using PAM
+- Traditional web-based authorization grants with redirection as well as
+  resource owner password credentials grants
+- Token introspection for services
+- Basic Resource Server functionality with implicit and explicit ACLs
+- Customizable web interface
+
+mOAuth currently requires CUPS for its HTTPS support.
+
+mOAuth is licensed under the Apache License Version 2.0.  See the file
+"LICENSE" for more information.
