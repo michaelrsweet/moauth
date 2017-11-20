@@ -27,11 +27,9 @@ int					/* O - Number of form variables or 0 on error */
 moauthFormDecode(const char    *data,	/* I - Form data */
                  cups_option_t **vars)	/* O - Form variables or @code NULL@ on error */
 {
-  int   num_vars = 0;                   /* Number of form variables */
-  char  ch,                             /* Current character */
-        name[1024],                     /* Variable name */
-        value[4096],                    /* Variable value */
-        *ptr;                           /* Pointer into name/value */
+  int	num_vars = 0;			/* Number of form variables */
+  char	name[1024],			/* Variable name */
+	value[4096];			/* Variable value */
 
 
  /*
@@ -98,10 +96,10 @@ char *					/* O - Encoded data or @code NULL@ on error */
 moauthFormEncode(int           num_vars,/* I - Number of form variables */
                  cups_option_t *vars)	/* I - Form variables */
 {
-  char  buffer[65536],                  /* Temporary buffer */
-        *bufptr = buffer,               /* Current position in buffer */
-        *bufend = buffer + sizeof(buffer) - 1;
-                                        /* End of buffer */
+  char	buffer[65536],			/* Temporary buffer */
+	*bufptr = buffer,		/* Current position in buffer */
+	*bufend = buffer + sizeof(buffer) - 1;
+					/* End of buffer */
 
 
   while (num_vars > 0)
@@ -143,9 +141,9 @@ decode_string(const char *data,         /* I - Pointer into data string */
               char       *buffer,       /* I - String buffer */
               size_t     bufsize)       /* I - Size of string buffer */
 {
-  char  ch,                             /* Current character */
-        *ptr,                           /* Pointer info buffer */
-        *end;                           /* Pointer to end of buffer */
+  int	ch;				/* Current character */
+  char	*ptr,				/* Pointer info buffer */
+	*end;				/* Pointer to end of buffer */
 
 
   for (ptr = buffer, end = buffer + bufsize - 1; *data && *data != term; data ++)
@@ -183,7 +181,7 @@ decode_string(const char *data,         /* I - Pointer into data string */
     }
 
     if (ch && ptr < end)
-      *ptr++ = ch;
+      *ptr++ = (char)ch;
   }
 
   *ptr = '\0';
