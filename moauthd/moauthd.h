@@ -18,6 +18,8 @@
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <string.h>
+#  include <ctype.h>
+#  include <errno.h>
 #  include <poll.h>
 #  include <pthread.h>
 
@@ -95,8 +97,8 @@ typedef enum moauthd_loglevel_e		/**** Log Levels ****/
 
 typedef struct moauthd_server_s		/**** Server ****/
 {
-  char		*server_name;		/* Server hostname */
-  int		server_port;		/* Server port */
+  char		*name;			/* Server hostname */
+  int		port;			/* Server port */
   int		log_file;		/* Log file descriptor */
   moauthd_loglevel_t log_level;		/* Log level */
   int		num_clients;		/* Number of clients served */
@@ -116,9 +118,8 @@ typedef struct moauthd_client_s		/**** Client Information ****/
   moauthd_server_t *server;		/* Server */
   http_t	*http;			/* HTTP connection */
   http_state_t	request_method;		/* Request method */
-  char		path_info[1024],	/* Request path/URI */
+  char		path_info[4096],	/* Request path/URI */
 		*query_string;		/* Query string (if any) */
-  http_addr_t	remote_addr;		/* Remote (client) address */
   char		remote_host[256],	/* Remote hostname */
 		remote_user[256];	/* Authenticated username */
 } moauthd_client_t;
@@ -133,7 +134,8 @@ extern moauthd_server_t	*moauthdCreateServer(const char *configfile, int verbosi
 extern void		moauthdDeleteClient(moauthd_client_t *client);
 extern void		moauthdDeleteServer(moauthd_server_t *server);
 extern int		moauthdGetFile(moauthd_client_t *client);
-extern void		moauthdLog(moauthd_server_t *server, moauthd_loglevel_t level, const char *message, ...) __attribute__((__format__(__printf__, 3, 4)));
+extern void		moauthdLogc(moauthd_client_t *client, moauthd_loglevel_t level, const char *message, ...) __attribute__((__format__(__printf__, 3, 4)));
+extern void		moauthdLogs(moauthd_server_t *server, moauthd_loglevel_t level, const char *message, ...) __attribute__((__format__(__printf__, 3, 4)));
 extern void		*moauthdRunClient(moauthd_client_t *client);
 extern int		moauthdRunServer(moauthd_server_t *server);
 

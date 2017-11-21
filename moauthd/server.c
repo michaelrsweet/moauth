@@ -7,11 +7,10 @@
  */
 
 #include "moauthd.h"
-#include <ctype.h>
-#include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <syslog.h>
 
 
 /*
@@ -46,7 +45,7 @@ moauthdCreateServer(
 
   server = calloc(1, sizeof(moauthd_server_t));
 
-  server->log_file  = -1;
+  server->log_file  = 2;
   server->log_level = MOAUTHD_LOGLEVEL_ERROR;
 
   httpGetHostname(NULL, server_name, sizeof(server_name));
@@ -70,11 +69,18 @@ moauthdCreateServer(
         */
 
         if (!value || !strcasecmp(value, "stderr"))
+        {
           server->log_file = 2;
+	}
 	else if (!strcmp(value, "none"))
-	  server->log_file = open("/dev/null", O_WRONLY, 0600);
+	{
+	  server->log_file = -1;
+	}
 	else if (!strcasecmp(value, "syslog"))
+	{
 	  server->log_file = 0;
+	  openlog("moauthd", LOG_CONS, LOG_AUTH);
+	}
 	else if ((server->log_file = open(value, O_WRONLY | O_CREAT | O_APPEND | O_EXCL, 0600)) < 0)
 	{
 	  fprintf(stderr, "moauthd: Unable to open log file \"%s\" on line %d of \"%s\": %s\n", value, linenum, configfile, strerror(errno));
@@ -139,8 +145,8 @@ moauthdCreateServer(
     cupsFileClose(fp);
   }
 
-  server->server_name = strdup(server_name);
-  server->server_port = server_port;
+  server->name = strdup(server_name);
+  server->port = server_port;
 
  /*
   * Setup listeners...
@@ -188,15 +194,14 @@ moauthdCreateServer(
   * Update logging and log our authorization server's URL...
   */
 
-  if (server->log_file < 0)
-    server->log_file = 2;			/* Log to stderr */
-
   if (verbosity == 1 && server->log_level < MOAUTHD_LOGLEVEL_DEBUG)
     server->log_level ++;
   else if (verbosity > 1)
     server->log_level = MOAUTHD_LOGLEVEL_DEBUG;
 
-  moauthdLog(server, MOAUTHD_LOGLEVEL_INFO, "Authorization server is \"https://%s:%d\".", server_name, server_port);
+  moauthdLogs(server, MOAUTHD_LOGLEVEL_INFO, "Authorization server is \"https://%s:%d\".", server_name, server_port);
+
+  cupsSetServerCredentials(NULL, server->name, 1);
 
  /*
   * Return the server object...
@@ -228,8 +233,8 @@ moauthdDeleteServer(
   int	i;				/* Looping var */
 
 
-  if (server->server_name)
-    free(server->server_name);
+  if (server->name)
+    free(server->name);
 
   for (i = 0; i < server->num_listeners; i ++)
     httpAddrClose(NULL, server->listeners[i].fd);
@@ -256,15 +261,15 @@ moauthdRunServer(
   if (!server)
     return (1);
 
-  moauthdLog(server, MOAUTHD_LOGLEVEL_INFO, "Listening for client connections.");
+  moauthdLogs(server, MOAUTHD_LOGLEVEL_INFO, "Listening for client connections.");
 
-  do
+  while (!done)
   {
     if (poll(server->listeners, server->num_listeners, -1) < 0)
     {
       if (errno != EAGAIN && errno != EINTR)
       {
-        moauthdLog(server, MOAUTHD_LOGLEVEL_ERROR, "poll() failed: %s", strerror(errno));
+        moauthdLogs(server, MOAUTHD_LOGLEVEL_ERROR, "poll() failed: %s", strerror(errno));
         done = 1;
       }
     }
@@ -290,7 +295,7 @@ moauthdRunServer(
               * Unable to create client thread...
               */
 
-              moauthdLog(server, MOAUTHD_LOGLEVEL_ERROR, "Unable to create client processing thread: %s", strerror(errno));
+              moauthdLogs(server, MOAUTHD_LOGLEVEL_ERROR, "Unable to create client processing thread: %s", strerror(errno));
               moauthdDeleteClient(client);
 	    }
 	    else
@@ -306,7 +311,6 @@ moauthdRunServer(
       }
     }
   }
-  while (!done);
 
   return (0);
 }

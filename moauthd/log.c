@@ -7,23 +7,65 @@
  */
 
 #include "moauthd.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdarg.h>
+#include <syslog.h>
 
 
 /*
- * 'moauthdLog()' - Log a message.
+ * Local globals...
+ */
+
+static const int priorities[] = { LOG_ERR, LOG_INFO, LOG_DEBUG };
+
+
+/*
+ * Local functions...
+ */
+
+static void	file_log(int fd, const char *message, va_list ap);
+
+
+/*
+ * 'moauthdLogc()' - Log a client message.
  */
 
 void
-moauthdLog(moauthd_loglevel_t level,	/* I - Log level */
-           moauthd_server_t   *server,	/* I - Server object */
-           const char         *message,	/* I - Printf-style message */
-           ...)				/* I - Additional arguments as needed */
+moauthdLogc(moauthd_client_t   *client,	/* I - Client object */
+            moauthd_loglevel_t level,	/* I - Log level */
+            const char         *message,/* I - Printf-style message */
+            ...)			/* I - Additional arguments as needed */
 {
-  char		buffer[8192],		/* Message buffer */
-		*bufptr;		/* Pointer into buffer */
+  moauthd_server_t *server = client->server;
+					/* Server object */
+  char		cmessage[1024];		/* Client message */
+  va_list	ap;			/* Argument pointer */
+
+
+  if (level > server->log_level || server->log_file < 0)
+    return;
+
+  snprintf(cmessage, sizeof(cmessage), "[Client %d] %s", client->number, message);
+  va_start(ap, message);
+
+  if (server->log_file == 0)
+    vsyslog(priorities[level], cmessage, ap);
+  else
+    file_log(server->log_file, cmessage, ap);
+
+  va_end(ap);
+}
+
+
+/*
+ * 'moauthdLogs()' - Log a server message.
+ */
+
+void
+moauthdLogs(moauthd_server_t   *server,	/* I - Server object */
+            moauthd_loglevel_t level,	/* I - Log level */
+            const char         *message,/* I - Printf-style message */
+            ...)			/* I - Additional arguments as needed */
+{
   va_list	ap;			/* Argument pointer */
 
 
@@ -31,12 +73,33 @@ moauthdLog(moauthd_loglevel_t level,	/* I - Log level */
     return;
 
   va_start(ap, message);
-  vsnprintf(buffer, sizeof(buffer) - 1, message, ap);
-  va_end(ap);
 
+  if (server->log_file == 0)
+    vsyslog(priorities[level], message, ap);
+  else
+    file_log(server->log_file, message, ap);
+
+  va_end(ap);
+}
+
+
+/*
+ * "file_log()" - Log a message to a file.
+ */
+
+static void
+file_log(int        fd,			/* I - File to write to */
+         const char *message,		/* I - Printf-style message */
+         va_list    ap)			/* I - Argument pointer */
+{
+  char		buffer[8192],		/* Message buffer */
+		*bufptr;		/* Pointer into buffer */
+
+
+  vsnprintf(buffer, sizeof(buffer) - 1, message, ap);
   bufptr = buffer + strlen(buffer);
   if (bufptr[-1] != '\n')
     *bufptr++ = '\n';
 
-  write(server->log_file, buffer, bufptr - buffer);
+  write(fd, buffer, bufptr - buffer);
 }
