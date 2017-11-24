@@ -16,13 +16,19 @@ SUBDIRS	=	moauth moauthd
 
 # Make everything...
 all:
+	echo "CC=$(CC)"
+	echo "CFLAGS=$(CFLAGS)"
+	echo "LDFLAGS=$(LDFLAGS)"
+	echo "LIBS=$(LIBS)"
 	for dir in $(SUBDIRS); do \
+		echo "Building all in $$dir..."; \
 		(cd $$dir; $(MAKE) $(MFLAGS) all || exit 1); \
 	done
 
 # Clean everything...
 clean:
 	for dir in $(SUBDIRS); do \
+		echo "Cleaning all in $$dir..."; \
 		(cd $$dir; $(MAKE) $(MFLAGS) clean || exit 1); \
 	done
 
@@ -30,6 +36,7 @@ clean:
 # Install everything...
 install:	all
 	for dir in $(SUBDIRS); do \
+		echo "Installing all in $$dir..."; \
 		(cd $$dir; $(MAKE) $(MFLAGS) install || exit 1); \
 	done
 
@@ -37,5 +44,6 @@ install:	all
 # Test everything...
 test:
 	for dir in $(SUBDIRS); do \
+		echo "Testing all in $$dir..."; \
 		(cd $$dir; $(MAKE) $(MFLAGS) test || exit 1); \
 	done
