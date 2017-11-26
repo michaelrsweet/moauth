@@ -153,7 +153,7 @@ moauthdCreateServer(
   */
 
   snprintf(server_ports, sizeof(server_ports), "%d", server_port);
-  addrlist = httpAddrGetList(server_name, AF_UNSPEC, server_ports);
+  addrlist = httpAddrGetList(NULL, AF_UNSPEC, server_ports);
   for (addr = addrlist; addr; addr = addr->next)
   {
     int			sock = httpAddrListen(&(addr->addr), server_port);

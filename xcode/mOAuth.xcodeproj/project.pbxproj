@@ -28,7 +28,6 @@
 		270E13BF1FC31DB70053DAE4 /* resource.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13B51FC31DB70053DAE4 /* resource.c */; };
 		270E13C01FC31DB70053DAE4 /* server.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13B61FC31DB70053DAE4 /* server.c */; };
 		270E13C11FC31DB70053DAE4 /* token.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13B81FC31DB70053DAE4 /* token.c */; };
-		270E13C21FC31DB70053DAE4 /* conf.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13BA1FC31DB70053DAE4 /* conf.c */; };
 		270E13C31FC31DB70053DAE4 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13BC1FC31DB70053DAE4 /* main.c */; };
 		270E13C41FC31DB70053DAE4 /* client.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13BD1FC31DB70053DAE4 /* client.c */; };
 		270E13C51FC31DB70053DAE4 /* log.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13BE1FC31DB70053DAE4 /* log.c */; };
@@ -109,7 +108,6 @@
 		270E13B71FC31DB70053DAE4 /* style-css.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "style-css.h"; sourceTree = "<group>"; };
 		270E13B81FC31DB70053DAE4 /* token.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = token.c; sourceTree = "<group>"; };
 		270E13B91FC31DB70053DAE4 /* moauth-png.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "moauth-png.h"; sourceTree = "<group>"; };
-		270E13BA1FC31DB70053DAE4 /* conf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = conf.c; sourceTree = "<group>"; };
 		270E13BB1FC31DB70053DAE4 /* moauthd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = moauthd.h; sourceTree = "<group>"; };
 		270E13BC1FC31DB70053DAE4 /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		270E13BD1FC31DB70053DAE4 /* client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = client.c; sourceTree = "<group>"; };
@@ -174,7 +172,6 @@
 			isa = PBXGroup;
 			children = (
 				270E13BD1FC31DB70053DAE4 /* client.c */,
-				270E13BA1FC31DB70053DAE4 /* conf.c */,
 				270E13BE1FC31DB70053DAE4 /* log.c */,
 				270E13BC1FC31DB70053DAE4 /* main.c */,
 				270E13B91FC31DB70053DAE4 /* moauth-png.h */,
@@ -335,7 +332,6 @@
 				270E13C31FC31DB70053DAE4 /* main.c in Sources */,
 				270E13C11FC31DB70053DAE4 /* token.c in Sources */,
 				270E13C41FC31DB70053DAE4 /* client.c in Sources */,
-				270E13C21FC31DB70053DAE4 /* conf.c in Sources */,
 				270E13C51FC31DB70053DAE4 /* log.c in Sources */,
 				270E13C01FC31DB70053DAE4 /* server.c in Sources */,
 				270E13BF1FC31DB70053DAE4 /* resource.c in Sources */,
