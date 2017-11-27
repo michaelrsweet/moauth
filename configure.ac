@@ -7,7 +7,7 @@ dnl Licensed under Apache License v2.0.  See the file "LICENSE" for more informa
 dnl
 
 AC_INIT([moauth], [0.1], [https://github.com/michaelrsweet/moauth/issues], [moauth], [https://michaelrsweet.github.io/moauth])
-AC_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS(config.h)
 
 dnl Define the version number...
 MOAUTH_VERSION="AC_PACKAGE_VERSION"
@@ -27,11 +27,8 @@ AC_PATH_PROG(RM,rm)
 AC_PATH_TOOL(CUPSCONFIG, cups-config)
 
 if test "x$CUPSCONFIG" = x; then
-	AC_MSG_ERROR([Sorry, this software requires CUPS.])
+    AC_MSG_ERROR([Sorry, this software requires CUPS.])
 fi
-
-dnl See if we need a .exe extension on executables...
-AC_EXEEXT
 
 dnl Figure out the correct "ar" command flags...
 if test "$ac_cv_prog_ranlib" = ":"; then
@@ -47,15 +44,44 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 LIBS="${LIBS:=}"
 
+dnl Debugging...
 AC_ARG_ENABLE(debug, [  --enable-debug          turn on debugging, default=no],
     [if eval "test x$enable_debug = xyes"; then
 	CFLAGS="-g $(CFLAGS)"
 	LDFLAGS="-g $(LDFLAGS)"
     fi])
 
+dnl CUPS library...
 CFLAGS="$CFLAGS `cups-config --cflags`"
 LDFLAGS="$LDFLAGS `cups-config --ldflags`"
 LIBS="$LIBS `cups-config --libs`"
+
+dnl POSIX threads...
+AC_CHECK_HEADER(pthread.h, AC_DEFINE(HAVE_PTHREAD_H))
+
+if test x$ac_cv_header_pthread_h != xyes; then
+    AC_MSG_ERROR([Sorry, this software requires POSIX threading support.])
+fi
+
+dnl Check various threading options for the platforms we support
+for flag in -lpthreads -lpthread -pthread; do
+    AC_MSG_CHECKING([for pthread_create using $flag])
+    SAVELIBS="$LIBS"
+    LIBS="$flag $LIBS"
+    AC_LANG([C])
+    AC_LINK_IFELSE([
+        AC_LANG_PROGRAM([#include <pthread.h>],[pthread_create(0, 0, 0, 0);])],
+        [have_pthread=yes],
+	[LIBS="$SAVELIBS"])
+
+    if test x$have_pthread = xyes; then
+        AC_MSG_RESULT([yes])
+        CFLAGS="$CFLAGS -D_THREAD_SAFE -D_REENTRANT"
+        break
+    else
+        AC_MSG_RESULT([no])
+    fi
+done
 
 dnl Generate the Makedefs file...
 AC_OUTPUT(Makedefs)

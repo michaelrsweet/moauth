@@ -96,6 +96,8 @@ file_log(int        fd,			/* I - File to write to */
   struct tm	*curdate;		/* Current date/time info */
   char		buffer[8192],		/* Message buffer */
 		*bufptr;		/* Pointer into buffer */
+  size_t        total;                  /* Length of log line */
+  ssize_t       bytes;                  /* Bytes written */
 
 
   curtime = time(NULL);
@@ -109,5 +111,15 @@ file_log(int        fd,			/* I - File to write to */
   if (bufptr[-1] != '\n')
     *bufptr++ = '\n';
 
-  write(fd, buffer, bufptr - buffer);
+  for (total = bufptr - buffer, bufptr = buffer; total > 0; total -= (size_t)bytes, bufptr += bytes)
+  {
+    if ((bytes = write(fd, bufptr, total)) < 0)
+    {
+      if (errno == EAGAIN || errno == EINTR)
+        bytes = 0;
+      else
+        break;
+    }
+  }
 }
+
