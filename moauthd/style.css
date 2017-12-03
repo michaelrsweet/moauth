@@ -16,6 +16,17 @@ input[type="text"], input[type="email"], input[type="password"] {
   font-family: monospace;
 }
 
+blockquote, pre {
+  background: rgba(127,127,127,0.1);
+  border-left: solid 2px #7f7f7f;
+  margin: 1em 40px;
+  padding: 5px;
+}
+
+blockquote p {
+  margin: 0;
+}
+
 /* Logical row */
 .row {
   width: 100%;

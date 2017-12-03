@@ -37,7 +37,17 @@ moauthdCreateResource(
     const char        *scope)		/* I - Scope string */
 {
   moauthd_resource_t	*resource;	/* Resource object */
+  static const char * const types[] =	/* Resource types */
+  {
+    "Directory",
+    "User-Directory",
+    "File",
+    "Cached-File",
+    "Static-File"
+  };
 
+
+  moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "CreateResource %s %s %s %s", types[type], scope, remote_path, local_path);
 
   resource = (moauthd_resource_t *)calloc(1, sizeof(moauthd_resource_t));
 
@@ -79,6 +89,8 @@ moauthdFindResource(
 			*best = NULL;	/* Best match */
 
 
+  moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "FindResource %s", path_info);
+
  /*
   * Find the best matching (longest path match) resource based on the remote
   * path...
@@ -90,7 +102,7 @@ moauthdFindResource(
   {
     resource = cupsArrayIndex(server->resources, i);
 
-    if (!strncmp(path_info, resource->remote_path, resource->remote_len) && (!path_info[resource->remote_len] || path_info[resource->remote_len] == '/'))
+    if (!strncmp(path_info, resource->remote_path, resource->remote_len) && (!path_info[resource->remote_len] || path_info[resource->remote_len] == '/' || !strcmp(resource->remote_path, "/")))
     {
       if (!best || resource->remote_len > best->remote_len)
         best = resource;
@@ -98,6 +110,11 @@ moauthdFindResource(
   }
 
   pthread_rwlock_unlock(&server->resources_lock);
+
+  if (best)
+    moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "FindResource %s matches %s", path_info, best->remote_path);
+
+  *name = '\0';
 
   if (best && best->local_path)
   {
@@ -111,7 +128,7 @@ moauthdFindResource(
       * Directory match...
       */
 
-      snprintf(name, namesize, "%s%s", best->local_path, path_info + best->remote_len);
+      snprintf(name, namesize, "%s/%s", best->local_path, path_info + best->remote_len);
     }
     else
     {
@@ -168,6 +185,11 @@ moauthdFindResource(
     info->st_mtime = server->start_time;
     info->st_size  = best->length;
   }
+
+  if (best)
+    moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "FindResource %s maps to %s", path_info, name[0] ? name : "(data)");
+  else
+    moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "FindResource %s not found", path_info);
 
   return (best);
 }
@@ -245,6 +267,9 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
 					/* Markdown document */
       const char *title = mmdGetMetadata(doc, "title");
 					/* Document title */
+
+      if (!title)
+        title = strrchr(client->path_info, '/') + 1;
 
       moauthdRespondClient(client, HTTP_STATUS_OK, content_type, localinfo.st_mtime, 0);
       moauthdHTMLHeader(client, title);

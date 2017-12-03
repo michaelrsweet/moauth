@@ -42,7 +42,10 @@ moauthdCreateServer(
   */
 
   if (configfile && (fp = cupsFileOpen(configfile, "r")) == NULL)
-   return (NULL);
+  {
+    fprintf(stderr, "moauthd: Unable to open configuration file \"%s\": %s\n", configfile, strerror(errno));
+    return (NULL);
+  }
 
  /*
   * Allocate a server object and initialize with defaults...
@@ -70,7 +73,70 @@ moauthdCreateServer(
 
     while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
     {
-      if (!strcasecmp(line, "LogFile"))
+      fprintf(stderr, "%d: %s %s\n", linenum, line, value);
+
+      if (!strcasecmp(line, "Resource"))
+      {
+       /*
+        * Resource {public,private,shared} /remote/path /local/path
+        */
+
+        char		*scope,		/* Access scope */
+			*remote_path,	/* Remote path */
+			*local_path;	/* Local path */
+        struct stat	local_info;	/* Local file info */
+
+        scope = value;
+        while (*value && !isspace(*value & 255))
+          value ++;
+
+        if (!*value)
+        {
+	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
+	  goto create_failed;
+	}
+
+        *value++ = '\0';
+        while (*value && isspace(*value & 255))
+          value ++;
+
+	if (!*value)
+        {
+	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
+	  goto create_failed;
+	}
+
+        remote_path = value;
+        while (*value && !isspace(*value & 255))
+          value ++;
+
+        if (!*value)
+        {
+	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
+	  goto create_failed;
+	}
+
+        *value++ = '\0';
+        while (*value && isspace(*value & 255))
+          value ++;
+
+	if (!*value)
+        {
+	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
+	  goto create_failed;
+	}
+
+        local_path = value;
+
+        if (stat(local_path, &local_info))
+        {
+	  fprintf(stderr, "moauthd: Unable to access Resource on line %d of \"%s\": %s\n", linenum, configfile, strerror(errno));
+	  goto create_failed;
+        }
+
+        moauthdCreateResource(server, S_ISREG(local_info.st_mode) ? MOAUTHD_RESTYPE_FILE : MOAUTHD_RESTYPE_DIR, remote_path, local_path, scope);
+      }
+      else if (!strcasecmp(line, "LogFile"))
       {
        /*
         * LogFile {filename,none,stderr,syslog}

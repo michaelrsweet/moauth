@@ -58,4 +58,5 @@ style-css.h:	style.css Makefile
 # Dependencies...
 $(OBJS):	moauthd.h ../moauth/moauth.h
 mmd.o:		mmd.h
-resource.o:	mmd.h moauth-png.h style-css.h
+resource.o:	mmd.h
+server.o:	moauth-png.h style-css.h
