@@ -11,6 +11,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <syslog.h>
+#include "moauth-png.h"
+#include "style-css.h"
 
 
 /*
@@ -25,11 +27,14 @@ moauthdCreateServer(
   moauthd_server_t *server;		/* Server object */
   cups_file_t	*fp = NULL;		/* Opened config file */
   char		server_name[256],	/* Server name */
-		server_ports[8];	/* Listening port (string) */
+		server_ports[8],	/* Listening port (string) */
+		*ptr;			/* Pointer into server name */
   int		server_port = 9000 + (getuid() % 1000);
 					/* Listening port (number) */
   http_addrlist_t *addrlist,		/* List of listener addresses */
 		*addr;			/* Current address */
+  char		temp[1024];		/* Temporary filename */
+  struct stat	tempinfo;		/* Temporary information */
 
 
  /*
@@ -49,6 +54,9 @@ moauthdCreateServer(
   server->log_level = MOAUTHD_LOGLEVEL_ERROR;
 
   httpGetHostname(NULL, server_name, sizeof(server_name));
+  ptr = server_name + strlen(server_name) - 1;
+  if (ptr > server_name && *ptr == '.')
+    *ptr = '\0';			/* Strip trailing "." from hostname */
 
   if (fp)
   {
@@ -202,6 +210,36 @@ moauthdCreateServer(
   moauthdLogs(server, MOAUTHD_LOGLEVEL_INFO, "Authorization server is \"https://%s:%d\".", server_name, server_port);
 
   cupsSetServerCredentials(NULL, server->name, 1);
+
+ /*
+  * Final setup...
+  */
+
+  time(&server->start_time);
+
+  pthread_rwlock_init(&server->resources_lock, NULL);
+
+  if (!moauthdFindResource(server, "/moauth.png", temp, sizeof(temp), &tempinfo))
+  {
+   /*
+    * Add default moauth.png file...
+    */
+
+    moauthd_resource_t *r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/moauth.png", NULL, "public");
+    r->data   = moauth_png;
+    r->length = sizeof(moauth_png);
+  }
+
+  if (!moauthdFindResource(server, "/style.css", temp, sizeof(temp), &tempinfo))
+  {
+   /*
+    * Add default style.css file...
+    */
+
+    moauthd_resource_t *r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/style.css", NULL, "public");
+    r->data   = style_css;
+    r->length = strlen(style_css);
+  }
 
  /*
   * Return the server object...

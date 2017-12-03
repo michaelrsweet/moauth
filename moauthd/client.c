@@ -7,19 +7,6 @@
  */
 
 #include "moauthd.h"
-#include "moauth-png.h"
-#include "style-css.h"
-
-
-/*
- * Local functions...
- */
-
-static void	html_escape(moauthd_client_t *client, const char *s, size_t slen);
-static void	html_footer(moauthd_client_t *client);
-static void	html_header(moauthd_client_t *client, const char *title);
-static void	html_printf(moauthd_client_t *client, const char *format, ...) __attribute__((__format__(__printf__, 2, 3)));
-static int	respond(moauthd_client_t *client, http_status_t code, const char *type, size_t length);
 
 
 /*
@@ -149,13 +136,13 @@ moauthdRunClient(
     else if (state == HTTP_STATE_UNKNOWN_METHOD)
     {
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad/unknown operation.");
-      respond(client, HTTP_STATUS_BAD_REQUEST, NULL, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
       break;
     }
     else if (state == HTTP_STATE_UNKNOWN_VERSION)
     {
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad HTTP version.");
-      respond(client, HTTP_STATUS_BAD_REQUEST, NULL, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
       break;
     }
 
@@ -190,7 +177,7 @@ moauthdRunClient(
       */
 
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad request URI \"%s\".", client->path_info);
-      respond(client, HTTP_STATUS_BAD_REQUEST, NULL, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
       break;
     }
 
@@ -205,7 +192,7 @@ moauthdRunClient(
       */
 
       moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Problem getting request headers.");
-      respond(client, HTTP_STATUS_BAD_REQUEST, NULL, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
       break;
     }
 
@@ -216,7 +203,7 @@ moauthdRunClient(
       */
 
       moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Bad Host: header value \"%s\" (expected \"%s\").", httpGetField(client->http, HTTP_FIELD_HOST), host_value);
-      respond(client, HTTP_STATUS_BAD_REQUEST, NULL, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
       break;
     }
 
@@ -232,7 +219,7 @@ moauthdRunClient(
 	* Send 100-continue header...
 	*/
 
-	if (!respond(client, HTTP_STATUS_CONTINUE, NULL, 0))
+	if (!moauthdRespondClient(client, HTTP_STATUS_CONTINUE, NULL, 0, 0))
 	  break;
       }
       else
@@ -241,7 +228,7 @@ moauthdRunClient(
 	* Send 417-expectation-failed header...
 	*/
 
-	if (!respond(client, HTTP_STATUS_EXPECTATION_FAILED, NULL, 0))
+	if (!moauthdRespondClient(client, HTTP_STATUS_EXPECTATION_FAILED, NULL, 0, 0))
 	  break;
       }
     }
@@ -253,31 +240,18 @@ moauthdRunClient(
 	  * Do OPTIONS command...
 	  */
 
-	  if (!respond(client, HTTP_STATUS_OK, NULL, 0))
+	  if (!moauthdRespondClient(client, HTTP_STATUS_OK, NULL, 0, 0))
 	    done = 1;
 	  break;
 
       case HTTP_STATE_HEAD :
 	  if (!strcmp(client->path_info, "/"))
 	  {
-	    if (!respond(client, HTTP_STATUS_OK, "text/html", 0))
+	    if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", 0, 0))
 	      done = 1;
 	  }
-	  else if (!strcmp(client->path_info, "/moauth.png"))
-	  {
-	    if (!respond(client, HTTP_STATUS_OK, "image/png", sizeof(moauth_png)))
-	      done = 1;
-	  }
-	  else if (!strcmp(client->path_info, "/style.css"))
-	  {
-	    if (!respond(client, HTTP_STATUS_OK, "text/css", strlen(style_css)))
-	      done = 1;
-	  }
-	  else
-	  {
-	    respond(client, HTTP_STATUS_NOT_FOUND, NULL, 0);
+	  else if (moauthdGetFile(client) != HTTP_STATUS_OK)
 	    done = 1;
-	  }
 	  break;
 
       case HTTP_STATE_GET :
@@ -285,46 +259,27 @@ moauthdRunClient(
 	  {
 	    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Sending home page.");
 
-	    if (!respond(client, HTTP_STATUS_OK, "text/html", 0))
+	    if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", 0, 0))
 	      done = 1;
 
-            html_header(client, "Home");
-            html_printf(client, "      <h1><img src=\"/moauth.png\" width=\"32\" height=\"32\"> mOAuth " MOAUTH_VERSION "</h1>\n");
-            html_footer(client);
+            moauthdHTMLHeader(client, "Home");
+            moauthdHTMLPrintf(client, "      <h1><img src=\"/moauth.png\" width=\"32\" height=\"32\"> mOAuth " MOAUTH_VERSION "</h1>\n");
+            moauthdHTMLFooter(client);
 
             httpFlushWrite(client->http);
 	  }
-	  else if (!strcmp(client->path_info, "/moauth.png"))
-	  {
-	    if (!respond(client, HTTP_STATUS_OK, "image/png", sizeof(moauth_png)))
-	      done = 1;
-
-	    httpWrite2(client->http, (void *)moauth_png, sizeof(moauth_png));
-	    httpFlushWrite(client->http);
-	  }
-	  else if (!strcmp(client->path_info, "/style.css"))
-	  {
-	    if (!respond(client, HTTP_STATUS_OK, "text/css", strlen(style_css)))
-	      done = 1;
-
-	    httpWrite2(client->http, (void *)style_css, strlen(style_css));
-	    httpFlushWrite(client->http);
-	  }
-	  else
-	  {
-	    respond(client, HTTP_STATUS_NOT_FOUND, NULL, 0);
+	  else if (moauthdGetFile(client) != HTTP_STATUS_OK)
 	    done = 1;
-	  }
 	  break;
 
       case HTTP_STATE_POST :
-	  respond(client, HTTP_STATUS_NOT_FOUND, NULL, 0);
+	  moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, 0, 0);
           done = 1;
           break;
 
       default :
 	  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Unexpected HTTP state %d.", client->request_method);
-	  respond(client, HTTP_STATUS_BAD_REQUEST, NULL, 0);
+	  moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
           done = 1;
 	  break;
     }
@@ -335,357 +290,3 @@ moauthdRunClient(
   return (NULL);
 }
 
-
-/*
- * 'html_escape()' - Write a HTML-safe string.
- */
-
-static void
-html_escape(moauthd_client_t *client,	/* I - Client */
-	    const char       *s,	/* I - String to write */
-	    size_t           slen)	/* I - Number of characters to write */
-{
-  const char	*start,			/* Start of segment */
-		*end;			/* End of string */
-
-
-  start = s;
-  end   = s + (slen > 0 ? slen : strlen(s));
-
-  while (*s && s < end)
-  {
-    if (*s == '&' || *s == '<')
-    {
-      if (s > start)
-        httpWrite2(client->http, start, (size_t)(s - start));
-
-      if (*s == '&')
-        httpWrite2(client->http, "&amp;", 5);
-      else
-        httpWrite2(client->http, "&lt;", 4);
-
-      start = s + 1;
-    }
-
-    s ++;
-  }
-
-  if (s > start)
-    httpWrite2(client->http, start, (size_t)(s - start));
-}
-
-
-/*
- * 'html_footer()' - Show the web interface footer.
- *
- * This function also writes the trailing 0-length chunk.
- */
-
-static void
-html_footer(moauthd_client_t *client)	/* I - Client */
-{
-  html_printf(client,
-	      "    </div>\n"
-	      "  </body>\n"
-	      "</html>\n");
-  httpWrite2(client->http, "", 0);
-}
-
-
-/*
- * 'html_header()' - Show the web interface header and title.
- */
-
-static void
-html_header(moauthd_client_t *client,	/* I - Client */
-            const char       *title)	/* I - Title */
-{
-  html_printf(client,
-	      "<!DOCTYPE html>\n"
-	      "<html>\n"
-	      "  <head>\n"
-	      "    <link rel=\"stylesheet\" type=\"text/css\" href=\"/style.css\">\n"
-	      "    <link rel=\"shortcut icon\" type=\"image/png\" href=\"/moauth.png\">\n"
-	      "    <title>%s (mOAuth " MOAUTH_VERSION ")</title>\n"
-	      "  </head>\n"
-	      "  <body>\n"
-	      "    <div class=\"body\">\n", title);
-}
-
-
-/*
- * 'html_printf()' - Send formatted text to the client, quoting as needed.
- */
-
-static void
-html_printf(moauthd_client_t *client,	/* I - Client */
-	    const char       *format,	/* I - Printf-style format string */
-	    ...)			/* I - Additional arguments as needed */
-{
-  va_list	ap;			/* Pointer to arguments */
-  const char	*start;			/* Start of string */
-  char		size,			/* Size character (h, l, L) */
-		type;			/* Format type character */
-  int		width,			/* Width of field */
-		prec;			/* Number of characters of precision */
-  char		tformat[100],		/* Temporary format string for sprintf() */
-		*tptr,			/* Pointer into temporary format */
-		temp[1024];		/* Buffer for formatted numbers */
-  char		*s;			/* Pointer to string */
-
-
- /*
-  * Loop through the format string, formatting as needed...
-  */
-
-  va_start(ap, format);
-  start = format;
-
-  while (*format)
-  {
-    if (*format == '%')
-    {
-      if (format > start)
-        httpWrite2(client->http, start, (size_t)(format - start));
-
-      tptr    = tformat;
-      *tptr++ = *format++;
-
-      if (*format == '%')
-      {
-        httpWrite2(client->http, "%", 1);
-        format ++;
-	start = format;
-	continue;
-      }
-      else if (strchr(" -+#\'", *format))
-        *tptr++ = *format++;
-
-      if (*format == '*')
-      {
-       /*
-        * Get width from argument...
-	*/
-
-	format ++;
-	width = va_arg(ap, int);
-
-	snprintf(tptr, sizeof(tformat) - (size_t)(tptr - tformat), "%d", width);
-	tptr += strlen(tptr);
-      }
-      else
-      {
-	width = 0;
-
-	while (isdigit(*format & 255))
-	{
-	  if (tptr < (tformat + sizeof(tformat) - 1))
-	    *tptr++ = *format;
-
-	  width = width * 10 + *format++ - '0';
-	}
-      }
-
-      if (*format == '.')
-      {
-	if (tptr < (tformat + sizeof(tformat) - 1))
-	  *tptr++ = *format;
-
-        format ++;
-
-        if (*format == '*')
-	{
-         /*
-	  * Get precision from argument...
-	  */
-
-	  format ++;
-	  prec = va_arg(ap, int);
-
-	  snprintf(tptr, sizeof(tformat) - (size_t)(tptr - tformat), "%d", prec);
-	  tptr += strlen(tptr);
-	}
-	else
-	{
-	  prec = 0;
-
-	  while (isdigit(*format & 255))
-	  {
-	    if (tptr < (tformat + sizeof(tformat) - 1))
-	      *tptr++ = *format;
-
-	    prec = prec * 10 + *format++ - '0';
-	  }
-	}
-      }
-
-      if (*format == 'l' && format[1] == 'l')
-      {
-        size = 'L';
-
-	if (tptr < (tformat + sizeof(tformat) - 2))
-	{
-	  *tptr++ = 'l';
-	  *tptr++ = 'l';
-	}
-
-	format += 2;
-      }
-      else if (*format == 'h' || *format == 'l' || *format == 'L')
-      {
-	if (tptr < (tformat + sizeof(tformat) - 1))
-	  *tptr++ = *format;
-
-        size = *format++;
-      }
-      else
-        size = 0;
-
-
-      if (!*format)
-      {
-        start = format;
-        break;
-      }
-
-      if (tptr < (tformat + sizeof(tformat) - 1))
-        *tptr++ = *format;
-
-      type  = *format++;
-      *tptr = '\0';
-      start = format;
-
-      switch (type)
-      {
-	case 'E' : /* Floating point formats */
-	case 'G' :
-	case 'e' :
-	case 'f' :
-	case 'g' :
-	    if ((size_t)(width + 2) > sizeof(temp))
-	      break;
-
-	    sprintf(temp, tformat, va_arg(ap, double));
-
-            httpWrite2(client->http, temp, strlen(temp));
-	    break;
-
-        case 'B' : /* Integer formats */
-	case 'X' :
-	case 'b' :
-        case 'd' :
-	case 'i' :
-	case 'o' :
-	case 'u' :
-	case 'x' :
-	    if ((size_t)(width + 2) > sizeof(temp))
-	      break;
-
-            if (size == 'l')
-	      sprintf(temp, tformat, va_arg(ap, long));
-	    else
-	      sprintf(temp, tformat, va_arg(ap, int));
-
-            httpWrite2(client->http, temp, strlen(temp));
-	    break;
-
-	case 's' : /* String */
-	    if ((s = va_arg(ap, char *)) == NULL)
-	      s = "(null)";
-
-            html_escape(client, s, strlen(s));
-	    break;
-      }
-    }
-    else
-      format ++;
-  }
-
-  if (format > start)
-    httpWrite2(client->http, start, (size_t)(format - start));
-
-  va_end(ap);
-}
-
-
-
-
-/*
- * 'respond()' - Send a HTTP response.
- */
-
-int					/* O - 1 on success, 0 on failure */
-respond(
-    moauthd_client_t *client,		/* I - Client */
-    http_status_t    code,		/* I - HTTP status of response */
-    const char       *type,		/* I - MIME media type of response */
-    size_t           length)		/* I - Length of response or 0 for chunked */
-{
-  char	message[1024];			/* Text message */
-
-
-  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "%s", httpStatus(code));
-
-  if (code == HTTP_STATUS_CONTINUE)
-  {
-   /*
-    * 100-continue doesn't send any headers...
-    */
-
-    return (httpWriteResponse(client->http, HTTP_STATUS_CONTINUE) == 0);
-  }
-
- /*
-  * Format an error message...
-  */
-
-  if (!type && !length && code != HTTP_STATUS_OK && code != HTTP_STATUS_SWITCHING_PROTOCOLS)
-  {
-    snprintf(message, sizeof(message), "%d - %s\n", code, httpStatus(code));
-
-    type   = "text/plain";
-    length = strlen(message);
-  }
-  else
-    message[0] = '\0';
-
- /*
-  * Send the HTTP response header...
-  */
-
-  httpClearFields(client->http);
-
-  if (code == HTTP_STATUS_METHOD_NOT_ALLOWED || client->request_method == HTTP_STATE_OPTIONS)
-    httpSetField(client->http, HTTP_FIELD_ALLOW, "GET, HEAD, OPTIONS, POST");
-
-  if (type)
-  {
-    if (!strcmp(type, "text/html"))
-      httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, "text/html; charset=utf-8");
-    else
-      httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, type);
-  }
-
-  httpSetLength(client->http, length);
-
-  if (httpWriteResponse(client->http, code) < 0)
-    return (0);
-
- /*
-  * Send the response data...
-  */
-
-  if (message[0])
-  {
-   /*
-    * Send a plain text message.
-    */
-
-    if (httpPrintf(client->http, "%s", message) < 0)
-      return (0);
-  }
-
-  httpFlushWrite(client->http);
-
-  return (1);
-}

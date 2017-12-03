@@ -36,6 +36,8 @@
 		278AC45C1FC3217100588F26 /* libcups.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 278AC45B1FC3216200588F26 /* libcups.tbd */; };
 		278AC45D1FC321BB00588F26 /* libmoauth.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 270E13AF1FC31D6A0053DAE4 /* libmoauth.a */; };
 		278AC45E1FC321C200588F26 /* libcups.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 278AC45B1FC3216200588F26 /* libcups.tbd */; };
+		27960FFA1FD4774C000D20A7 /* web.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FF81FD4774B000D20A7 /* web.c */; };
+		27960FFB1FD4774C000D20A7 /* mmd.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FF91FD4774B000D20A7 /* mmd.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -115,6 +117,9 @@
 		270E13E01FC31E520053DAE4 /* testmoauth */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testmoauth; sourceTree = BUILT_PRODUCTS_DIR; };
 		270E13E21FC31E8A0053DAE4 /* testmoauth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testmoauth.c; path = ../moauth/testmoauth.c; sourceTree = "<group>"; };
 		278AC45B1FC3216200588F26 /* libcups.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcups.tbd; path = usr/lib/libcups.tbd; sourceTree = SDKROOT; };
+		27960FF71FD4774B000D20A7 /* mmd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mmd.h; sourceTree = "<group>"; };
+		27960FF81FD4774B000D20A7 /* web.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = web.c; sourceTree = "<group>"; };
+		27960FF91FD4774B000D20A7 /* mmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mmd.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -174,12 +179,15 @@
 				270E13BD1FC31DB70053DAE4 /* client.c */,
 				270E13BE1FC31DB70053DAE4 /* log.c */,
 				270E13BC1FC31DB70053DAE4 /* main.c */,
+				27960FF91FD4774B000D20A7 /* mmd.c */,
+				27960FF71FD4774B000D20A7 /* mmd.h */,
 				270E13B91FC31DB70053DAE4 /* moauth-png.h */,
 				270E13BB1FC31DB70053DAE4 /* moauthd.h */,
 				270E13B51FC31DB70053DAE4 /* resource.c */,
 				270E13B61FC31DB70053DAE4 /* server.c */,
 				270E13B71FC31DB70053DAE4 /* style-css.h */,
 				270E13B81FC31DB70053DAE4 /* token.c */,
+				27960FF81FD4774B000D20A7 /* web.c */,
 			);
 			name = moauthd;
 			path = ../moauthd;
@@ -330,8 +338,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				270E13C31FC31DB70053DAE4 /* main.c in Sources */,
+				27960FFA1FD4774C000D20A7 /* web.c in Sources */,
 				270E13C11FC31DB70053DAE4 /* token.c in Sources */,
 				270E13C41FC31DB70053DAE4 /* client.c in Sources */,
+				27960FFB1FD4774C000D20A7 /* mmd.c in Sources */,
 				270E13C51FC31DB70053DAE4 /* log.c in Sources */,
 				270E13C01FC31DB70053DAE4 /* server.c in Sources */,
 				270E13BF1FC31DB70053DAE4 /* resource.c in Sources */,

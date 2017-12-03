@@ -22,6 +22,7 @@
 #  include <errno.h>
 #  include <poll.h>
 #  include <pthread.h>
+#  include <sys/stat.h>
 
 
 /*
@@ -54,8 +55,10 @@ typedef struct moauthd_client_id_s	/**** Client (Application) ID ****/
 typedef enum moauthd_restype_e		/**** Resource Types ****/
 {
   MOAUTHD_RESTYPE_DIR,			/* Explicit directory */
+  MOAUTHD_RESTYPE_USER_DIR,		/* Wildcard user directory */
   MOAUTHD_RESTYPE_FILE,			/* Explicit file */
-  MOAUTHD_RESTYPE_USERDIR		/* Wildcard user directory */
+  MOAUTHD_RESTYPE_CACHED_FILE,		/* Static (cached) file */
+  MOAUTHD_RESTYPE_STATIC_FILE		/* Static (compiled in) file */
 } moauthd_restype_t;
 
 
@@ -65,7 +68,10 @@ typedef struct moauthd_resource_s	/**** Resource ****/
   char			*remote_path,	/* Remote path */
 			*local_path,	/* Local path */
 			*scope;		/* Access scope */
+  size_t		remote_len;	/* Length of remote path */
   moauthd_user_t	*owner;		/* Owning user (not used for MOAUTHD_RESTYPE_USERDIR) */
+  const void		*data;		/* Data (static files) */
+  size_t		length;		/* Length (static files) */
 } moauthd_resource_t;
 
 
@@ -106,9 +112,11 @@ typedef struct moauthd_server_s		/**** Server ****/
   struct pollfd	listeners[MOAUTHD_MAX_LISTENERS];
 					/* Listener sockets */
   cups_array_t	*resources;		/* Resources that are shared */
+  pthread_rwlock_t resources_lock;	/* R/W lock for resources array */
   cups_array_t	*scopes;		/* Scopes */
   cups_array_t	*tokens;		/* Tokens that have been issued */
   cups_array_t	*users;			/* Users */
+  time_t	start_time;		/* Startup time */
 } moauthd_server_t;
 
 
@@ -130,12 +138,18 @@ typedef struct moauthd_client_s		/**** Client Information ****/
  */
 
 extern moauthd_client_t	*moauthdCreateClient(moauthd_server_t *server, int fd);
+extern moauthd_resource_t *moauthdCreateResource(moauthd_server_t *server, moauthd_restype_t type, const char *remote_path, const char *local_path, const char *scope);
 extern moauthd_server_t	*moauthdCreateServer(const char *configfile, int verbosity);
 extern void		moauthdDeleteClient(moauthd_client_t *client);
 extern void		moauthdDeleteServer(moauthd_server_t *server);
+extern moauthd_resource_t *moauthdFindResource(moauthd_server_t *server, const char *path_info, char *name, size_t namesize, struct stat *info);
 extern int		moauthdGetFile(moauthd_client_t *client);
+extern void		moauthdHTMLFooter(moauthd_client_t *client);
+extern void		moauthdHTMLHeader(moauthd_client_t *client, const char *title);
+extern void		moauthdHTMLPrintf(moauthd_client_t *client, const char *format, ...) __attribute__((__format__(__printf__, 2, 3)));
 extern void		moauthdLogc(moauthd_client_t *client, moauthd_loglevel_t level, const char *message, ...) __attribute__((__format__(__printf__, 3, 4)));
 extern void		moauthdLogs(moauthd_server_t *server, moauthd_loglevel_t level, const char *message, ...) __attribute__((__format__(__printf__, 3, 4)));
+extern int		moauthdRespondClient(moauthd_client_t *client, http_status_t code, const char *type, time_t mtime, size_t length);
 extern void		*moauthdRunClient(moauthd_client_t *client);
 extern int		moauthdRunServer(moauthd_server_t *server);
 

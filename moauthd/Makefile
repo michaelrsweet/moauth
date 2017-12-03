@@ -11,7 +11,7 @@ include ../Makedefs
 
 
 # Daemon targets...
-OBJS	=	client.o log.o main.o resource.o server.o token.o
+OBJS	=	client.o log.o main.o mmd.o resource.o server.o token.o web.o
 
 TARGETS	=	moauthd
 
@@ -57,4 +57,5 @@ style-css.h:	style.css Makefile
 
 # Dependencies...
 $(OBJS):	moauthd.h ../moauth/moauth.h
-resource.o:	moauth-png.h style-css.h
+mmd.o:		mmd.h
+resource.o:	mmd.h moauth-png.h style-css.h
