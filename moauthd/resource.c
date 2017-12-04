@@ -128,7 +128,9 @@ moauthdFindResource(
       * Directory match...
       */
 
-      snprintf(name, namesize, "%s/%s", best->local_path, path_info + best->remote_len);
+      const char *path_ptr = path_info + best->remote_len - (best->remote_len == 1);
+
+      snprintf(name, namesize, "%s%s", best->local_path, path_ptr);
     }
     else
     {
@@ -220,6 +222,27 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
   {
     moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, 0, 0);
     return (HTTP_STATUS_NOT_FOUND);
+  }
+
+ /*
+  * Support authentication...
+  */
+
+  if (best->scope && strcmp(best->scope, "public"))
+  {
+   /*
+    * Need authentication...
+    */
+
+    if (!client->remote_user[0] || (!strcmp(best->scope, "private") && client->remote_uid != localinfo.st_uid))
+    {
+      http_status_t status = client->remote_user[0] ? HTTP_STATUS_FORBIDDEN : HTTP_STATUS_UNAUTHORIZED;
+					/* Returned HTTP status */
+
+      moauthdRespondClient(client, status, NULL, 0, 0);
+
+      return (status);
+    }
   }
 
  /*

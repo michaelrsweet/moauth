@@ -300,6 +300,14 @@ moauthdRespondClient(
   if (code == HTTP_STATUS_METHOD_NOT_ALLOWED || client->request_method == HTTP_STATE_OPTIONS)
     httpSetField(client->http, HTTP_FIELD_ALLOW, "GET, HEAD, OPTIONS, POST");
 
+  if (code == HTTP_STATUS_UNAUTHORIZED || code == HTTP_STATUS_FORBIDDEN)
+  {
+    if (client->server->options & MOAUTHD_OPTION_BASIC_AUTH)
+      httpSetField(client->http, HTTP_FIELD_WWW_AUTHENTICATE, "Bearer realm=\"mOAuth\", Basic realm=\"mOAuth\"");
+    else
+      httpSetField(client->http, HTTP_FIELD_WWW_AUTHENTICATE, "Bearer realm=\"mOAuth\"");
+  }
+
   if (mtime)
     httpSetField(client->http, HTTP_FIELD_LAST_MODIFIED, httpGetDateString(mtime));
 

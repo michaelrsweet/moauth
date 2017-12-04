@@ -73,9 +73,71 @@ moauthdCreateServer(
 
     while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
     {
-      fprintf(stderr, "%d: %s %s\n", linenum, line, value);
+      if (!strcasecmp(line, "LogFile"))
+      {
+       /*
+        * LogFile {filename,none,stderr,syslog}
+        */
 
-      if (!strcasecmp(line, "Resource"))
+        if (!value || !strcasecmp(value, "stderr"))
+        {
+          server->log_file = 2;
+	}
+	else if (!strcmp(value, "none"))
+	{
+	  server->log_file = -1;
+	}
+	else if (!strcasecmp(value, "syslog"))
+	{
+	  server->log_file = 0;
+	  openlog("moauthd", LOG_CONS, LOG_AUTH);
+	}
+	else if ((server->log_file = open(value, O_WRONLY | O_CREAT | O_APPEND | O_EXCL, 0600)) < 0)
+	{
+	  fprintf(stderr, "moauthd: Unable to open log file \"%s\" on line %d of \"%s\": %s\n", value, linenum, configfile, strerror(errno));
+	  goto create_failed;
+	}
+      }
+      else if (!strcasecmp(line, "LogLevel"))
+      {
+       /*
+        * LogLevel {error,info,debug}
+        */
+
+        if (!value)
+        {
+          fprintf(stderr, "moauthd: Missing log level on line %d of \"%s\".\n", linenum, configfile);
+          goto create_failed;
+	}
+	else if (!strcasecmp(value, "error"))
+	  server->log_level = MOAUTHD_LOGLEVEL_ERROR;
+	else if (!strcasecmp(value, "info"))
+	  server->log_level = MOAUTHD_LOGLEVEL_INFO;
+	else if (!strcasecmp(value, "debug"))
+	  server->log_level = MOAUTHD_LOGLEVEL_DEBUG;
+	else
+	{
+	  fprintf(stderr, "moauthd: Unknown LogLevel \"%s\" on line %d of \"%s\" ignored.\n", value, linenum, configfile);
+	}
+      }
+      else if (!strcasecmp(line, "Option"))
+      {
+       /*
+        * Option {BasicAuth}
+        */
+
+        if (!value)
+        {
+	  fprintf(stderr, "moauthd: Bad Option on line %d of \"%s\".\n", linenum, configfile);
+	  goto create_failed;
+        }
+
+        if (!strcasecmp(value, "BasicAuth"))
+          server->options |= MOAUTHD_OPTION_BASIC_AUTH;
+	else
+	  fprintf(stderr, "moauthd: Unknown Option %s on line %d of \"%s\".\n", value, linenum, configfile);
+      }
+      else if (!strcasecmp(line, "Resource"))
       {
        /*
         * Resource {public,private,shared} /remote/path /local/path
@@ -85,6 +147,12 @@ moauthdCreateServer(
 			*remote_path,	/* Remote path */
 			*local_path;	/* Local path */
         struct stat	local_info;	/* Local file info */
+
+        if (!value)
+        {
+	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
+	  goto create_failed;
+        }
 
         scope = value;
         while (*value && !isspace(*value & 255))
@@ -136,53 +204,6 @@ moauthdCreateServer(
 
         moauthdCreateResource(server, S_ISREG(local_info.st_mode) ? MOAUTHD_RESTYPE_FILE : MOAUTHD_RESTYPE_DIR, remote_path, local_path, scope);
       }
-      else if (!strcasecmp(line, "LogFile"))
-      {
-       /*
-        * LogFile {filename,none,stderr,syslog}
-        */
-
-        if (!value || !strcasecmp(value, "stderr"))
-        {
-          server->log_file = 2;
-	}
-	else if (!strcmp(value, "none"))
-	{
-	  server->log_file = -1;
-	}
-	else if (!strcasecmp(value, "syslog"))
-	{
-	  server->log_file = 0;
-	  openlog("moauthd", LOG_CONS, LOG_AUTH);
-	}
-	else if ((server->log_file = open(value, O_WRONLY | O_CREAT | O_APPEND | O_EXCL, 0600)) < 0)
-	{
-	  fprintf(stderr, "moauthd: Unable to open log file \"%s\" on line %d of \"%s\": %s\n", value, linenum, configfile, strerror(errno));
-	  goto create_failed;
-	}
-      }
-      else if (!strcasecmp(line, "LogLevel"))
-      {
-       /*
-        * LogLevel {error,info,debug}
-        */
-
-        if (!value)
-        {
-          fprintf(stderr, "moauthd: Missing log level on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-	}
-	else if (!strcasecmp(value, "error"))
-	  server->log_level = MOAUTHD_LOGLEVEL_ERROR;
-	else if (!strcasecmp(value, "info"))
-	  server->log_level = MOAUTHD_LOGLEVEL_INFO;
-	else if (!strcasecmp(value, "debug"))
-	  server->log_level = MOAUTHD_LOGLEVEL_DEBUG;
-	else
-	{
-	  fprintf(stderr, "moauthd: Unknown LogLevel \"%s\" on line %d of \"%s\" ignored.\n", value, linenum, configfile);
-	}
-      }
       else if (!strcasecmp(line, "ServerName"))
       {
        /*
@@ -209,6 +230,18 @@ moauthdCreateServer(
 
         strncpy(server_name, value, sizeof(server_name) - 1);
         server_name[sizeof(server_name) - 1] = '\0';
+      }
+      else if (!strcasecmp(line, "TestPassword"))
+      {
+        if (value)
+        {
+          server->test_password = strdup(value);
+	}
+	else
+	{
+          fprintf(stderr, "moauthd: Missing password on line %d of \"%s\".\n", linenum, configfile);
+          goto create_failed;
+	}
       }
       else
       {
@@ -346,7 +379,11 @@ moauthdDeleteServer(
   cupsArrayDelete(server->resources);
   cupsArrayDelete(server->scopes);
   cupsArrayDelete(server->tokens);
-  cupsArrayDelete(server->users);
+
+  pthread_rwlock_destroy(&server->resources_lock);
+
+  if (server->test_password)
+    free(server->test_password);
 
   free(server);
 }

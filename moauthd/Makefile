@@ -11,7 +11,7 @@ include ../Makedefs
 
 
 # Daemon targets...
-OBJS	=	client.o log.o main.o mmd.o resource.o server.o token.o web.o
+OBJS	=	auth.o client.o log.o main.o mmd.o resource.o server.o token.o web.o
 
 TARGETS	=	moauthd
 

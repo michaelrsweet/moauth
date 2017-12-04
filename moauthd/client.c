@@ -7,6 +7,7 @@
  */
 
 #include "moauthd.h"
+#include <pwd.h>
 
 
 /*
@@ -87,6 +88,7 @@ moauthdRunClient(
   int			done = 0;	/* Are we done yet? */
   http_state_t		state;		/* HTTP state */
   http_status_t		status;		/* HTTP status */
+  const char		*authorization;	/* Authorization: header value */
   char			host_value[300];/* Expected Host: header value */
   char			uri_prefix[300];/* URI prefix for server */
   size_t		uri_prefix_len;	/* Length of URI prefix */
@@ -183,8 +185,6 @@ moauthdRunClient(
 
     while ((status = httpUpdate(client->http)) == HTTP_STATUS_CONTINUE);
 
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "status=%d", status);
-
     if (status != HTTP_STATUS_OK)
     {
      /*
@@ -207,6 +207,74 @@ moauthdRunClient(
       break;
     }
 
+    client->remote_user[0] = '\0';
+    client->remote_uid     = (uid_t)-1;
+
+    if ((authorization = httpGetField(client->http, HTTP_FIELD_AUTHORIZATION)) != NULL && *authorization)
+    {
+      if (!strncmp(authorization, "Basic ", 6))
+      {
+	char	username[512],		/* Username value */
+		*password;		/* Password value */
+        int	userlen = sizeof(username);
+					/* Length of username:password */
+        struct passwd *user;		/* User information */
+
+        for (authorization += 6; *authorization && isspace(*authorization & 255); authorization ++);
+
+        httpDecode64_2(username, &userlen, authorization);
+        if ((password = strchr(username, ':')) != NULL)
+        {
+          *password++ = '\0';
+
+          if (moauthdAuthenticateUser(client->server, username, password))
+          {
+            if ((user = getpwnam(username)) != NULL)
+	    {
+	      moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authenticated as \"%s\".", username);
+	      strncpy(client->remote_user, username, sizeof(client->remote_user) - 1);
+	      client->remote_uid = user->pw_uid;
+	    }
+	    else
+	      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup user \"%s\".", username);
+	  }
+	  else
+	    moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authentication of \"%s\" failed.", username);
+	}
+	else
+	  moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad Authorizztion value.");
+      }
+      else
+      {
+       /*
+        * Unsupported Authorization scheme...
+        */
+
+        char	scheme[32],		/* Scheme name */
+		*sptr;			/* Pointer into scheme */
+
+        strncpy(scheme, authorization, sizeof(scheme) - 1);
+        scheme[sizeof(scheme) - 1] = '\0';
+
+        for (sptr = scheme; *sptr; sptr ++)
+        {
+          if (isspace(*sptr & 255))
+          {
+            *sptr = '\0';
+            break;
+	  }
+	}
+
+	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unsupported Authorization scheme \"%s\".", scheme);
+      }
+
+      if (!client->remote_user[0])
+      {
+	moauthdRespondClient(client, HTTP_STATUS_FORBIDDEN, NULL, 0, 0);
+	break;
+      }
+    }
+
     if (httpGetExpect(client->http) && client->request_method == HTTP_STATE_POST)
     {
      /*
@@ -217,6 +285,9 @@ moauthdRunClient(
       {
        /*
 	* Send 100-continue header...
+	*
+	* TODO: Update as needed based on the URL path - some endpoints need
+	* authentication...
 	*/
 
 	if (!moauthdRespondClient(client, HTTP_STATUS_CONTINUE, NULL, 0, 0))

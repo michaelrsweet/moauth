@@ -36,15 +36,6 @@
  * Types...
  */
 
-typedef struct moauthd_user_s		/**** User ****/
-{
-  char		*email,			/* Email address */
-		*username,		/* User name */
-		*realname,		/* Real name */
-		*password;		/* Hashed password */
-  cups_array_t	*scopes;		/* Member scopes */
-} moauthd_user_t;
-
 typedef struct moauthd_client_id_s	/**** Client (Application) ID ****/
 {
   char		*client_id;		/* Client identifier */
@@ -69,7 +60,6 @@ typedef struct moauthd_resource_s	/**** Resource ****/
 			*local_path,	/* Local path */
 			*scope;		/* Access scope */
   size_t		remote_len;	/* Length of remote path */
-  moauthd_user_t	*owner;		/* Owning user (not used for MOAUTHD_RESTYPE_USERDIR) */
   const void		*data;		/* Data (static files) */
   size_t		length;		/* Length (static files) */
 } moauthd_resource_t;
@@ -89,7 +79,8 @@ typedef struct moauthd_token_s		/**** Token ****/
   char			*token,		/* Token string */
 			*redirect_uri;	/* Redirection URI used */
   cups_array_t		*scopes;	/* Scopes */
-  moauthd_user_t	*user;		/* Authenticated user */
+  char			user[256];	/* Authenticated user */
+  uid_t			uid;		/* Authenticated UID */
 } moauthd_token_t;
 
 
@@ -101,6 +92,11 @@ typedef enum moauthd_loglevel_e		/**** Log Levels ****/
 } moauthd_loglevel_t;
 
 
+typedef enum moauthd_option_e		/**** Server options ****/
+{
+  MOAUTHD_OPTION_BASIC_AUTH = 1		/* Enable Basic authentication as a backup */
+} moauthd_option_t;
+
 typedef struct moauthd_server_s		/**** Server ****/
 {
   char		*name;			/* Server hostname */
@@ -111,12 +107,13 @@ typedef struct moauthd_server_s		/**** Server ****/
   int		num_listeners;		/* Number of listener sockets */
   struct pollfd	listeners[MOAUTHD_MAX_LISTENERS];
 					/* Listener sockets */
+  unsigned	options;		/* Server option flags */
   cups_array_t	*resources;		/* Resources that are shared */
   pthread_rwlock_t resources_lock;	/* R/W lock for resources array */
   cups_array_t	*scopes;		/* Scopes */
   cups_array_t	*tokens;		/* Tokens that have been issued */
-  cups_array_t	*users;			/* Users */
   time_t	start_time;		/* Startup time */
+  char		*test_password;		/* Testing password */
 } moauthd_server_t;
 
 
@@ -130,6 +127,7 @@ typedef struct moauthd_client_s		/**** Client Information ****/
 		*query_string;		/* Query string (if any) */
   char		remote_host[256],	/* Remote hostname */
 		remote_user[256];	/* Authenticated username */
+  uid_t		remote_uid;		/* Authenticated UID */
 } moauthd_client_t;
 
 
@@ -137,6 +135,7 @@ typedef struct moauthd_client_s		/**** Client Information ****/
  * Functions...
  */
 
+extern int		moauthdAuthenticateUser(moauthd_server_t *server, const char *username, const char *password);
 extern moauthd_client_t	*moauthdCreateClient(moauthd_server_t *server, int fd);
 extern moauthd_resource_t *moauthdCreateResource(moauthd_server_t *server, moauthd_restype_t type, const char *remote_path, const char *local_path, const char *scope);
 extern moauthd_server_t	*moauthdCreateServer(const char *configfile, int verbosity);
