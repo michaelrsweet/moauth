@@ -43,6 +43,7 @@ The following directives are currently recognized:
   name of "oauth.example.com" and a port number of 9443.  The default host name
   is the configured host name of the system.  The default port number is 9nnn
   where 'nnn' is the bottom three digits of your user UI.
+- `TestPassword`: Specifies a test password to use for all accounts.
 
 The log level specified in the configuration file is also affected by the `-v`
 option, so if the configuration file specifies `LogLevel info` but you run
