@@ -128,9 +128,10 @@ moauthdFindResource(
       * Directory match...
       */
 
-      const char *path_ptr = path_info + best->remote_len - (best->remote_len == 1);
-
-      snprintf(name, namesize, "%s%s", best->local_path, path_ptr);
+      if (best->remote_len == 1)
+	snprintf(name, namesize, "%s%s", best->local_path, path_info);
+      else
+	snprintf(name, namesize, "%s%s", best->local_path, path_info + best->remote_len);
     }
     else
     {
@@ -286,13 +287,38 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
       * Serve a Markdown file...
       */
 
-      mmd_t	*doc = mmdLoad(localfile);
-					/* Markdown document */
+      mmd_t *doc = mmdLoad(localfile);	/* Markdown document */
       const char *title = mmdGetMetadata(doc, "title");
 					/* Document title */
+      char buffer[1024], *bufptr;	/* Temporary buffer */
 
       if (!title)
-        title = strrchr(client->path_info, '/') + 1;
+      {
+        mmd_t *node;			/* Current Markdown node */
+
+        for (node = mmdGetFirstChild(doc); node; node = mmdGetNextSibling(node))
+        {
+          if (mmdGetType(node) == MMD_TYPE_HEADING_1)
+          {
+            buffer[sizeof(buffer) - 1] = '\0';
+
+            for (bufptr = buffer, node = mmdGetFirstChild(node); node && bufptr < (buffer + sizeof(buffer) - 2); node = mmdGetNextSibling(node))
+            {
+              if (mmdGetWhitespace(node))
+                *bufptr++ = ' ';
+	      strncpy(bufptr, mmdGetText(node), sizeof(buffer) - (bufptr - buffer) - 1);
+	      bufptr += strlen(bufptr);
+	    }
+
+	    *bufptr = '\0';
+	    title   = buffer;
+            break;
+	  }
+	}
+
+	if (!title)
+          title = strrchr(client->path_info, '/') + 1;
+      }
 
       moauthdRespondClient(client, HTTP_STATUS_OK, content_type, localinfo.st_mtime, 0);
       moauthdHTMLHeader(client, title);

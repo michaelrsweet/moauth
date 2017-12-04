@@ -6,21 +6,52 @@
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
 
+/* Basic appearance */
 body {
   background: white;
   color: black;
   font-family: sans-serif;
+  font-size: 20px;
+  margin: 0px 20px;
+}
+
+a:link, a:link:hover, a:link:visited {
+  color: #00c;
+}
+
+a:active {
+  color: #00f;
 }
 
 input[type="text"], input[type="email"], input[type="password"] {
   font-family: monospace;
 }
 
-blockquote, pre {
-  background: rgba(127,127,127,0.1);
-  border-left: solid 2px #7f7f7f;
+p {
+  text-align: justify;
+}
+
+pre, code {
+  background: #eee;
+}
+
+pre {
   margin: 1em 40px;
-  padding: 5px;
+  padding: 10px;
+}
+
+code {
+  padding: 1px 5px;
+}
+
+pre code {
+  padding: 0px;
+}
+
+blockquote {
+  border-left: solid 2px #777;
+  margin: 1em 40px;
+  padding: 10px;
 }
 
 blockquote p {
