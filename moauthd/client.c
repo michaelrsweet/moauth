@@ -220,6 +220,7 @@ moauthdRunClient(
 					/* Length of username:password */
         struct passwd *user;		/* User information */
 
+
         for (authorization += 6; *authorization && isspace(*authorization & 255); authorization ++);
 
         httpDecode64_2(username, &userlen, authorization);
@@ -242,7 +243,7 @@ moauthdRunClient(
 	    moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authentication of \"%s\" failed.", username);
 	}
 	else
-	  moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad Authorizztion value.");
+	  moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad Authorization value.");
       }
       else
       {
@@ -250,20 +251,11 @@ moauthdRunClient(
         * Unsupported Authorization scheme...
         */
 
-        char	scheme[32],		/* Scheme name */
-		*sptr;			/* Pointer into scheme */
+        char	scheme[32];		/* Scheme name */
 
         strncpy(scheme, authorization, sizeof(scheme) - 1);
         scheme[sizeof(scheme) - 1] = '\0';
-
-        for (sptr = scheme; *sptr; sptr ++)
-        {
-          if (isspace(*sptr & 255))
-          {
-            *sptr = '\0';
-            break;
-	  }
-	}
+        strtok(scheme, " \t");
 
 	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unsupported Authorization scheme \"%s\".", scheme);
       }

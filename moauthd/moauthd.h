@@ -29,7 +29,7 @@
  * Constants...
  */
 
-#  define MOAUTHD_MAX_LISTENERS	100	/* Maximum number of listener sockets */
+#  define MOAUTHD_MAX_LISTENERS	4	/* Maximum number of listener sockets */
 
 
 /*

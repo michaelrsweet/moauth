@@ -154,47 +154,15 @@ moauthdCreateServer(
 	  goto create_failed;
         }
 
-        scope = value;
-        while (*value && !isspace(*value & 255))
-          value ++;
+        scope       = strtok(value, " \t");
+        remote_path = strtok(NULL, " \t");
+        local_path  = strtok(NULL, " \t");
 
-        if (!*value)
+        if (!scope || !remote_path || !local_path)
         {
 	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
 	  goto create_failed;
 	}
-
-        *value++ = '\0';
-        while (*value && isspace(*value & 255))
-          value ++;
-
-	if (!*value)
-        {
-	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
-	  goto create_failed;
-	}
-
-        remote_path = value;
-        while (*value && !isspace(*value & 255))
-          value ++;
-
-        if (!*value)
-        {
-	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
-	  goto create_failed;
-	}
-
-        *value++ = '\0';
-        while (*value && isspace(*value & 255))
-          value ++;
-
-	if (!*value)
-        {
-	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
-	  goto create_failed;
-	}
-
-        local_path = value;
 
         if (stat(local_path, &local_info))
         {
@@ -279,7 +247,7 @@ moauthdCreateServer(
     if (server->num_listeners >= (int)(sizeof(server->listeners) / sizeof(server->listeners[0])))
     {
      /*
-      * Unlikely, but ignore more than N (currently 100) listeners...
+      * Unlikely, but ignore more than N listeners...
       */
 
       fputs("moauthd: Ignoring extra listener addresses.\n", stderr);
