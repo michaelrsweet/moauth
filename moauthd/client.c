@@ -128,7 +128,7 @@ moauthdRunClient(
 
     if (state == HTTP_STATE_ERROR)
     {
-      if (httpError(client->http) == EPIPE || httpError(client->http) == 0)
+      if (httpError(client->http) == EPIPE || httpError(client->http) == ETIMEDOUT || httpError(client->http) == 0)
 	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Client closed connection.");
       else
 	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad request line (%s).", strerror(httpError(client->http)));
