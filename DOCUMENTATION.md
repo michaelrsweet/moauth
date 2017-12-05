@@ -31,6 +31,8 @@ LogFile /var/log/moauthd.log
 
 The following directives are currently recognized:
 
+- `Application`: Specifies a client ID and redirect URI pair to allow when
+  authorizing.
 - `LogFile`: Specifies the file for log messages.  The filename can be "stderr"
   to send messages to the standard error file, "syslog" to send messages to the
   syslog daemon, or "none" to disable logging.

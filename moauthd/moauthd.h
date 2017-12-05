@@ -36,11 +36,11 @@
  * Types...
  */
 
-typedef struct moauthd_client_id_s	/**** Client (Application) ID ****/
+typedef struct moauthd_application_s	/**** Application (Client) ****/
 {
-  char		*client_id;		/* Client identifier */
-  cups_array_t	*redirect_uris;		/* Allowed redirection URIs */
-} moauthd_client_id_t;
+  char	*client_id,			/* Client identifier */
+	*redirect_uri;			/* Redirection URI */
+} moauthd_application_t;
 
 
 typedef enum moauthd_restype_e		/**** Resource Types ****/
@@ -77,10 +77,11 @@ typedef struct moauthd_token_s		/**** Token ****/
 {
   moauthd_toktype_t	type;		/* Type of token */
   char			*token,		/* Token string */
-			*redirect_uri;	/* Redirection URI used */
-  cups_array_t		*scopes;	/* Scopes */
-  char			user[256];	/* Authenticated user */
+			*redirect_uri,	/* Redirection URI used */
+			*user;		/* Authenticated user */
+  cups_array_t		*scopes;	/* Scope(s) */
   uid_t			uid;		/* Authenticated UID */
+  time_t		expires;	/* When the token expires */
 } moauthd_token_t;
 
 
@@ -97,6 +98,7 @@ typedef enum moauthd_option_e		/**** Server options ****/
   MOAUTHD_OPTION_BASIC_AUTH = 1		/* Enable Basic authentication as a backup */
 } moauthd_option_t;
 
+
 typedef struct moauthd_server_s		/**** Server ****/
 {
   char		*name;			/* Server hostname */
@@ -108,9 +110,10 @@ typedef struct moauthd_server_s		/**** Server ****/
   struct pollfd	listeners[MOAUTHD_MAX_LISTENERS];
 					/* Listener sockets */
   unsigned	options;		/* Server option flags */
+  cups_array_t	*applications;		/* "Registered" applications */
+  pthread_mutex_t applications_lock;	/* Mutex for applications array */
   cups_array_t	*resources;		/* Resources that are shared */
   pthread_rwlock_t resources_lock;	/* R/W lock for resources array */
-  cups_array_t	*scopes;		/* Scopes */
   cups_array_t	*tokens;		/* Tokens that have been issued */
   time_t	start_time;		/* Startup time */
   char		*test_password;		/* Testing password */
@@ -126,8 +129,9 @@ typedef struct moauthd_client_s		/**** Client Information ****/
   char		path_info[4096],	/* Request path/URI */
 		*query_string;		/* Query string (if any) */
   char		remote_host[256],	/* Remote hostname */
-		remote_user[256];	/* Authenticated username */
-  uid_t		remote_uid;		/* Authenticated UID */
+		remote_user[256];	/* Authenticated username, if any */
+  uid_t		remote_uid;		/* Authenticated UID, if any */
+  moauthd_token_t *remote_token;	/* Access token used, if any */
 } moauthd_client_t;
 
 

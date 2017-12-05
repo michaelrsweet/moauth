@@ -16,6 +16,15 @@
 
 
 /*
+ * Local functions...
+ */
+
+static int	compare_applications(moauthd_application_t *a, moauthd_application_t *b);
+static moauthd_application_t *copy_application(moauthd_application_t *a);
+static void	free_application(moauthd_application_t *a);
+
+
+/*
  * 'moauthdCreateServer()' - Create a new server object and load the specified config file.
  */
 
@@ -73,7 +82,35 @@ moauthdCreateServer(
 
     while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
     {
-      if (!strcasecmp(line, "LogFile"))
+      if (!strcasecmp(line, "Application"))
+      {
+       /*
+        * Application client-id redirect-uri
+        */
+
+        moauthd_application_t temp;	/* New application object */
+
+        if (!value)
+        {
+          fprintf(stderr, "moauthd: Missing client ID and redirect URI on line %d of \"%s\".\n", linenum, configfile);
+          goto create_failed;
+        }
+
+        temp.client_id    = strtok(value, " \t");
+        temp.redirect_uri = strtok(NULL, " \t");
+
+        if (!temp.client_id || !*temp.client_id || !temp.redirect_uri || !*temp.redirect_uri)
+        {
+          fprintf(stderr, "moauthd: Missing client ID and redirect URI on line %d of \"%s\".\n", linenum, configfile);
+          goto create_failed;
+        }
+
+        if (!server->applications)
+          server->applications = cupsArrayNew3((cups_array_func_t)compare_applications, NULL, NULL, 0, (cups_acopy_func_t)copy_application, (cups_afree_func_t)free_application);
+
+        cupsArrayAdd(server->applications, &temp);
+      }
+      else if (!strcasecmp(line, "LogFile"))
       {
        /*
         * LogFile {filename,none,stderr,syslog}
@@ -284,6 +321,7 @@ moauthdCreateServer(
 
   time(&server->start_time);
 
+  pthread_mutex_init(&server->applications_lock, NULL);
   pthread_rwlock_init(&server->resources_lock, NULL);
 
   if (!moauthdFindResource(server, "/moauth.png", temp, sizeof(temp), &tempinfo))
@@ -344,10 +382,11 @@ moauthdDeleteServer(
   for (i = 0; i < server->num_listeners; i ++)
     httpAddrClose(NULL, server->listeners[i].fd);
 
+  cupsArrayDelete(server->applications);
   cupsArrayDelete(server->resources);
-  cupsArrayDelete(server->scopes);
   cupsArrayDelete(server->tokens);
 
+  pthread_mutex_destroy(&server->applications_lock);
   pthread_rwlock_destroy(&server->resources_lock);
 
   if (server->test_password)
@@ -422,4 +461,52 @@ moauthdRunServer(
   }
 
   return (0);
+}
+
+
+/*
+ * 'compare_applications()' - Compare two application registrations.
+ */
+
+static int				/* O - Result of comparison */
+compare_applications(
+    moauthd_application_t *a,		/* I - First application */
+    moauthd_application_t *b)		/* I - Second application */
+{
+  return (strcmp(a->client_id, b->client_id));
+}
+
+
+/*
+ * 'copy_application()' - Make a copy of an application object.
+ */
+
+static moauthd_application_t *		/* O - New application object */
+copy_application(
+    moauthd_application_t *a)		/* I - Application object */
+{
+  moauthd_application_t	*na;		/* New application object */
+
+
+  if ((na = (moauthd_application_t *)calloc(1, sizeof(moauthd_application_t))) != NULL)
+  {
+    na->client_id    = strdup(a->client_id);
+    na->redirect_uri = strdup(a->redirect_uri);
+  }
+
+  return (na);
+}
+
+
+/*
+ * 'free_application()' - Free an application object.
+ */
+
+static void
+free_application(
+    moauthd_application_t *a)		/* I - Application object */
+{
+  free(a->client_id);
+  free(a->redirect_uri);
+  free(a);
 }
