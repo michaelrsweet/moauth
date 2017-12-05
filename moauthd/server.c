@@ -62,9 +62,9 @@ moauthdCreateServer(
 
   server = calloc(1, sizeof(moauthd_server_t));
 
-  server->log_file  = 2;
-  server->log_level = MOAUTHD_LOGLEVEL_ERROR;
-
+  server->log_file       = 2;		/* stderr */
+  server->log_level      = MOAUTHD_LOGLEVEL_ERROR;
+  server->max_token_life = 604800;	/* 1 week */
   httpGetHostname(NULL, server_name, sizeof(server_name));
   ptr = server_name + strlen(server_name) - 1;
   if (ptr > server_name && *ptr == '.')
@@ -157,10 +157,45 @@ moauthdCreateServer(
 	  fprintf(stderr, "moauthd: Unknown LogLevel \"%s\" on line %d of \"%s\" ignored.\n", value, linenum, configfile);
 	}
       }
+      else if (!strcasecmp(line, "MaxTokenLife"))
+      {
+       /*
+        * MaxTokenLife NNN{m,h,d,w}
+        *
+        * Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
+        * and "w" is weeks.
+        */
+
+        int	max_token_life;		/* Maximum token life value */
+        char	*units;			/* Units at end of number */
+
+        if (!value)
+        {
+          fprintf(stderr, "moauthd: Missing time value on line %d of \"%s\".\n", linenum, configfile);
+          goto create_failed;
+	}
+
+        max_token_life = (int)strtol(value, &units, 10);
+        if (!strcasecmp(units, "m"))
+          max_token_life *= 60;
+	else if (!strcasecmp(units, "h"))
+	  max_token_life *= 3600;
+	else if (!strcasecmp(units, "d"))
+	  max_token_life *= 86400;
+	else if (!strcasecmp(units, "w"))
+	  max_token_life *= 604800;
+	else
+	{
+          fprintf(stderr, "moauthd: Unknown time value \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+          goto create_failed;
+	}
+
+        server->max_token_life = max_token_life;
+      }
       else if (!strcasecmp(line, "Option"))
       {
        /*
-        * Option {BasicAuth}
+        * Option {[-]BasicAuth}
         */
 
         if (!value)
@@ -323,6 +358,19 @@ moauthdCreateServer(
 
   pthread_mutex_init(&server->applications_lock, NULL);
   pthread_rwlock_init(&server->resources_lock, NULL);
+  pthread_rwlock_init(&server->tokens_lock, NULL);
+
+  if (!server->secret)
+  {
+   /*
+    * Generate a random secret string that is used when creating token UUIDs.
+    */
+
+    for (ptr = temp; ptr < (temp + sizeof(temp) - 1); ptr ++)
+      *ptr = (arc4random() % 95) + ' ';
+    *ptr = '\0';
+    server->secret = strdup(temp);
+  }
 
   if (!moauthdFindResource(server, "/moauth.png", temp, sizeof(temp), &tempinfo))
   {

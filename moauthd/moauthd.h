@@ -110,11 +110,15 @@ typedef struct moauthd_server_s		/**** Server ****/
   struct pollfd	listeners[MOAUTHD_MAX_LISTENERS];
 					/* Listener sockets */
   unsigned	options;		/* Server option flags */
+  int		max_token_life;		/* Maximum life of a token in seconds */
+  int		num_tokens;		/* Number of tokens issued */
+  char		*secret;		/* Secret value string for this invocation */
   cups_array_t	*applications;		/* "Registered" applications */
   pthread_mutex_t applications_lock;	/* Mutex for applications array */
   cups_array_t	*resources;		/* Resources that are shared */
   pthread_rwlock_t resources_lock;	/* R/W lock for resources array */
   cups_array_t	*tokens;		/* Tokens that have been issued */
+  pthread_rwlock_t tokens_lock;		/* R/W lock for tokens array */
   time_t	start_time;		/* Startup time */
   char		*test_password;		/* Testing password */
 } moauthd_server_t;
@@ -143,9 +147,11 @@ extern int		moauthdAuthenticateUser(moauthd_server_t *server, const char *userna
 extern moauthd_client_t	*moauthdCreateClient(moauthd_server_t *server, int fd);
 extern moauthd_resource_t *moauthdCreateResource(moauthd_server_t *server, moauthd_restype_t type, const char *remote_path, const char *local_path, const char *scope);
 extern moauthd_server_t	*moauthdCreateServer(const char *configfile, int verbosity);
+extern moauthd_token_t	*moauthdCreateToken(moauthd_server_t *server, moauthd_toktype_t type, const char *redirect_uri, const char *user, const char *scopes);
 extern void		moauthdDeleteClient(moauthd_client_t *client);
 extern void		moauthdDeleteServer(moauthd_server_t *server);
 extern moauthd_resource_t *moauthdFindResource(moauthd_server_t *server, const char *path_info, char *name, size_t namesize, struct stat *info);
+extern moauthd_token_t	*moauthdFindToken(moauthd_server_t *server, const char *token_id);
 extern int		moauthdGetFile(moauthd_client_t *client);
 extern void		moauthdHTMLFooter(moauthd_client_t *client);
 extern void		moauthdHTMLHeader(moauthd_client_t *client, const char *title);

@@ -38,6 +38,7 @@ The following directives are currently recognized:
   syslog daemon, or "none" to disable logging.
 - `LogLevel`: Specifies the logging level - "error", "info", or "debug".  The
   default level is "error" so that only errors are logged.
+- `MaxTokenLife`: Specifies the maximum life of issued tokens in seconds ("42"), minutes ("42m"), hours ("42h"), days ("42d"), or weeks ("42w").  The default is one week.
 - `Resource`: Specifies a remotely accessible file or directory resource.  See
   below for examples and details.
 - `ServerName`: Specifies the host name and (optionally) port number to bind to,

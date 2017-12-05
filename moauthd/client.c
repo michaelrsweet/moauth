@@ -214,6 +214,10 @@ moauthdRunClient(
     {
       if (!strncmp(authorization, "Basic ", 6))
       {
+       /*
+        * Basic authentication...
+        */
+
 	char	username[512],		/* Username value */
 		*password;		/* Password value */
         int	userlen = sizeof(username);
@@ -232,18 +236,62 @@ moauthdRunClient(
           {
             if ((user = getpwnam(username)) != NULL)
 	    {
-	      moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authenticated as \"%s\".", username);
+	      moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authenticated as \"%s\" using Basic.", username);
 	      strncpy(client->remote_user, username, sizeof(client->remote_user) - 1);
 	      client->remote_uid = user->pw_uid;
 	    }
 	    else
+	    {
 	      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup user \"%s\".", username);
+	    }
 	  }
 	  else
-	    moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authentication of \"%s\" failed.", username);
+	  {
+	    moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Basic authentication of \"%s\" failed.", username);
+	  }
 	}
 	else
-	  moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad Authorization value.");
+	{
+	  moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad Basic Authorization value.");
+	}
+      }
+      else if (!strncmp(authorization, "Bearer ", 7))
+      {
+       /*
+        * Bearer (OAuth) token...
+        */
+
+        moauthd_token_t *token;		/* Access token */
+
+        for (authorization += 7; *authorization && isspace(*authorization & 255); authorization ++);
+
+        if ((token = moauthdFindToken(client->server, authorization)) != NULL)
+        {
+          if (token->expires <= time(NULL))
+          {
+	    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bearer token has expired.");
+
+            pthread_rwlock_wrlock(&client->server->tokens_lock);
+            cupsArrayRemove(client->server->tokens, token);
+            pthread_rwlock_unlock(&client->server->tokens_lock);
+
+            token = NULL;
+          }
+          else if (token->type != MOAUTHD_TOKTYPE_ACCESS)
+          {
+	    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bearer token is of the wrong type.");
+
+            token = NULL;
+	  }
+	}
+
+        if (token)
+        {
+	  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authenticated as \"%s\" using Bearer.", token->user);
+          client->remote_token = token;
+          client->remote_uid   = token->uid;
+          strncpy(client->remote_user, token->user, sizeof(client->remote_user) - 1);
+        }
       }
       else
       {
@@ -262,7 +310,7 @@ moauthdRunClient(
 
       if (!client->remote_user[0])
       {
-	moauthdRespondClient(client, HTTP_STATUS_FORBIDDEN, NULL, 0, 0);
+	moauthdRespondClient(client, HTTP_STATUS_UNAUTHORIZED, NULL, 0, 0);
 	break;
       }
     }
