@@ -31,6 +31,22 @@ div.form {
   width: 50%;
 }
 
+div.form-group label {
+  display: inline-block;
+  text-align: right;
+  vertical-align: middle;
+  width: 40%;
+}
+
+div.form-group input {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+div.form-group input[type="submit"] {
+  margin-left: 42%;
+}
+
 input[type="text"], input[type="email"], input[type="password"] {
   font-family: monospace;
 }
@@ -45,6 +61,7 @@ pre, code {
 
 pre {
   margin: 1em 40px;
+  overflow-x: scroll;
   padding: 10px;
 }
 
@@ -54,6 +71,13 @@ code {
 
 pre code {
   padding: 0px;
+}
+
+kbd {
+  background: black;
+  border-radius: 2px;
+  color: white;
+  padding: 1px 5px;
 }
 
 blockquote {
@@ -87,19 +111,33 @@ blockquote p {
 }
 
 /* iPhone/iPod touch overrides */
-@media (max-device-width: 480px), (max-device-width: 568px) {
+@media (max-width: 480px) {
+  body {
+    margin: 0px 10px;
+  }
+  div.form {
+    background: center top no-repeat url(/moauth.png);
+/*    margin: 0 10px;*/
+    padding-left: 0px;
+    padding-top: 128px;
+    width: auto;
+  }
+  div.form-group label {
+    text-align: left;
+    width: 100%;
+  }
+
+  div.form-group input[type="submit"] {
+    margin-left: 0;
+  }
+
+  blockquote, pre {
+    margin: 1em 0px;
+  }
   /* 6-column layout becomes 12-columns */
   .row .col-6 {
     float: none;
     margin: 0;
-    width: 100%;
-  }
-  div.form {
-    background: center top no-repeat url(/moauth.png);
-    margin-left: 0;
-    margin-right: 0;
-    padding-left: 0px;
-    padding-top: 148px;
     width: 100%;
   }
 }
