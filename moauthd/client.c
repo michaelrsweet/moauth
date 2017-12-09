@@ -11,6 +11,14 @@
 
 
 /*
+ * Local functions...
+ */
+
+static int	do_authorize(moauthd_client_t *client);
+static int	do_token(moauthd_client_t *client);
+
+
+/*
  * 'moauthdCreateClient()' - Accept a connection and create a client object.
  */
 
@@ -356,42 +364,29 @@ moauthdRunClient(
 	  break;
 
       case HTTP_STATE_HEAD :
-#if 0
-	  if (!strcmp(client->path_info, "/"))
-	  {
-	    if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", NULL, 0, 0))
-	      done = 1;
-	  }
-	  else
-#endif // 0
-	  if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
+	  if (!strcmp(client->path_info, "/authorize"))
+	    done = !do_authorize(client);
+	  else if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
 	    done = 1;
 	  break;
 
       case HTTP_STATE_GET :
-#if 0
-	  if (!strcmp(client->path_info, "/"))
-	  {
-	    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Sending home page.");
-
-	    if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", NULL, 0, 0))
-	      done = 1;
-
-            moauthdHTMLHeader(client, "Home");
-            moauthdHTMLPrintf(client, "      <h1><img src=\"/moauth.png\" width=\"32\" height=\"32\"> mOAuth " MOAUTH_VERSION "</h1>\n");
-            moauthdHTMLFooter(client);
-
-            httpFlushWrite(client->http);
-	  }
-	  else
-#endif // 0
-	  if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
+	  if (!strcmp(client->path_info, "/authorize"))
+	    done = !do_authorize(client);
+	  else if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
 	    done = 1;
 	  break;
 
       case HTTP_STATE_POST :
-	  moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, NULL, 0, 0);
-          done = 1;
+	  if (!strcmp(client->path_info, "/authorize"))
+	    done = !do_authorize(client);
+	  else if (!strcmp(client->path_info, "/token"))
+	    done = !do_token(client);
+	  else
+	  {
+	    moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, NULL, 0, 0);
+            done = 1;
+	  }
           break;
 
       default :
@@ -405,5 +400,57 @@ moauthdRunClient(
   moauthdDeleteClient(client);
 
   return (NULL);
+}
+
+
+/*
+ * 'do_authorize()' - Process a request for the /authorize endpoint.
+ */
+
+static int				/* O - 1 on success, 0 on failure */
+do_authorize(moauthd_client_t *client)	/* I - Client object */
+{
+  switch (client->request_method)
+  {
+    case HTTP_STATE_HEAD :
+        return (moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", NULL, 0, 0));
+
+    case HTTP_STATE_GET :
+        if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", NULL, 0, 0))
+          return (0);
+
+        moauthdHTMLHeader(client, "Authorization");
+        moauthdHTMLPrintf(client,
+            "<div class=\"form\">\n"
+            "  <form action=\"/authorize\" method=\"POST\">\n"
+            "    <h1>Authorization</h1>\n"
+            "    <p>Username: <input type=\"text\" name=\"username\" size=\"16\"><br>\n"
+            "    Password: <input type=\"password\" name=\"password\" size=\"16\"><br>\n"
+            "    <input type=\"submit\" value=\"Login\"></p>\n"
+            "  </form>\n"
+            "</div>\n");
+        moauthdHTMLFooter(client);
+        break;
+
+    case HTTP_STATE_POST :
+        return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+//        break;
+
+    default :
+        return (0);
+  }
+
+  return (1);
+}
+
+
+/*
+ * 'do_token()' - Process a request for the /token endpoint.
+ */
+
+static int				/* O - 1 on success, 0 on failure */
+do_token(moauthd_client_t *client)	/* I - Client object */
+{
+  return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 }
 

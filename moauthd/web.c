@@ -48,6 +48,7 @@ moauthdHTMLHeader(
       "  <head>\n"
       "    <link rel=\"stylesheet\" type=\"text/css\" href=\"/style.css\">\n"
       "    <link rel=\"shortcut icon\" type=\"image/png\" href=\"/moauth.png\">\n"
+      "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
       "    <title>%s (mOAuth " MOAUTH_VERSION ")</title>\n"
       "  </head>\n"
       "  <body>\n"

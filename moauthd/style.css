@@ -23,6 +23,14 @@ a:active {
   color: #00f;
 }
 
+div.form {
+  background: left top no-repeat url(/moauth.png);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 148px;
+  width: 50%;
+}
+
 input[type="text"], input[type="email"], input[type="password"] {
   font-family: monospace;
 }
@@ -79,12 +87,19 @@ blockquote p {
 }
 
 /* iPhone/iPod touch overrides */
-@media only screen and (min-device-width: 320px) and (max-device-width: 480px),
-       only screen and (min-device-width: 320px) and (max-device-width: 568px) {
+@media (max-device-width: 480px), (max-device-width: 568px) {
   /* 6-column layout becomes 12-columns */
   .row .col-6 {
     float: none;
     margin: 0;
+    width: 100%;
+  }
+  div.form {
+    background: center top no-repeat url(/moauth.png);
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0px;
+    padding-top: 148px;
     width: 100%;
   }
 }
