@@ -259,7 +259,8 @@ int					/* O - 1 on success, 0 on failure */
 moauthdRespondClient(
     moauthd_client_t *client,		/* I - Client */
     http_status_t    code,		/* I - HTTP status of response */
-    const char       *type_or_uri,	/* I - MIME media type or URI of response */
+    const char       *type,		/* I - MIME media type */
+    const char       *uri,		/* I - URI of response */
     time_t           mtime,		/* I - Last modified date and time */
     size_t           length)		/* I - Length of response or 0 for chunked */
 {
@@ -281,12 +282,12 @@ moauthdRespondClient(
   * Format an error message...
   */
 
-  if (!type_or_uri && !length && code != HTTP_STATUS_OK && code != HTTP_STATUS_SWITCHING_PROTOCOLS && code != HTTP_STATUS_MOVED_PERMANENTLY && code != HTTP_STATUS_MOVED_TEMPORARILY)
+  if (!type && !length && code != HTTP_STATUS_OK && code != HTTP_STATUS_SWITCHING_PROTOCOLS)
   {
     snprintf(message, sizeof(message), "%d - %s\n", code, httpStatus(code));
 
-    type_or_uri = "text/plain";
-    length      = strlen(message);
+    type   = "text/plain";
+    length = strlen(message);
   }
   else
     message[0] = '\0';
@@ -311,21 +312,22 @@ moauthdRespondClient(
   if (mtime)
     httpSetField(client->http, HTTP_FIELD_LAST_MODIFIED, httpGetDateString(mtime));
 
-  if (type_or_uri)
+  if (code == HTTP_STATUS_MOVED_PERMANENTLY || code == HTTP_STATUS_MOVED_TEMPORARILY)
   {
-    if (code == HTTP_STATUS_MOVED_PERMANENTLY || code == HTTP_STATUS_MOVED_TEMPORARILY)
-    {
-      httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, "text/plain");
-      httpSetField(client->http, HTTP_FIELD_LOCATION, type_or_uri);
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Location: %s", type_or_uri);
+    httpSetField(client->http, HTTP_FIELD_LOCATION, uri);
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Location: %s", uri);
+  }
+  else if (uri)
+  {
+    httpSetField(client->http, HTTP_FIELD_CONTENT_LOCATION, uri);
+  }
 
-      snprintf(message, sizeof(message), "%d - %s\n", code, httpStatus(code));
-      length = strlen(message);
-    }
-    else if (!strcmp(type_or_uri, "text/html"))
+  if (type)
+  {
+    if (!strcmp(type, "text/html"))
       httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, "text/html; charset=utf-8");
     else
-      httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, type_or_uri);
+      httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, type);
   }
 
   httpSetLength(client->http, length);

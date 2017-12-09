@@ -186,7 +186,8 @@ int					/* O - HTTP status */
 moauthdGetFile(moauthd_client_t *client)/* I - Client object */
 {
   moauthd_resource_t	*best;		/* Matching resource */
-  char			localfile[1024];/* Local filename */
+  char			uri[1024],	/* Content-URI value */
+			localfile[1024];/* Local filename */
   struct stat		localinfo;	/* Local file information */
   const char		*ext,		/* Extension on local file */
 			*content_type;	/* Content type of file */
@@ -198,7 +199,7 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
 
   if ((best = moauthdFindResource(client->server, client->path_info, localfile, sizeof(localfile), &localinfo)) == NULL)
   {
-    moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, 0, 0);
+    moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, NULL, 0, 0);
     return (HTTP_STATUS_NOT_FOUND);
   }
 
@@ -217,7 +218,7 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
       http_status_t status = client->remote_user[0] ? HTTP_STATUS_FORBIDDEN : HTTP_STATUS_UNAUTHORIZED;
 					/* Returned HTTP status */
 
-      moauthdRespondClient(client, status, NULL, 0, 0);
+      moauthdRespondClient(client, status, NULL, NULL, 0, 0);
 
       return (status);
     }
@@ -237,42 +238,52 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
 		*ptr;			/* Pointer into path_info */
 
     ptr = client->path_info + strlen(client->path_info) - 1;
-    if (ptr >= client->path_info && *ptr == '/')
-      *ptr = '\0';			/* Strip trailing slash */
+    if (ptr >= client->path_info && *ptr != '/')
+    {
+     /*
+      * No trailing slash, need to redirect...
+      */
+
+      httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, "%s/", client->path_info);
+      moauthdRespondClient(client, HTTP_STATUS_MOVED_PERMANENTLY, NULL, uri, 0, 0);
+      return (HTTP_STATUS_MOVED_PERMANENTLY);
+    }
 
     snprintf(temp, sizeof(temp), "%s/index.md", localfile);
-    if (!access(localfile, R_OK))
+    if (!stat(localfile, &localinfo))
     {
-      httpAssembleURIf(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", NULL, client->server->name, client->server->port, "%s/index.md", client->path_info);
+      strncpy(localfile, temp, sizeof(localfile) - 1);
+      localfile[sizeof(localfile) - 1] = '\0';
+
+      httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, "%sindex.md", client->path_info);
     }
     else
     {
       snprintf(temp, sizeof(temp), "%s/index.html", localfile);
 
-      if (!access(temp, R_OK))
+      if (!stat(localfile, &localinfo))
       {
-        httpAssembleURIf(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", NULL, client->server->name, client->server->port, "%s/index.html", client->path_info);
+        strncpy(localfile, temp, sizeof(localfile) - 1);
+        localfile[sizeof(localfile) - 1] = '\0';
+
+        httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, "%sindex.html", client->path_info);
       }
       else
       {
-	moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, 0, 0);
+	moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, NULL, 0, 0);
 	return (HTTP_STATUS_NOT_FOUND);
       }
     }
-
-    moauthdRespondClient(client, HTTP_STATUS_MOVED_TEMPORARILY, temp, 0, 0);
-    return (HTTP_STATUS_MOVED_TEMPORARILY);
   }
+  else
+    httpAssembleURI(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, client->path_info);
 
  /*
   * Serve the file...
   */
 
-  if ((ext = strrchr(client->path_info, '.')) == NULL)
-  {
-    if ((ext = strrchr(localfile, '.')) == NULL)
-      ext = ".txt";
-  }
+  if ((ext = strrchr(uri, '.')) == NULL)
+    ext = ".txt";
 
   if (!strcmp(ext, ".css"))
     content_type = "text/css";
@@ -297,7 +308,7 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
       * Serve a static/cached file...
       */
 
-      moauthdRespondClient(client, HTTP_STATUS_OK, content_type, localinfo.st_mtime, best->length);
+      moauthdRespondClient(client, HTTP_STATUS_OK, content_type, uri, localinfo.st_mtime, best->length);
 
       if (httpWrite2(client->http, best->data, best->length) < best->length)
         return (HTTP_STATUS_BAD_REQUEST);
@@ -341,7 +352,7 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
           title = strrchr(client->path_info, '/') + 1;
       }
 
-      moauthdRespondClient(client, HTTP_STATUS_OK, content_type, localinfo.st_mtime, 0);
+      moauthdRespondClient(client, HTTP_STATUS_OK, content_type, uri, localinfo.st_mtime, 0);
       moauthdHTMLHeader(client, title);
       write_block(client, doc);
       moauthdHTMLFooter(client);
@@ -358,7 +369,7 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
 
       if ((fd = open(localfile, O_RDONLY)) >= 0)
       {
-	moauthdRespondClient(client, HTTP_STATUS_OK, content_type, localinfo.st_mtime, localinfo.st_size);
+	moauthdRespondClient(client, HTTP_STATUS_OK, content_type, uri, localinfo.st_mtime, localinfo.st_size);
 
         while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
           httpWrite2(client->http, buffer, (size_t)bytes);
@@ -367,7 +378,7 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
       }
       else
       {
-	moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
+	moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
 	return (HTTP_STATUS_BAD_REQUEST);
       }
     }

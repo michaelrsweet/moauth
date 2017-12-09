@@ -138,13 +138,13 @@ moauthdRunClient(
     else if (state == HTTP_STATE_UNKNOWN_METHOD)
     {
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad/unknown operation.");
-      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
       break;
     }
     else if (state == HTTP_STATE_UNKNOWN_VERSION)
     {
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad HTTP version.");
-      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
       break;
     }
 
@@ -179,7 +179,7 @@ moauthdRunClient(
       */
 
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad request URI \"%s\".", client->path_info);
-      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
       break;
     }
 
@@ -192,7 +192,7 @@ moauthdRunClient(
       */
 
       moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Problem getting request headers.");
-      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
       break;
     }
 
@@ -203,7 +203,7 @@ moauthdRunClient(
       */
 
       moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Bad Host: header value \"%s\" (expected \"%s\").", httpGetField(client->http, HTTP_FIELD_HOST), host_value);
-      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
+      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
       break;
     }
 
@@ -310,7 +310,7 @@ moauthdRunClient(
 
       if (!client->remote_user[0])
       {
-	moauthdRespondClient(client, HTTP_STATUS_UNAUTHORIZED, NULL, 0, 0);
+	moauthdRespondClient(client, HTTP_STATUS_UNAUTHORIZED, NULL, NULL, 0, 0);
 	break;
       }
     }
@@ -330,7 +330,7 @@ moauthdRunClient(
 	* authentication...
 	*/
 
-	if (!moauthdRespondClient(client, HTTP_STATUS_CONTINUE, NULL, 0, 0))
+	if (!moauthdRespondClient(client, HTTP_STATUS_CONTINUE, NULL, NULL, 0, 0))
 	  break;
       }
       else
@@ -339,7 +339,7 @@ moauthdRunClient(
 	* Send 417-expectation-failed header...
 	*/
 
-	if (!moauthdRespondClient(client, HTTP_STATUS_EXPECTATION_FAILED, NULL, 0, 0))
+	if (!moauthdRespondClient(client, HTTP_STATUS_EXPECTATION_FAILED, NULL, NULL, 0, 0))
 	  break;
       }
     }
@@ -351,17 +351,20 @@ moauthdRunClient(
 	  * Do OPTIONS command...
 	  */
 
-	  if (!moauthdRespondClient(client, HTTP_STATUS_OK, NULL, 0, 0))
+	  if (!moauthdRespondClient(client, HTTP_STATUS_OK, NULL, NULL, 0, 0))
 	    done = 1;
 	  break;
 
       case HTTP_STATE_HEAD :
+#if 0
 	  if (!strcmp(client->path_info, "/"))
 	  {
-	    if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", 0, 0))
+	    if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", NULL, 0, 0))
 	      done = 1;
 	  }
-	  else if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
+	  else
+#endif // 0
+	  if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
 	    done = 1;
 	  break;
 
@@ -371,7 +374,7 @@ moauthdRunClient(
 	  {
 	    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Sending home page.");
 
-	    if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", 0, 0))
+	    if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", NULL, 0, 0))
 	      done = 1;
 
             moauthdHTMLHeader(client, "Home");
@@ -387,13 +390,13 @@ moauthdRunClient(
 	  break;
 
       case HTTP_STATE_POST :
-	  moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, 0, 0);
+	  moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, NULL, 0, 0);
           done = 1;
           break;
 
       default :
 	  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Unexpected HTTP state %d.", client->request_method);
-	  moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, 0, 0);
+	  moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
           done = 1;
 	  break;
     }

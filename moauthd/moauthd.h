@@ -158,7 +158,7 @@ extern void		moauthdHTMLHeader(moauthd_client_t *client, const char *title);
 extern void		moauthdHTMLPrintf(moauthd_client_t *client, const char *format, ...) __attribute__((__format__(__printf__, 2, 3)));
 extern void		moauthdLogc(moauthd_client_t *client, moauthd_loglevel_t level, const char *message, ...) __attribute__((__format__(__printf__, 3, 4)));
 extern void		moauthdLogs(moauthd_server_t *server, moauthd_loglevel_t level, const char *message, ...) __attribute__((__format__(__printf__, 3, 4)));
-extern int		moauthdRespondClient(moauthd_client_t *client, http_status_t code, const char *type_or_uri, time_t mtime, size_t length);
+extern int		moauthdRespondClient(moauthd_client_t *client, http_status_t code, const char *type, const char *uri, time_t mtime, size_t length);
 extern void		*moauthdRunClient(moauthd_client_t *client);
 extern int		moauthdRunServer(moauthd_server_t *server);
 
