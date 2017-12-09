@@ -156,29 +156,6 @@ moauthdFindResource(
       best  = NULL;
       *name = '\0';
     }
-    else if (S_ISDIR(info->st_mode))
-    {
-     /*
-      * Directory match, see if we have an index file...
-      */
-
-      char	temp[1024];		/* Temporary filename buffer */
-
-      snprintf(temp, sizeof(temp), "%s/index.md", name);
-      if (stat(temp, info))
-        snprintf(temp, sizeof(temp), "%s/index.html", name);
-
-      if (stat(temp, info))
-      {
-        best  = NULL;
-        *name = '\0';
-      }
-      else
-      {
-        strncpy(name, temp, namesize - 1);
-        name[namesize - 1] = '\0';
-      }
-    }
   }
   else if (best && best->type == MOAUTHD_RESTYPE_STATIC_FILE)
   {
@@ -247,11 +224,55 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
   }
 
  /*
+  * Redirect for directories...
+  */
+
+  if (S_ISDIR(localinfo.st_mode))
+  {
+   /*
+    * Directory match, see if we have an index file...
+    */
+
+    char	temp[1024],		/* Temporary filename buffer */
+		*ptr;			/* Pointer into path_info */
+
+    ptr = client->path_info + strlen(client->path_info) - 1;
+    if (ptr >= client->path_info && *ptr == '/')
+      *ptr = '\0';			/* Strip trailing slash */
+
+    snprintf(temp, sizeof(temp), "%s/index.md", localfile);
+    if (!access(localfile, R_OK))
+    {
+      httpAssembleURIf(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", NULL, client->server->name, client->server->port, "%s/index.md", client->path_info);
+    }
+    else
+    {
+      snprintf(temp, sizeof(temp), "%s/index.html", localfile);
+
+      if (!access(temp, R_OK))
+      {
+        httpAssembleURIf(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", NULL, client->server->name, client->server->port, "%s/index.html", client->path_info);
+      }
+      else
+      {
+	moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, 0, 0);
+	return (HTTP_STATUS_NOT_FOUND);
+      }
+    }
+
+    moauthdRespondClient(client, HTTP_STATUS_MOVED_TEMPORARILY, temp, 0, 0);
+    return (HTTP_STATUS_MOVED_TEMPORARILY);
+  }
+
+ /*
   * Serve the file...
   */
 
   if ((ext = strrchr(client->path_info, '.')) == NULL)
-    ext = ".txt";
+  {
+    if ((ext = strrchr(localfile, '.')) == NULL)
+      ext = ".txt";
+  }
 
   if (!strcmp(ext, ".css"))
     content_type = "text/css";

@@ -259,14 +259,14 @@ int					/* O - 1 on success, 0 on failure */
 moauthdRespondClient(
     moauthd_client_t *client,		/* I - Client */
     http_status_t    code,		/* I - HTTP status of response */
-    const char       *type,		/* I - MIME media type of response */
+    const char       *type_or_uri,	/* I - MIME media type or URI of response */
     time_t           mtime,		/* I - Last modified date and time */
     size_t           length)		/* I - Length of response or 0 for chunked */
 {
   char	message[1024];			/* Text message */
 
 
-  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "%s", httpStatus(code));
+  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "HTTP/1.1 %d %s", code, httpStatus(code));
 
   if (code == HTTP_STATUS_CONTINUE)
   {
@@ -281,12 +281,12 @@ moauthdRespondClient(
   * Format an error message...
   */
 
-  if (!type && !length && code != HTTP_STATUS_OK && code != HTTP_STATUS_SWITCHING_PROTOCOLS)
+  if (!type_or_uri && !length && code != HTTP_STATUS_OK && code != HTTP_STATUS_SWITCHING_PROTOCOLS && code != HTTP_STATUS_MOVED_PERMANENTLY && code != HTTP_STATUS_MOVED_TEMPORARILY)
   {
     snprintf(message, sizeof(message), "%d - %s\n", code, httpStatus(code));
 
-    type   = "text/plain";
-    length = strlen(message);
+    type_or_uri = "text/plain";
+    length      = strlen(message);
   }
   else
     message[0] = '\0';
@@ -311,12 +311,21 @@ moauthdRespondClient(
   if (mtime)
     httpSetField(client->http, HTTP_FIELD_LAST_MODIFIED, httpGetDateString(mtime));
 
-  if (type)
+  if (type_or_uri)
   {
-    if (!strcmp(type, "text/html"))
+    if (code == HTTP_STATUS_MOVED_PERMANENTLY || code == HTTP_STATUS_MOVED_TEMPORARILY)
+    {
+      httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, "text/plain");
+      httpSetField(client->http, HTTP_FIELD_LOCATION, type_or_uri);
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Location: %s", type_or_uri);
+
+      snprintf(message, sizeof(message), "%d - %s\n", code, httpStatus(code));
+      length = strlen(message);
+    }
+    else if (!strcmp(type_or_uri, "text/html"))
       httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, "text/html; charset=utf-8");
     else
-      httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, type);
+      httpSetField(client->http, HTTP_FIELD_CONTENT_TYPE, type_or_uri);
   }
 
   httpSetLength(client->http, length);
@@ -334,7 +343,7 @@ moauthdRespondClient(
     * Send a plain text message.
     */
 
-    if (httpPrintf(client->http, "%s", message) < 0)
+    if (httpWrite2(client->http, message, length) < 0)
       return (0);
   }
 

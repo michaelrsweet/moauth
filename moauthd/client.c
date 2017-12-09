@@ -361,11 +361,12 @@ moauthdRunClient(
 	    if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", 0, 0))
 	      done = 1;
 	  }
-	  else if (moauthdGetFile(client) != HTTP_STATUS_OK)
+	  else if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
 	    done = 1;
 	  break;
 
       case HTTP_STATE_GET :
+#if 0
 	  if (!strcmp(client->path_info, "/"))
 	  {
 	    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Sending home page.");
@@ -379,7 +380,9 @@ moauthdRunClient(
 
             httpFlushWrite(client->http);
 	  }
-	  else if (moauthdGetFile(client) != HTTP_STATUS_OK)
+	  else
+#endif // 0
+	  if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
 	    done = 1;
 	  break;
 
