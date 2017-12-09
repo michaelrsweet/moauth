@@ -297,6 +297,8 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
     content_type = "application/pdf";
   else if (!strcmp(ext, ".png"))
     content_type = "image/png";
+  else if (!strcmp(ext, ".xml"))
+    content_type = "text/xml";
   else
     content_type = "text/plain";
 
