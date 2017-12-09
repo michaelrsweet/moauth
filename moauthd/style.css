@@ -31,11 +31,15 @@ div.form {
   width: 50%;
 }
 
+div.form h1 {
+  text-align: center;
+}
+
 div.form-group label {
   display: inline-block;
   text-align: right;
   vertical-align: middle;
-  width: 40%;
+  width: 30%;
 }
 
 div.form-group input {
@@ -44,7 +48,13 @@ div.form-group input {
 }
 
 div.form-group input[type="submit"] {
-  margin-left: 42%;
+  margin-left: 32%;
+  -webkit-appearance: none;
+}
+
+input {
+  font-size: inherit;
+  line-height: inherit;
 }
 
 input[type="text"], input[type="email"], input[type="password"] {
