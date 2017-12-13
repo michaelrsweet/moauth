@@ -630,8 +630,6 @@ get_post_data(moauthd_client_t *client)	/* I - Client object */
     for (ptr = data, end = data + datalen; ptr < end; ptr += bytes)
       if ((bytes = httpRead2(client->http, ptr, end - ptr)) <= 0)
         break;
-
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "get_post_data: \"%s\"", data);
   }
 
   if (httpGetState(client->http) == HTTP_STATE_POST_RECV)
