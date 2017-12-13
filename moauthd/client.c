@@ -16,6 +16,7 @@
 
 static int	do_authorize(moauthd_client_t *client);
 static int	do_token(moauthd_client_t *client);
+static char	*get_post_data(moauthd_client_t *client);
 
 
 /*
@@ -410,14 +411,79 @@ moauthdRunClient(
 static int				/* O - 1 on success, 0 on failure */
 do_authorize(moauthd_client_t *client)	/* I - Client object */
 {
+  int		num_vars;		/* Number of form variables */
+  cups_option_t	*vars;			/* Form variables */
+  char		*data;			/* Form data */
+  const char	*client_id,		/* client_id variable (REQUIRED) */
+		*redirect_uri,		/* redirect_uri variable (OPTIONAL) */
+		*response_type,		/* response_type variable (REQUIRED) */
+		*scope,			/* scope variable (OPTIONAL) */
+		*state,			/* state variable (RECOMMENDED) */
+		*username,		/* username variable */
+		*password;		/* password variable */
+  moauthd_application_t *app;		/* Application */
+  moauthd_token_t *token;		/* Token */
+  char		uri[2048];		/* Redirect URI */
+  const char	*prefix;		/* Prefix string */
+
+
   switch (client->request_method)
   {
     case HTTP_STATE_HEAD :
         return (moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", NULL, 0, 0));
 
     case HTTP_STATE_GET :
+       /*
+        * Get form variable on the request line...
+        */
+
+        num_vars      = moauthFormDecode(client->query_string, &vars);
+        client_id     = cupsGetOption("client_id", num_vars, vars);
+        redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
+        response_type = cupsGetOption("response_type", num_vars, vars);
+        scope         = cupsGetOption("scope", num_vars, vars);
+        state         = cupsGetOption("state", num_vars, vars);
+
+        if (!client_id || !response_type || strcmp(response_type, "code"))
+        {
+	 /*
+	  * Missing required variables!
+	  */
+
+          if (!client_id)
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing client_id in authorize request.");
+          if (!response_type)
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing response_type in authorize request.");
+          else if (strcmp(response_type, "code"))
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad response_type in authorize request.");
+
+	  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Query string was \"%s\".", client->query_string);
+
+          cupsFreeOptions(num_vars, vars);
+
+          return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+        }
+
+        if ((app = moauthdFindApplication(client->server, client_id, redirect_uri)) == NULL)
+        {
+          if (redirect_uri)
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id/redirect_uri in authorize request.");
+	  else
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id in authorize request.");
+
+	  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Query string was \"%s\".", client->query_string);
+
+          cupsFreeOptions(num_vars, vars);
+
+          return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+        }
+
         if (!moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", NULL, 0, 0))
+        {
+	  cupsFreeOptions(num_vars, vars);
+
           return (0);
+	}
 
         moauthdHTMLHeader(client, "Authorization");
         moauthdHTMLPrintf(client,
@@ -435,14 +501,87 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
             "    <div class=\"form-group\">\n"
             "      <input type=\"submit\" value=\"Login\">\n"
             "    </div>\n"
+            "    <input type=\"hidden\" name=\"client_id\" value=\"%s\">\n"
+            "    <input type=\"hidden\" name=\"redirect_uri\" value=\"%s\">\n"
+            "    <input type=\"hidden\" name=\"response_type\" value=\"%s\">\n"
+            "    <input type=\"hidden\" name=\"scope\" value=\"%s\">\n",
+            client_id, app->redirect_uri, response_type, scope ? scope : "private shared");
+        if (state)
+          moauthdHTMLPrintf(client, "    <input type=\"hidden\" name=\"state\" value=\"%s\">\n", state);
+	moauthdHTMLPrintf(client,
             "  </form>\n"
             "</div>\n");
         moauthdHTMLFooter(client);
+
+        cupsFreeOptions(num_vars, vars);
         break;
 
     case HTTP_STATE_POST :
-        return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
-//        break;
+        if ((data = get_post_data(client)) == NULL)
+          return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+
+        num_vars      = moauthFormDecode(data, &vars);
+        client_id     = cupsGetOption("client_id", num_vars, vars);
+        redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
+        response_type = cupsGetOption("response_type", num_vars, vars);
+        scope         = cupsGetOption("scope", num_vars, vars);
+        state         = cupsGetOption("state", num_vars, vars);
+        username      = cupsGetOption("username", num_vars, vars);
+        password      = cupsGetOption("password", num_vars, vars);
+
+        if (!client_id || !response_type || strcmp(response_type, "code"))
+        {
+	 /*
+	  * Missing required variables!
+	  */
+
+          if (!client_id)
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing client_id in authorize request.");
+          if (!response_type)
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing response_type in authorize request.");
+          else if (strcmp(response_type, "code"))
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad response_type in authorize request.");
+
+          cupsFreeOptions(num_vars, vars);
+
+          return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+        }
+
+        if ((app = moauthdFindApplication(client->server, client_id, redirect_uri)) == NULL)
+        {
+          if (redirect_uri)
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id/redirect_uri in authorize request.");
+	  else
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id in authorize request.");
+
+	  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Query string was \"%s\".", client->query_string);
+
+          cupsFreeOptions(num_vars, vars);
+
+          return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+        }
+
+        if (strchr(redirect_uri, '?'))
+          prefix = "&";
+	else
+	  prefix = "?";
+
+        if (!username || !password || !moauthdAuthenticateUser(client->server, username, password))
+        {
+          snprintf(uri, sizeof(uri), "%s%serror=access_denied&error_description=Bad+username+or+password.%s%s", redirect_uri, prefix, state ? "&state=" : "", state ? state : "");
+        }
+        else if ((token = moauthdCreateToken(client->server, MOAUTHD_TOKTYPE_GRANT, redirect_uri, username, scope)) == NULL)
+        {
+          snprintf(uri, sizeof(uri), "%s%serror=server_error&error_description=Unable+to+create+grant.%s%s", redirect_uri, prefix, state ? "&state=" : "", state ? state : "");
+        }
+        else
+        {
+          snprintf(uri, sizeof(uri), "%s%scode=%s%s%s", redirect_uri, prefix, token->token, state ? "&state=" : "", state ? state : "");
+        }
+
+        cupsFreeOptions(num_vars, vars);
+
+        return (moauthdRespondClient(client, HTTP_STATUS_MOVED_TEMPORARILY, NULL, uri, 0, 0));
 
     default :
         return (0);
@@ -462,3 +601,41 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 }
 
+
+/*
+ * 'get_post_data()' - Get POST form data.
+ */
+
+static char *				/* O - Form data string or NULL on error */
+get_post_data(moauthd_client_t *client)	/* I - Client object */
+{
+  char		*data,			/* Form data string */
+		*end,			/* End of data */
+		*ptr;			/* Pointer into string */
+  size_t	datalen;		/* Allocated length of string */
+  ssize_t	bytes;			/* Bytes read */
+
+
+ /*
+  * Allocate memory for string...
+  */
+
+  if ((datalen = httpGetLength2(client->http)) == 0 || datalen > 65536)
+    datalen = 65536;			/* Accept up to 64k for POSTs */
+
+  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "get_post_data: %d bytes of form data.", (int)datalen);
+
+  if ((data = calloc(1, datalen + 1)) != NULL)
+  {
+    for (ptr = data, end = data + datalen; ptr < end; ptr += bytes)
+      if ((bytes = httpRead2(client->http, ptr, end - ptr)) <= 0)
+        break;
+
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "get_post_data: \"%s\"", data);
+  }
+
+  if (httpGetState(client->http) == HTTP_STATE_POST_RECV)
+    httpFlush(client->http);
+
+  return (data);
+}

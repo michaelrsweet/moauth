@@ -22,6 +22,7 @@
 static int	compare_applications(moauthd_application_t *a, moauthd_application_t *b);
 static moauthd_application_t *copy_application(moauthd_application_t *a);
 static void	free_application(moauthd_application_t *a);
+static int	get_seconds(const char *value);
 
 
 /*
@@ -64,7 +65,9 @@ moauthdCreateServer(
 
   server->log_file       = 2;		/* stderr */
   server->log_level      = MOAUTHD_LOGLEVEL_ERROR;
+  server->max_grant_life = 300;		/* 5 minutes */
   server->max_token_life = 604800;	/* 1 week */
+
   httpGetHostname(NULL, server_name, sizeof(server_name));
   ptr = server_name + strlen(server_name) - 1;
   if (ptr > server_name && *ptr == '.')
@@ -157,6 +160,31 @@ moauthdCreateServer(
 	  fprintf(stderr, "moauthd: Unknown LogLevel \"%s\" on line %d of \"%s\" ignored.\n", value, linenum, configfile);
 	}
       }
+      else if (!strcasecmp(line, "MaxGrantLife"))
+      {
+       /*
+        * MaxGrantLife NNN{m,h,d,w}
+        *
+        * Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
+        * and "w" is weeks.
+        */
+
+        int	max_grant_life;		/* Maximum grant life value */
+
+        if (!value)
+        {
+          fprintf(stderr, "moauthd: Missing time value on line %d of \"%s\".\n", linenum, configfile);
+          goto create_failed;
+	}
+
+        if ((max_grant_life = get_seconds(value)) < 0)
+	{
+          fprintf(stderr, "moauthd: Unknown time value \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+          goto create_failed;
+	}
+
+        server->max_grant_life = max_grant_life;
+      }
       else if (!strcasecmp(line, "MaxTokenLife"))
       {
        /*
@@ -167,7 +195,6 @@ moauthdCreateServer(
         */
 
         int	max_token_life;		/* Maximum token life value */
-        char	*units;			/* Units at end of number */
 
         if (!value)
         {
@@ -175,16 +202,7 @@ moauthdCreateServer(
           goto create_failed;
 	}
 
-        max_token_life = (int)strtol(value, &units, 10);
-        if (!strcasecmp(units, "m"))
-          max_token_life *= 60;
-	else if (!strcasecmp(units, "h"))
-	  max_token_life *= 3600;
-	else if (!strcasecmp(units, "d"))
-	  max_token_life *= 86400;
-	else if (!strcasecmp(units, "w"))
-	  max_token_life *= 604800;
-	else
+        if ((max_token_life = get_seconds(value)) < 0)
 	{
           fprintf(stderr, "moauthd: Unknown time value \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
           goto create_failed;
@@ -445,6 +463,50 @@ moauthdDeleteServer(
 
 
 /*
+ * 'moauthdFindApplication()' - Find an application by its client ID.
+ */
+
+moauthd_application_t *			/* O - Matching application, if any */
+moauthdFindApplication(
+    moauthd_server_t *server,		/* I - Server object */
+    const char       *client_id,	/* I - Client ID */
+    const char       *redirect_uri)	/* I - Redirect URI or NULL */
+{
+  moauthd_application_t	*app,		/* Matching application */
+			key;		/* Search key */
+
+
+  pthread_mutex_lock(&server->applications_lock);
+
+  if (redirect_uri)
+  {
+   /*
+    * Exact match...
+    */
+
+    key.client_id    = (char *)client_id;
+    key.redirect_uri = (char *)redirect_uri;
+
+    app = (moauthd_application_t *)cupsArrayFind(server->applications, &key);
+  }
+  else
+  {
+   /*
+    * First matching client ID...
+    */
+
+    for (app = (moauthd_application_t *)cupsArrayFirst(server->applications); app; app = (moauthd_application_t *)cupsArrayNext(server->applications))
+      if (!strcmp(app->client_id, client_id))
+        break;
+  }
+
+  pthread_mutex_unlock(&server->applications_lock);
+
+  return (app);
+}
+
+
+/*
  * 'moauthdRunServer()' - Listen for client connections and process requests.
  */
 
@@ -557,4 +619,30 @@ free_application(
   free(a->client_id);
   free(a->redirect_uri);
   free(a);
+}
+
+
+/*
+ * 'get_seconds()' - Get a time value in seconds.
+ */
+
+static int				/* O - Number of seconds or -1 on error */
+get_seconds(const char *value)		/* I - Value string */
+{
+  char	*units;				/* Pointer to units */
+  int	tval = (int)strtol(value, &units, 10);
+					/* Time value */
+
+  if (!strcasecmp(units, "m"))
+    tval *= 60;
+  else if (!strcasecmp(units, "h"))
+    tval *= 3600;
+  else if (!strcasecmp(units, "d"))
+    tval *= 86400;
+  else if (!strcasecmp(units, "w"))
+    tval *= 604800;
+  else
+    tval = -1;
+
+  return (tval);
 }

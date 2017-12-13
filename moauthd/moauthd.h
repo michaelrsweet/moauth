@@ -110,7 +110,8 @@ typedef struct moauthd_server_s		/**** Server ****/
   struct pollfd	listeners[MOAUTHD_MAX_LISTENERS];
 					/* Listener sockets */
   unsigned	options;		/* Server option flags */
-  int		max_token_life;		/* Maximum life of a token in seconds */
+  int		max_grant_life,		/* Maximum life of a grant in seconds */
+		max_token_life;		/* Maximum life of a token in seconds */
   int		num_tokens;		/* Number of tokens issued */
   char		*secret;		/* Secret value string for this invocation */
   cups_array_t	*applications;		/* "Registered" applications */
@@ -150,6 +151,7 @@ extern moauthd_server_t	*moauthdCreateServer(const char *configfile, int verbosi
 extern moauthd_token_t	*moauthdCreateToken(moauthd_server_t *server, moauthd_toktype_t type, const char *redirect_uri, const char *user, const char *scopes);
 extern void		moauthdDeleteClient(moauthd_client_t *client);
 extern void		moauthdDeleteServer(moauthd_server_t *server);
+extern moauthd_application_t *moauthdFindApplication(moauthd_server_t *server, const char *client_id, const char *redirect_uri);
 extern moauthd_resource_t *moauthdFindResource(moauthd_server_t *server, const char *path_info, char *name, size_t namesize, struct stat *info);
 extern moauthd_token_t	*moauthdFindToken(moauthd_server_t *server, const char *token_id);
 extern int		moauthdGetFile(moauthd_client_t *client);

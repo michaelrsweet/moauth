@@ -56,7 +56,10 @@ moauthdCreateToken(
   else
     token->uid = (uid_t)-1;
 
-  token->expires = time(NULL) + server->max_token_life;
+  if (type == MOAUTHD_TOKTYPE_GRANT)
+    token->expires = time(NULL) + server->max_grant_life;
+  else
+    token->expires = time(NULL) + server->max_token_life;
 
  /*
   * Generate the token as a UUID using the server name, port, secret, and number

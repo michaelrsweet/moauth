@@ -38,6 +38,9 @@ moauthFormDecode(const char    *data,	/* I - Form data */
 
   *vars = NULL;
 
+  if (!data)
+    return (0);
+
   while (*data)
   {
    /*
