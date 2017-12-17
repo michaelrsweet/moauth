@@ -11,9 +11,9 @@ include ../Makedefs
 
 
 # Daemon targets...
-OBJS	=	auth.o client.o log.o main.o mmd.o resource.o server.o token.o web.o
-
-TARGETS	=	moauthd
+MOAUTHD_OBJS	=	auth.o client.o log.o main.o mmd.o resource.o server.o token.o web.o
+OBJS		=	$(MOAUTHD_OBJS) testmoauthd.o
+TARGETS		=	moauthd testmoauthd
 
 
 # Make everything...
@@ -30,14 +30,24 @@ install:	all
 
 
 # Test everything...
-test:	moauthd
-	echo "Sorry, moauthd test not yet written..."
+test:	$(TARGETS)
+	./testmoauthd
 
 
 # Daemon program...
-moauthd:	$(OBJS) ../moauth/libmoauth.a
+moauthd:	$(MOAUTHD_OBJS) ../moauth/libmoauth.a
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) ../moauth/libmoauth.a $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ $(MOAUTHD_OBJS) ../moauth/libmoauth.a $(LIBS)
+
+
+# Daemon test program...
+testmoauthd:	testmoauthd.o ../moauth/libmoauth.a
+	echo Linking $@...
+	if test `uname` = Darwin; then \
+		$(CC) $(LDFLAGS) -o $@ testmoauthd.o ../moauth/libmoauth.a $(LIBS) -framework CoreServices; \
+	else \
+		$(CC) $(LDFLAGS) -o $@ testmoauthd.o ../moauth/libmoauth.a $(LIBS); \
+	fi
 
 
 # Default resource files for daemon web UI
@@ -56,7 +66,8 @@ style-css.h:	style.css Makefile
 
 
 # Dependencies...
-$(OBJS):	moauthd.h ../moauth/moauth.h
+$(MOAUTHD_OBJS): moauthd.h
+$(OBJS):	../moauth/moauth.h
 mmd.o:		mmd.h
 resource.o:	mmd.h
 server.o:	moauth-png.h style-css.h

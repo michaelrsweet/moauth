@@ -37,6 +37,9 @@
 		278AC45D1FC321BB00588F26 /* libmoauth.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 270E13AF1FC31D6A0053DAE4 /* libmoauth.a */; };
 		278AC45E1FC321C200588F26 /* libcups.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 278AC45B1FC3216200588F26 /* libcups.tbd */; };
 		279187231FE5EFC300FBA1E3 /* post.c in Sources */ = {isa = PBXBuildFile; fileRef = 279187221FE5EFA800FBA1E3 /* post.c */; };
+		2791872A1FE5FAB000FBA1E3 /* libcups.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 278AC45B1FC3216200588F26 /* libcups.tbd */; };
+		2791872B1FE5FAB000FBA1E3 /* libmoauth.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 270E13AF1FC31D6A0053DAE4 /* libmoauth.a */; };
+		279187321FE5FAD900FBA1E3 /* testmoauthd.c in Sources */ = {isa = PBXBuildFile; fileRef = 279187311FE5FAC500FBA1E3 /* testmoauthd.c */; };
 		27960FFA1FD4774C000D20A7 /* web.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FF81FD4774B000D20A7 /* web.c */; };
 		27960FFB1FD4774C000D20A7 /* mmd.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FF91FD4774B000D20A7 /* mmd.c */; };
 		27960FFD1FD4D20F000D20A7 /* auth.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FFC1FD4D20F000D20A7 /* auth.c */; };
@@ -78,6 +81,20 @@
 			remoteGlobalIDString = 270E13D01FC31E520053DAE4;
 			remoteInfo = testmoauth;
 		};
+		279187261FE5FAB000FBA1E3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 270E13931FC31A530053DAE4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 270E13AE1FC31D6A0053DAE4;
+			remoteInfo = moauth;
+		};
+		279187331FE5FAE400FBA1E3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 270E13931FC31A530053DAE4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 270E139A1FC31A530053DAE4;
+			remoteInfo = moauthd;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -91,6 +108,15 @@
 			runOnlyForDeploymentPostprocessing = 1;
 		};
 		270E13DC1FC31E520053DAE4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		2791872C1FE5FAB000FBA1E3 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -120,6 +146,8 @@
 		270E13E21FC31E8A0053DAE4 /* testmoauth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testmoauth.c; path = ../moauth/testmoauth.c; sourceTree = "<group>"; };
 		278AC45B1FC3216200588F26 /* libcups.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcups.tbd; path = usr/lib/libcups.tbd; sourceTree = SDKROOT; };
 		279187221FE5EFA800FBA1E3 /* post.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = post.c; sourceTree = "<group>"; };
+		279187301FE5FAB000FBA1E3 /* testmoauthd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testmoauthd; sourceTree = BUILT_PRODUCTS_DIR; };
+		279187311FE5FAC500FBA1E3 /* testmoauthd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testmoauthd.c; path = ../moauthd/testmoauthd.c; sourceTree = "<group>"; };
 		27960FF71FD4774B000D20A7 /* mmd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mmd.h; sourceTree = "<group>"; };
 		27960FF81FD4774B000D20A7 /* web.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = web.c; sourceTree = "<group>"; };
 		27960FF91FD4774B000D20A7 /* mmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mmd.c; sourceTree = "<group>"; };
@@ -152,6 +180,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		279187291FE5FAB000FBA1E3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2791872A1FE5FAB000FBA1E3 /* libcups.tbd in Frameworks */,
+				2791872B1FE5FAB000FBA1E3 /* libmoauth.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -173,6 +210,7 @@
 				270E139B1FC31A530053DAE4 /* moauthd */,
 				270E13AF1FC31D6A0053DAE4 /* libmoauth.a */,
 				270E13E01FC31E520053DAE4 /* testmoauth */,
+				279187301FE5FAB000FBA1E3 /* testmoauthd */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -213,6 +251,7 @@
 			isa = PBXGroup;
 			children = (
 				270E13E21FC31E8A0053DAE4 /* testmoauth.c */,
+				279187311FE5FAC500FBA1E3 /* testmoauthd.c */,
 			);
 			name = Tests;
 			sourceTree = "<group>";
@@ -292,6 +331,25 @@
 			productReference = 270E13E01FC31E520053DAE4 /* testmoauth */;
 			productType = "com.apple.product-type.tool";
 		};
+		279187241FE5FAB000FBA1E3 /* testmoauthd */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2791872D1FE5FAB000FBA1E3 /* Build configuration list for PBXNativeTarget "testmoauthd" */;
+			buildPhases = (
+				279187271FE5FAB000FBA1E3 /* Sources */,
+				279187291FE5FAB000FBA1E3 /* Frameworks */,
+				2791872C1FE5FAB000FBA1E3 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				279187341FE5FAE400FBA1E3 /* PBXTargetDependency */,
+				279187251FE5FAB000FBA1E3 /* PBXTargetDependency */,
+			);
+			name = testmoauthd;
+			productName = mOAuth;
+			productReference = 279187301FE5FAB000FBA1E3 /* testmoauthd */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -316,6 +374,9 @@
 					270E13D01FC31E520053DAE4 = {
 						ProvisioningStyle = Manual;
 					};
+					279187241FE5FAB000FBA1E3 = {
+						ProvisioningStyle = Manual;
+					};
 				};
 			};
 			buildConfigurationList = 270E13961FC31A530053DAE4 /* Build configuration list for PBXProject "mOAuth" */;
@@ -334,6 +395,7 @@
 				270E13AE1FC31D6A0053DAE4 /* moauth */,
 				270E139A1FC31A530053DAE4 /* moauthd */,
 				270E13D01FC31E520053DAE4 /* testmoauth */,
+				279187241FE5FAB000FBA1E3 /* testmoauthd */,
 			);
 		};
 /* End PBXProject section */
@@ -372,6 +434,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		279187271FE5FAB000FBA1E3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				279187321FE5FAD900FBA1E3 /* testmoauthd.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -399,6 +469,16 @@
 			isa = PBXTargetDependency;
 			target = 270E13D01FC31E520053DAE4 /* testmoauth */;
 			targetProxy = 278AC4571FC320E400588F26 /* PBXContainerItemProxy */;
+		};
+		279187251FE5FAB000FBA1E3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 270E13AE1FC31D6A0053DAE4 /* moauth */;
+			targetProxy = 279187261FE5FAB000FBA1E3 /* PBXContainerItemProxy */;
+		};
+		279187341FE5FAE400FBA1E3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 270E139A1FC31A530053DAE4 /* moauthd */;
+			targetProxy = 279187331FE5FAE400FBA1E3 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -609,6 +689,22 @@
 			};
 			name = Release;
 		};
+		2791872E1FE5FAB000FBA1E3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = RU58A2256H;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		2791872F1FE5FAB000FBA1E3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = RU58A2256H;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -653,6 +749,15 @@
 			buildConfigurations = (
 				270E13DE1FC31E520053DAE4 /* Debug */,
 				270E13DF1FC31E520053DAE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2791872D1FE5FAB000FBA1E3 /* Build configuration list for PBXNativeTarget "testmoauthd" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2791872E1FE5FAB000FBA1E3 /* Debug */,
+				2791872F1FE5FAB000FBA1E3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
