@@ -99,6 +99,7 @@ moauthdRunClient(
   const char		*authorization;	/* Authorization: header value */
   char			host_value[300],/* Host: header value */
 			*host_ptr;	/* Pointer into Host: header */
+  int			host_port;	/* Port number */
   char			uri_prefix[300];/* URI prefix for server */
   size_t		uri_prefix_len;	/* Length of URI prefix */
   static const char * const states[] =
@@ -212,19 +213,27 @@ moauthdRunClient(
     strncpy(host_value, httpGetField(client->http, HTTP_FIELD_HOST), sizeof(host_value) - 1);
     host_value[sizeof(host_value) - 1] = '\0';
 
-    if ((host_ptr = strrchr(host_value, ':')) == NULL)
-      host_ptr = host_value + strlen(host_value);
+    if ((host_ptr = strrchr(host_value, ':')) != NULL)
+    {
+      host_port = atoi(host_ptr + 1);
+    }
+    else
+    {
+      host_port = 443;
+      host_ptr  = host_value + strlen(host_value);
+    }
+
     if (host_ptr > host_value && host_ptr[-1] == '.')
       host_ptr --;			/* Also strip trailing dot */
     *host_ptr = '\0';
 
-    if (strcasecmp(host_value, client->server->name))
+    if (strcasecmp(host_value, client->server->name) || host_port != client->server->port)
     {
      /*
       * Bad "Host:" field...
       */
 
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Bad Host: header value \"%s\" (expected \"%s\").", httpGetField(client->http, HTTP_FIELD_HOST), host_value);
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Bad Host: header value \"%s\" (expected \"%s:%d\").", httpGetField(client->http, HTTP_FIELD_HOST), client->server->name, client->server->port);
       moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
       break;
     }
