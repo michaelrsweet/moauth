@@ -9,4 +9,5 @@ moauth-160.png
 moauth/libmoauth.a
 moauth/testmoauth
 moauthd/moauthd
+moauthd/testmoauthd
 xcuserdata
