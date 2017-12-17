@@ -97,7 +97,8 @@ moauthdRunClient(
   http_state_t		state;		/* HTTP state */
   http_status_t		status;		/* HTTP status */
   const char		*authorization;	/* Authorization: header value */
-  char			host_value[300];/* Expected Host: header value */
+  char			host_value[300],/* Host: header value */
+			*host_ptr;	/* Pointer into Host: header */
   char			uri_prefix[300];/* URI prefix for server */
   size_t		uri_prefix_len;	/* Length of URI prefix */
   static const char * const states[] =
@@ -204,7 +205,20 @@ moauthdRunClient(
       break;
     }
 
-    if (strcasecmp(httpGetField(client->http, HTTP_FIELD_HOST), host_value))
+   /*
+    * Validate Host: header...
+    */
+
+    strncpy(host_value, httpGetField(client->http, HTTP_FIELD_HOST), sizeof(host_value) - 1);
+    host_value[sizeof(host_value) - 1] = '\0';
+
+    if ((host_ptr = strrchr(host_value, ':')) == NULL)
+      host_ptr = host_value + strlen(host_value);
+    if (host_ptr > host_value && host_ptr[-1] == '.')
+      host_ptr --;			/* Also strip trailing dot */
+    *host_ptr = '\0';
+
+    if (strcasecmp(host_value, client->server->name))
     {
      /*
       * Bad "Host:" field...
