@@ -16,7 +16,6 @@
 
 static int	do_authorize(moauthd_client_t *client);
 static int	do_token(moauthd_client_t *client);
-static char	*get_post_data(moauthd_client_t *client);
 
 
 /*
@@ -517,7 +516,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         break;
 
     case HTTP_STATE_POST :
-        if ((data = get_post_data(client)) == NULL)
+        if ((data = moauthGetPostData(client->http)) == NULL)
           return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
         num_vars      = moauthFormDecode(data, &vars);
@@ -601,39 +600,3 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 }
 
-
-/*
- * 'get_post_data()' - Get POST form data.
- */
-
-static char *				/* O - Form data string or NULL on error */
-get_post_data(moauthd_client_t *client)	/* I - Client object */
-{
-  char		*data,			/* Form data string */
-		*end,			/* End of data */
-		*ptr;			/* Pointer into string */
-  size_t	datalen;		/* Allocated length of string */
-  ssize_t	bytes;			/* Bytes read */
-
-
- /*
-  * Allocate memory for string...
-  */
-
-  if ((datalen = httpGetLength2(client->http)) == 0 || datalen > 65536)
-    datalen = 65536;			/* Accept up to 64k for POSTs */
-
-  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "get_post_data: %d bytes of form data.", (int)datalen);
-
-  if ((data = calloc(1, datalen + 1)) != NULL)
-  {
-    for (ptr = data, end = data + datalen; ptr < end; ptr += bytes)
-      if ((bytes = httpRead2(client->http, ptr, end - ptr)) <= 0)
-        break;
-  }
-
-  if (httpGetState(client->http) == HTTP_STATE_POST_RECV)
-    httpFlush(client->http);
-
-  return (data);
-}

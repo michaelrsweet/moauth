@@ -23,4 +23,6 @@
 extern int	moauthFormDecode(const char *data, cups_option_t **vars);
 extern char	*moauthFormEncode(int num_vars, cups_option_t *vars);
 
+extern char	*moauthGetPostData(http_t *http);
+
 #endif /* !_MOAUTH_H_ */
