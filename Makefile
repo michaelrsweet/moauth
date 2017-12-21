@@ -18,6 +18,7 @@ SUBDIRS	=	moauth moauthd
 all:
 	echo "CC=$(CC)"
 	echo "CFLAGS=$(CFLAGS)"
+	echo "CODESIGN_IDENTITY=$(CODESIGN_IDENTITY)"
 	echo "LDFLAGS=$(LDFLAGS)"
 	echo "LIBS=$(LIBS)"
 	for dir in $(SUBDIRS); do \
@@ -42,6 +43,7 @@ install:	all
 
 
 # Test everything...
+.PHONY:	test
 test:
 	for dir in $(SUBDIRS); do \
 		echo "Testing all in $$dir..."; \

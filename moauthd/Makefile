@@ -38,6 +38,10 @@ test:	$(TARGETS)
 moauthd:	$(MOAUTHD_OBJS) ../moauth/libmoauth.a
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ $(MOAUTHD_OBJS) ../moauth/libmoauth.a $(LIBS)
+	if test `uname` = Darwin; then \
+		echo Code-signing $@...; \
+		codesign -s "$(CODESIGN_IDENTITY)" $@; \
+	fi
 
 
 # Daemon test program...
@@ -45,6 +49,8 @@ testmoauthd:	testmoauthd.o ../moauth/libmoauth.a
 	echo Linking $@...
 	if test `uname` = Darwin; then \
 		$(CC) $(LDFLAGS) -o $@ testmoauthd.o ../moauth/libmoauth.a $(LIBS) -framework CoreServices; \
+		echo Code-signing $@...; \
+		codesign -s "$(CODESIGN_IDENTITY)" $@; \
 	else \
 		$(CC) $(LDFLAGS) -o $@ testmoauthd.o ../moauth/libmoauth.a $(LIBS); \
 	fi

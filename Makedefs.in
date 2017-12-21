@@ -14,6 +14,7 @@ AR		=	@AR@
 ARFLAGS		=	@ARFLAGS@
 CC		=	@CC@
 CFLAGS		=	-I.. @CFLAGS@
+CODESIGN_IDENTITY =	Developer ID
 INSTALL		=	@INSTALL@
 LDFLAGS		=	-L../moauth @LDFLAGS@
 LIBS		=	@LIBS@

@@ -349,6 +349,8 @@ moauthdCreateServer(
     lis->events = POLLIN | POLLHUP | POLLERR;
   }
 
+  httpAddrFreeList(addrlist);
+
   if (server->num_listeners == 0)
   {
     fputs("moauthd: No working listener sockets.\n", stderr);
