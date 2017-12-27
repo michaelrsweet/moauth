@@ -16,6 +16,8 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreServices/CoreServices.h>
 
+extern char **environ;
+
 
 /*
  * Constants...
@@ -433,7 +435,7 @@ start_moauthd(void)
 
 
   chdir("..");
-  posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, moauthd_argv, NULL);
+  posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, moauthd_argv, environ);
 
   return (pid);
 }
