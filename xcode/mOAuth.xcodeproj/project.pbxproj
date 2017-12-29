@@ -24,6 +24,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		270D41E91FF6909A00EFA9B4 /* authorize.c in Sources */ = {isa = PBXBuildFile; fileRef = 270D41E81FF6909900EFA9B4 /* authorize.c */; };
 		270E13B31FC31D750053DAE4 /* form.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13A91FC31D3E0053DAE4 /* form.c */; };
 		270E13B41FC31D750053DAE4 /* moauth.h in Headers */ = {isa = PBXBuildFile; fileRef = 270E13A81FC31D3E0053DAE4 /* moauth.h */; };
 		270E13BF1FC31DB70053DAE4 /* resource.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13B51FC31DB70053DAE4 /* resource.c */; };
@@ -136,6 +137,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		270D41E81FF6909900EFA9B4 /* authorize.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = authorize.c; sourceTree = "<group>"; };
 		270E139B1FC31A530053DAE4 /* moauthd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = moauthd; sourceTree = BUILT_PRODUCTS_DIR; };
 		270E13A71FC31D220053DAE4 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		270E13A81FC31D3E0053DAE4 /* moauth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = moauth.h; sourceTree = "<group>"; };
@@ -248,6 +250,7 @@
 			isa = PBXGroup;
 			children = (
 				270E13A81FC31D3E0053DAE4 /* moauth.h */,
+				270D41E81FF6909900EFA9B4 /* authorize.c */,
 				270E13A91FC31D3E0053DAE4 /* form.c */,
 				279187221FE5EFA800FBA1E3 /* post.c */,
 			);
@@ -429,6 +432,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				270D41E91FF6909A00EFA9B4 /* authorize.c in Sources */,
 				270E13B31FC31D750053DAE4 /* form.c in Sources */,
 				279187231FE5EFC300FBA1E3 /* post.c in Sources */,
 			);

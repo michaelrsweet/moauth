@@ -32,6 +32,7 @@ extern char **environ;
 
 typedef struct _moauth_redirect_s
 {
+  char	state[32];			/* State string */
   char	*grant;				/* Grant token */
 } _moauth_redirect_t;
 
@@ -47,7 +48,7 @@ static int	stop_tests = 0;
  * Local functions...
  */
 
-static int	open_auth_url(void);
+static int	open_auth_url(const char *state);
 static void	*redirect_server(_moauth_redirect_t *data);
 static int	respond_client(http_t *http, http_status_t code, const char *message);
 static void	sig_handler(int sig);
@@ -86,6 +87,7 @@ main(void)
   * Start redirect server thread...
   */
 
+  snprintf(redirect_data.state, sizeof(redirect_data.state), "%d", getpid());
   redirect_data.grant = NULL;
 
   if (pthread_create(&redirect_tid, NULL, (void *(*)(void *))redirect_server, &redirect_data))
@@ -98,7 +100,7 @@ main(void)
   * Start authentication process...
   */
 
-  open_auth_url();
+  open_auth_url(redirect_data.state);
 
  /*
   * Wait up to 5 minutes for the response...
@@ -152,37 +154,17 @@ main(void)
  */
 
 static int				/* O - 1 on success, 0 on failure */
-open_auth_url(void)
+open_auth_url(const char *state)	/* I - Client state string */
 {
   char	host[256],			/* Hostname */
 	authenticate_url[1024];		/* Authentication URL */
-  int	status = 1;			/* Status */
 
 
   httpGetHostname(NULL, host, sizeof(host));
 
-  snprintf(authenticate_url, sizeof(authenticate_url), "https://%s:%d/authorize?response_type=code&client_id=testmoauthd&redirect_uri=https://localhost:10000/&state=%d", host, 9000 + (getuid() % 1000), getpid());
+  httpAssembleURI(HTTP_URI_CODING_ALL, authenticate_url, sizeof(authenticate_url), "https", NULL, host, 9000 + (getuid() % 1000), "/authorize");
 
-#ifdef __APPLE__
-  CFURLRef cfauthenticate_url = CFURLCreateWithBytes(kCFAllocatorDefault, (const UInt8 *)authenticate_url, (CFIndex)strlen(authenticate_url), kCFStringEncodingASCII, NULL);
-  if (cfauthenticate_url)
-  {
-    if (LSOpenCFURLRef(cfauthenticate_url, NULL) != noErr)
-    {
-      fprintf(stderr, "testmoauthd: Unable to open authentication URL \"%s\".\n", authenticate_url);
-      status = 0;
-    }
-
-    CFRelease(cfauthenticate_url);
-  }
-  else
-  {
-    fprintf(stderr, "testmoauthd: Unable to create authentication URL \"%s\".\n", authenticate_url);
-    status = 0;
-  }
-#endif /* __APPLE__ */
-
-  return (status);
+  return (moauthAuthorize(authenticate_url, "https://localhost:10000", "testmoauthd", state));
 }
 
 
@@ -252,7 +234,8 @@ redirect_server(
 			*query_string;	/* Query string */
           int		num_vars;	/* Number of form variables */
           cups_option_t	*vars;		/* Form variables */
-          const char	*grant;		/* Grant code */
+          const char	*state_string,	/* State string */
+			*grant;		/* Grant code */
 	  static const char * const states[] =
 	  {				/* Strings for logging HTTP method */
 	    "WAITING",
@@ -338,15 +321,18 @@ redirect_server(
 	    continue;
 	  }
 
-          num_vars = moauthFormDecode(query_string, &vars);
-          grant    = cupsGetOption("code", num_vars, vars);
+          num_vars     = moauthFormDecode(query_string, &vars);
+          grant        = cupsGetOption("code", num_vars, vars);
+          state_string = cupsGetOption("state", num_vars, vars);
 
-          if (grant)
+          if (grant && state_string && !strcmp(state_string, data->state))
 	  {
 	    data->grant = strdup(grant);
 	    snprintf(path_info, sizeof(path_info), "Grant code is \"%s\".\n", grant);
 	    respond_client(http, HTTP_STATUS_OK, path_info);
 	  }
+	  else if (grant)
+	    respond_client(http, HTTP_STATUS_OK, "Missing or bad state string.\n");
 	  else
 	    respond_client(http, HTTP_STATUS_OK, "Missing grant code.\n");
 

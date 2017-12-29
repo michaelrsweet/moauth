@@ -11,7 +11,7 @@ include ../Makedefs
 
 
 # Library targets...
-LIBOBJS	=	form.o post.o
+LIBOBJS	=	authorize.o form.o post.o
 
 OBJS	=	$(LIBOBJS) testmoauth.o
 

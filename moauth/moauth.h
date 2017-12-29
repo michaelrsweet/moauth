@@ -20,6 +20,8 @@
  * Functions...
  */
 
+extern int	moauthAuthorize(const char *oauth_uri, const char *redirect_uri, const char *client_id, const char *state);
+
 extern int	moauthFormDecode(const char *data, cups_option_t **vars);
 extern char	*moauthFormEncode(int num_vars, cups_option_t *vars);
 
