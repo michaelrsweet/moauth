@@ -46,6 +46,22 @@ main(void)
     { "quotes", "\"value\"", "empty=&name=value+with+spaces&quotes=%22value%22" },
     { "equation", "1+2=3 & 2+1=3", "empty=&equation=1%2B2%3D3+%26+2%2B1%3D3&name=value+with+spaces&quotes=%22value%22" }
   };
+  static const char *json_in =
+    "{\n"
+    "\"access_token\":\"2YotnFZFEjr1zCsicMWpAA\",\n"
+    "\"example_parameter\":\"example_value\",\n"
+    "\"expires_in\":3600,\n"
+    "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\",\n"
+    "\"token_type\":\"example\"\n"
+    "}\n";
+  static const char *json_out =
+    "{"
+    "\"access_token\":\"2YotnFZFEjr1zCsicMWpAA\","
+    "\"example_parameter\":\"example_value\","
+    "\"expires_in\":3600,"
+    "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\","
+    "\"token_type\":\"example\""
+    "}";
 
 
  /*
@@ -127,6 +143,87 @@ main(void)
     if (data)
       free(data);
   }
+
+  cupsFreeOptions(num_vars, vars);
+
+ /*
+  * Test JSON encoding/decoding...
+  */
+
+  fputs("moauthJSONDecode(...): ", stdout);
+
+  num_vars = moauthJSONDecode(json_in, &vars);
+
+  if (num_vars != 5)
+  {
+    printf("FAIL (got %d vars, expected 5)\n", num_vars);
+    status = 1;
+  }
+  else if ((value = cupsGetOption("access_token", num_vars, vars)) == NULL || strcmp(value, "2YotnFZFEjr1zCsicMWpAA"))
+  {
+    if (value)
+      printf("FAIL (got \"%s\" for \"access_token\", expected \"2YotnFZFEjr1zCsicMWpAA\")\n", value);
+    else
+      puts("FAIL (missing \"access_token\")");
+
+    status = 1;
+  }
+  else if ((value = cupsGetOption("example_parameter", num_vars, vars)) == NULL || strcmp(value, "example_value"))
+  {
+    if (value)
+      printf("FAIL (got \"%s\" for \"example_parameter\", expected \"example_value\")\n", value);
+    else
+      puts("FAIL (missing \"example_parameter\")");
+
+    status = 1;
+  }
+  else if ((value = cupsGetOption("expires_in", num_vars, vars)) == NULL || strcmp(value, "3600"))
+  {
+    if (value)
+      printf("FAIL (got \"%s\" for \"expires_in\", expected \"3600\")\n", value);
+    else
+      puts("FAIL (missing \"expires_in\")");
+
+    status = 1;
+  }
+  else if ((value = cupsGetOption("refresh_token", num_vars, vars)) == NULL || strcmp(value, "tGzv3JOkF0XG5Qx2TlKWIA"))
+  {
+    if (value)
+      printf("FAIL (got \"%s\" for \"refresh_token\", expected \"tGzv3JOkF0XG5Qx2TlKWIA\")\n", value);
+    else
+      puts("FAIL (missing \"refresh_token\")");
+
+    status = 1;
+  }
+  else if ((value = cupsGetOption("token_type", num_vars, vars)) == NULL || strcmp(value, "example"))
+  {
+    if (value)
+      printf("FAIL (got \"%s\" for \"token_type\", expected \"example\")\n", value);
+    else
+      puts("FAIL (missing \"token_type\")");
+
+    status = 1;
+  }
+  else
+    puts("PASS");
+
+  fputs("moauthJSONEncode(...): ", stdout);
+
+  if ((data = moauthJSONEncode(num_vars, vars)) == NULL)
+  {
+    puts("FAIL (unable to encode)");
+    status = 1;
+  }
+  else if (strcmp(data, json_out))
+  {
+    printf("FAIL (got \"%s\", expected \"%s\")\n", data, json_out);
+    status = 1;
+  }
+  else
+    puts("PASS");
+
+  if (data)
+    free(data);
 
   cupsFreeOptions(num_vars, vars);
 

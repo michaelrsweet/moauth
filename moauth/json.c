@@ -141,11 +141,12 @@ char *					/* O - Encoded data or @code NULL@ on error */
 moauthJSONEncode(int           num_vars,/* I - Number of JSON member variables */
                  cups_option_t *vars)	/* I - JSON member variables */
 {
-  char	buffer[65536],			/* Temporary buffer */
-	*bufptr = buffer,		/* Current position in buffer */
-	*bufend = buffer + sizeof(buffer) - 2;
+  char		buffer[65536],		/* Temporary buffer */
+		*bufptr = buffer,	/* Current position in buffer */
+		*bufend = buffer + sizeof(buffer) - 2;
 					/* End of buffer */
-
+  const char	*valptr;		/* Pointer into value */
+  int		is_number;		/* Is the value a number? */
 
   *bufptr++ = '{';
 
@@ -158,7 +159,36 @@ moauthJSONEncode(int           num_vars,/* I - Number of JSON member variables *
 
     *bufptr++ = ':';
 
-    bufptr = encode_string(vars->value, bufptr, bufend);
+    is_number = 0;
+
+    if (vars->value[0] == '-' || isdigit(vars->value[0] & 255))
+    {
+      for (valptr = vars->value + 1; *valptr && (isdigit(*valptr & 255) || *valptr == '.'); valptr ++);
+
+      if (*valptr == 'e' || *valptr == 'E' || !*valptr)
+        is_number = 1;
+    }
+
+    if (is_number)
+    {
+     /*
+      * Copy number literal...
+      */
+
+      for (valptr = vars->value; *valptr; valptr ++)
+      {
+        if (bufptr < bufend)
+          *bufptr++ = *valptr;
+      }
+    }
+    else
+    {
+     /*
+      * Copy string value...
+      */
+
+      bufptr = encode_string(vars->value, bufptr, bufend);
+    }
 
     num_vars --;
     vars ++;
@@ -284,6 +314,9 @@ encode_string(const char *s,            /* I - String to encode */
               char       *bufptr,       /* I - Pointer into buffer */
               char       *bufend)       /* I - End of buffer */
 {
+  if (bufptr < bufend)
+    *bufptr++ = '\"';
+
   while (*s && bufptr < bufend)
   {
     if (*s == '\b')
@@ -333,6 +366,9 @@ encode_string(const char *s,            /* I - String to encode */
 
     s ++;
   }
+
+  if (bufptr < bufend)
+    *bufptr++ = '\"';
 
   *bufptr = '\0';
 
