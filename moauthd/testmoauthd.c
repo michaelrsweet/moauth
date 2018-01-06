@@ -1,7 +1,7 @@
 /*
  * Unit test program for moauth daemon
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
@@ -156,15 +156,24 @@ main(void)
 static int				/* O - 1 on success, 0 on failure */
 open_auth_url(const char *state)	/* I - Client state string */
 {
-  char	host[256],			/* Hostname */
-	authenticate_url[1024];		/* Authentication URL */
+  moauth_t	*server;		/* Connection to OAuth server */
+  char		host[256],		/* Hostname */
+		authenticate_url[1024];	/* Authentication URL */
+  int		status = 1;		/* Return status */
 
 
   httpGetHostname(NULL, host, sizeof(host));
 
   httpAssembleURI(HTTP_URI_CODING_ALL, authenticate_url, sizeof(authenticate_url), "https", NULL, host, 9000 + (getuid() % 1000), "/authorize");
 
-  return (moauthAuthorize(authenticate_url, "https://localhost:10000", "testmoauthd", state));
+  if ((server = moauthConnect(authenticate_url, 30000, NULL)) == NULL)
+    status = 0;
+  else if (!moauthAuthorize(server, "https://localhost:10000", "testmoauthd", state))
+    status = 0;
+
+  moauthClose(server);
+
+  return (status);
 }
 
 

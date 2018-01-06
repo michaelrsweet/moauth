@@ -1,7 +1,7 @@
 #
 # moauth library makefile
 #
-# Copyright © 2017 by Michael R Sweet
+# Copyright © 2017-2018 by Michael R Sweet
 #
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
 #
@@ -53,4 +53,4 @@ libmoauth.a:	$(LIBOBJS)
 
 
 # Dependencies...
-$(OBJS):	moauth.h
+$(OBJS):	moauth.h moauth-private.h

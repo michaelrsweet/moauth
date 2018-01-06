@@ -1,21 +1,21 @@
 /*
  * POST support for moauth library
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
 
 #include <config.h>
-#include "moauth.h"
+#include "moauth-private.h"
 
 
 /*
- * 'moauthGetPostData()' - Get POST form data.
+ * '_moauthGetPostData()' - Get POST form data.
  */
 
-char *				/* O - Form data string or @code NULL@ on error */
-moauthGetPostData(http_t *http)	/* I - HTTP connection */
+char *					/* O - Form data string or @code NULL@ on error */
+_moauthGetPostData(http_t *http)	/* I - HTTP connection */
 {
   char		*data,			/* Form data string */
 		*end,			/* End of data */

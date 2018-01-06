@@ -1,13 +1,13 @@
 /*
  * Token grant/introspection support for moauth library
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
 
 #include <config.h>
-#include "moauth.h"
+#include "moauth-private.h"
 
 
 /*
@@ -15,7 +15,7 @@
  */
 
 char *					/* O - Access token or @code NULL@ on error */
-moauthGetToken(const char *oauth_uri,	/* I - Authorization URI */
+moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
                const char *redirect_uri,/* I - Redirection URI that was used */
                const char *client_id,	/* I - Client ID that was used */
                const char *grant,	/* I - Grant code */
@@ -25,7 +25,6 @@ moauthGetToken(const char *oauth_uri,	/* I - Authorization URI */
 	       size_t     refreshsize,	/* I - Size of refresh token buffer */
 	       time_t     *expires)	/* O - Expiration date/time, if known */
 {
-  http_t	*http = NULL;		/* Connection to authorization server */
   http_status_t	status;			/* Response status */
   int		num_form = 0;		/* Number of form variables */
   cups_option_t	*form = NULL;		/* Form variables */
@@ -50,7 +49,7 @@ moauthGetToken(const char *oauth_uri,	/* I - Authorization URI */
   if (expires)
     *expires = 0;
 
-  if (!oauth_uri || !redirect_uri || !client_id || !grant || !token || tokensize < 32)
+  if (!server || !redirect_uri || !client_id || !grant || !token || tokensize < 32)
     return (NULL);
 
  /*
@@ -68,31 +67,23 @@ moauthGetToken(const char *oauth_uri,	/* I - Authorization URI */
   form_length = strlen(form_data);
 
  /*
-  * Connect to the authorization server...
-  */
-
-  if ((http = moauthConnect(oauth_uri, 30000, NULL)) == NULL)
-    goto done;
-
- /*
   * Send a POST request with the form data...
   */
 
-  httpSetField(http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
-  httpSetLength(http, form_length);
+  httpSetField(server->http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
+  httpSetLength(server->http, form_length);
 
-  /* TODO: Don't use hardcoded resource path */
-  if (httpPost(http, "/token"))
+  if (httpPost(server->http, server->token_resource))
     goto done;
 
-  if (httpWrite2(http, form_data, form_length) < form_length)
+  if (httpWrite2(server->http, form_data, form_length) < form_length)
     goto done;
 
-  while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+  while ((status = httpUpdate(server->http)) == HTTP_STATUS_CONTINUE);
 
   if (status == HTTP_STATUS_OK)
   {
-    json_data = moauthGetPostData(http);
+    json_data = _moauthGetPostData(server->http);
     num_json  = moauthJSONDecode(json_data, &json);
 
     if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
@@ -112,7 +103,7 @@ moauthGetToken(const char *oauth_uri,	/* I - Authorization URI */
   }
 
  /*
-  * Close the connection and return whatever we got...
+  * Return whatever we got...
   */
 
   done:
@@ -125,8 +116,6 @@ moauthGetToken(const char *oauth_uri,	/* I - Authorization URI */
   if (json_data)
     free(json_data);
 
-  httpClose(http);
-
   return (*token ? token : NULL);
 }
 
@@ -137,7 +126,7 @@ moauthGetToken(const char *oauth_uri,	/* I - Authorization URI */
 
 char *					/* O - Access token or @code NULL@ on error */
 moauthRefreshToken(
-    const char *oauth_uri,		/* I - Authorization URI */
+    moauth_t   *server,			/* I - Connection to OAuth server */
     const char *refresh,		/* I - Refresh token */
     char       *token,			/* I - Access token buffer */
     size_t     tokensize,		/* I - Size of access token buffer */
@@ -145,7 +134,6 @@ moauthRefreshToken(
     size_t     new_refreshsize,		/* I - Size of refresh token buffer */
     time_t     *expires)		/* O - Expiration date/time, if known */
 {
-  http_t	*http = NULL;		/* Connection to authorization server */
   http_status_t	status;			/* Response status */
   int		num_form = 0;		/* Number of form variables */
   cups_option_t	*form = NULL;		/* Form variables */
@@ -170,7 +158,7 @@ moauthRefreshToken(
   if (expires)
     *expires = 0;
 
-  if (!oauth_uri || !refresh || !token || tokensize < 32)
+  if (!server || !refresh || !token || tokensize < 32)
     return (NULL);
 
  /*
@@ -186,31 +174,23 @@ moauthRefreshToken(
   form_length = strlen(form_data);
 
  /*
-  * Connect to the authorization server...
-  */
-
-  if ((http = moauthConnect(oauth_uri, 30000, NULL)) == NULL)
-    goto done;
-
- /*
   * Send a POST request with the form data...
   */
 
-  httpSetField(http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
-  httpSetLength(http, form_length);
+  httpSetField(server->http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
+  httpSetLength(server->http, form_length);
 
-  /* TODO: Don't use hardcoded resource path */
-  if (httpPost(http, "/token"))
+  if (httpPost(server->http, server->token_resource))
     goto done;
 
-  if (httpWrite2(http, form_data, form_length) < form_length)
+  if (httpWrite2(server->http, form_data, form_length) < form_length)
     goto done;
 
-  while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+  while ((status = httpUpdate(server->http)) == HTTP_STATUS_CONTINUE);
 
   if (status == HTTP_STATUS_OK)
   {
-    json_data = moauthGetPostData(http);
+    json_data = _moauthGetPostData(server->http);
     num_json  = moauthJSONDecode(json_data, &json);
 
     if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
@@ -242,8 +222,6 @@ moauthRefreshToken(
   cupsFreeOptions(num_json, json);
   if (json_data)
     free(json_data);
-
-  httpClose(http);
 
   return (*token ? token : NULL);
 }

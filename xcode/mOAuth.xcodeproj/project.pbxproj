@@ -28,6 +28,7 @@
 		270D41EC1FF698AF00EFA9B4 /* connect.c in Sources */ = {isa = PBXBuildFile; fileRef = 270D41EA1FF698AD00EFA9B4 /* connect.c */; };
 		270D41ED1FF698AF00EFA9B4 /* token.c in Sources */ = {isa = PBXBuildFile; fileRef = 270D41EB1FF698AF00EFA9B4 /* token.c */; };
 		270D41EF1FF7257900EFA9B4 /* json.c in Sources */ = {isa = PBXBuildFile; fileRef = 270D41EE1FF7257800EFA9B4 /* json.c */; };
+		270D41F12000983200EFA9B4 /* moauth-private.h in Headers */ = {isa = PBXBuildFile; fileRef = 270D41F02000983000EFA9B4 /* moauth-private.h */; };
 		270E13B31FC31D750053DAE4 /* form.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13A91FC31D3E0053DAE4 /* form.c */; };
 		270E13B41FC31D750053DAE4 /* moauth.h in Headers */ = {isa = PBXBuildFile; fileRef = 270E13A81FC31D3E0053DAE4 /* moauth.h */; };
 		270E13BF1FC31DB70053DAE4 /* resource.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13B51FC31DB70053DAE4 /* resource.c */; };
@@ -144,6 +145,7 @@
 		270D41EA1FF698AD00EFA9B4 /* connect.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = connect.c; sourceTree = "<group>"; };
 		270D41EB1FF698AF00EFA9B4 /* token.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = token.c; sourceTree = "<group>"; };
 		270D41EE1FF7257800EFA9B4 /* json.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = json.c; sourceTree = "<group>"; };
+		270D41F02000983000EFA9B4 /* moauth-private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "moauth-private.h"; sourceTree = "<group>"; };
 		270E139B1FC31A530053DAE4 /* moauthd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = moauthd; sourceTree = BUILT_PRODUCTS_DIR; };
 		270E13A71FC31D220053DAE4 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		270E13A81FC31D3E0053DAE4 /* moauth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = moauth.h; sourceTree = "<group>"; };
@@ -256,6 +258,7 @@
 			isa = PBXGroup;
 			children = (
 				270E13A81FC31D3E0053DAE4 /* moauth.h */,
+				270D41F02000983000EFA9B4 /* moauth-private.h */,
 				270D41E81FF6909900EFA9B4 /* authorize.c */,
 				270D41EA1FF698AD00EFA9B4 /* connect.c */,
 				270E13A91FC31D3E0053DAE4 /* form.c */,
@@ -291,6 +294,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				270D41F12000983200EFA9B4 /* moauth-private.h in Headers */,
 				270E13B41FC31D750053DAE4 /* moauth.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1,7 +1,7 @@
 /*
  * Header file for moauth daemon
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
@@ -14,7 +14,7 @@
  */
 
 #  include <config.h>
-#  include <moauth/moauth.h>
+#  include <moauth/moauth-private.h>
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <string.h>

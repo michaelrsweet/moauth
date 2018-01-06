@@ -1,7 +1,7 @@
 /*
  * Client support for moauth daemon
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
@@ -539,7 +539,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         break;
 
     case HTTP_STATE_POST :
-        if ((data = moauthGetPostData(client->http)) == NULL)
+        if ((data = _moauthGetPostData(client->http)) == NULL)
           return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
         num_vars      = moauthFormDecode(data, &vars);
