@@ -1,7 +1,7 @@
 /*
  * Private header file for moauth library
  *
- * Copyright © 2018 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
@@ -13,6 +13,7 @@
  * Include necessary headers...
  */
 
+#  include <cups/cups.h>
 #  include "moauth.h"
 
 
@@ -34,6 +35,12 @@ struct _moauth_s			/* OAuth server connection data */
  * Private functions...
  */
 
+extern int	_moauthFormDecode(const char *data, cups_option_t **vars);
+extern char	*_moauthFormEncode(int num_vars, cups_option_t *vars);
+
 extern char	*_moauthGetPostData(http_t *http);
+
+extern int	_moauthJSONDecode(const char *data, cups_option_t **vars);
+extern char	*_moauthJSONEncode(int num_vars, cups_option_t *vars);
 
 #endif /* !_MOAUTH_PRIVATE_H_ */

@@ -12,7 +12,7 @@
 #include <spawn.h>
 #include <pthread.h>
 #include <sys/poll.h>
-#include <moauth/moauth.h>
+#include <moauth/moauth-private.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreServices/CoreServices.h>
 
@@ -330,7 +330,7 @@ redirect_server(
 	    continue;
 	  }
 
-          num_vars     = moauthFormDecode(query_string, &vars);
+          num_vars     = _moauthFormDecode(query_string, &vars);
           grant        = cupsGetOption("code", num_vars, vars);
           state_string = cupsGetOption("state", num_vars, vars);
 

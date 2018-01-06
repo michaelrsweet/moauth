@@ -1,7 +1,7 @@
 /*
  * Unit test program for moauth library
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
@@ -9,7 +9,7 @@
 #include <config.h>
 #include <stdio.h>
 #include <string.h>
-#include "moauth.h"
+#include "moauth-private.h"
 
 
 /*
@@ -70,10 +70,10 @@ main(void)
 
   for (i = 0; i < (int)(sizeof(decodes) / sizeof(decodes[0])); i ++)
   {
-    printf("moauthFormDecode(\"%s\", ...): ", decodes[i]);
+    printf("_moauthFormDecode(\"%s\", ...): ", decodes[i]);
 
     count    = (int)strtol(decodes[i], NULL, 10);
-    num_vars = moauthFormDecode(decodes[i] + 2, &vars);
+    num_vars = _moauthFormDecode(decodes[i] + 2, &vars);
 
     if (count != num_vars)
     {
@@ -122,10 +122,10 @@ main(void)
 
   for (i = 0, num_vars = 0, vars = NULL; i < (int)(sizeof(encodes) / sizeof(encodes[0])); i ++)
   {
-    printf("moauthFormEncode(\"%s=%s\", ...): ", encodes[i][0], encodes[i][1]);
+    printf("_moauthFormEncode(\"%s=%s\", ...): ", encodes[i][0], encodes[i][1]);
 
     num_vars = cupsAddOption(encodes[i][0], encodes[i][1], num_vars, &vars);
-    data     = moauthFormEncode(num_vars, vars);
+    data     = _moauthFormEncode(num_vars, vars);
 
     if (!data)
     {
@@ -150,9 +150,9 @@ main(void)
   * Test JSON encoding/decoding...
   */
 
-  fputs("moauthJSONDecode(...): ", stdout);
+  fputs("_moauthJSONDecode(...): ", stdout);
 
-  num_vars = moauthJSONDecode(json_in, &vars);
+  num_vars = _moauthJSONDecode(json_in, &vars);
 
   if (num_vars != 5)
   {
@@ -207,9 +207,9 @@ main(void)
   else
     puts("PASS");
 
-  fputs("moauthJSONEncode(...): ", stdout);
+  fputs("_moauthJSONEncode(...): ", stdout);
 
-  if ((data = moauthJSONEncode(num_vars, vars)) == NULL)
+  if ((data = _moauthJSONEncode(num_vars, vars)) == NULL)
   {
     puts("FAIL (unable to encode)");
     status = 1;

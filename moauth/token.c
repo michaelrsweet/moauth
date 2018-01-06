@@ -61,7 +61,7 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
   num_form = cupsAddOption("redirect_uri", redirect_uri, num_form, &form);
   num_form = cupsAddOption("client_id", client_id, num_form, &form);
 
-  if ((form_data = moauthFormEncode(num_form, form)) == NULL)
+  if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
     goto done;
 
   form_length = strlen(form_data);
@@ -84,7 +84,7 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
   if (status == HTTP_STATUS_OK)
   {
     json_data = _moauthGetPostData(server->http);
-    num_json  = moauthJSONDecode(json_data, &json);
+    num_json  = _moauthJSONDecode(json_data, &json);
 
     if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
     {
@@ -168,7 +168,7 @@ moauthRefreshToken(
   num_form = cupsAddOption("grant_type", "refresh_token", num_form, &form);
   num_form = cupsAddOption("refresh_token", refresh, num_form, &form);
 
-  if ((form_data = moauthFormEncode(num_form, form)) == NULL)
+  if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
     goto done;
 
   form_length = strlen(form_data);
@@ -191,7 +191,7 @@ moauthRefreshToken(
   if (status == HTTP_STATUS_OK)
   {
     json_data = _moauthGetPostData(server->http);
-    num_json  = moauthJSONDecode(json_data, &json);
+    num_json  = _moauthJSONDecode(json_data, &json);
 
     if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
     {

@@ -70,14 +70,3 @@ moauthConnect(
   return (server);
 }
 
-
-/*
- * 'moauthGetHTTP()' - Get the HTTP connection associated with the OAuth server
- *                     connection.
- */
-
-http_t *				/* O - HTTP connection or @code NULL@ */
-moauthGetHTTP(moauth_t *server)		/* I - OAuth server connection */
-{
-  return (server ? server->http : NULL);
-}

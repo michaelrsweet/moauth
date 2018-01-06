@@ -459,7 +459,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         * Get form variable on the request line...
         */
 
-        num_vars      = moauthFormDecode(client->query_string, &vars);
+        num_vars      = _moauthFormDecode(client->query_string, &vars);
         client_id     = cupsGetOption("client_id", num_vars, vars);
         redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
         response_type = cupsGetOption("response_type", num_vars, vars);
@@ -542,7 +542,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         if ((data = _moauthGetPostData(client->http)) == NULL)
           return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
-        num_vars      = moauthFormDecode(data, &vars);
+        num_vars      = _moauthFormDecode(data, &vars);
         client_id     = cupsGetOption("client_id", num_vars, vars);
         redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
         response_type = cupsGetOption("response_type", num_vars, vars);

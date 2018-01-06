@@ -1,13 +1,13 @@
 /*
  * JSON support for moauth library
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
 
 #include <config.h>
-#include "moauth.h"
+#include "moauth-private.h"
 #include <ctype.h>
 
 
@@ -20,12 +20,12 @@ static char *encode_string(const char *s, char *bufptr, char *bufend);
 
 
 /*
- * 'moauthJSONDecode()' - Decode an application/json object.
+ * '_moauthJSONDecode()' - Decode an application/json object.
  */
 
 int					/* O - Number of JSON member variables or 0 on error */
-moauthJSONDecode(const char    *data,	/* I - JSON data */
-                 cups_option_t **vars)	/* O - JSON member variables or @code NULL@ on error */
+_moauthJSONDecode(const char    *data,	/* I - JSON data */
+                  cups_option_t **vars)	/* O - JSON member variables or @code NULL@ on error */
 {
   int	num_vars = 0;			/* Number of form variables */
   char	name[1024],			/* Variable name */
@@ -132,14 +132,15 @@ moauthJSONDecode(const char    *data,	/* I - JSON data */
 
 
 /*
- * 'moauthJSONEncode()' - Encode variables as a JSON object.
+ * '_moauthJSONEncode()' - Encode variables as a JSON object.
  *
  * The caller is responsible for calling @code free@ on the returned string.
  */
 
 char *					/* O - Encoded data or @code NULL@ on error */
-moauthJSONEncode(int           num_vars,/* I - Number of JSON member variables */
-                 cups_option_t *vars)	/* I - JSON member variables */
+_moauthJSONEncode(
+    int           num_vars,		/* I - Number of JSON member variables */
+    cups_option_t *vars)		/* I - JSON member variables */
 {
   char		buffer[65536],		/* Temporary buffer */
 		*bufptr = buffer,	/* Current position in buffer */

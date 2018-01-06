@@ -1,13 +1,13 @@
 /*
  * Form variable support for moauth library
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
 
 #include <config.h>
-#include "moauth.h"
+#include "moauth-private.h"
 #include <ctype.h>
 
 
@@ -20,12 +20,12 @@ static char *encode_string(const char *s, char *bufptr, char *bufend);
 
 
 /*
- * 'moauthFormDecode()' - Decode x-www-form-urlencoded variables.
+ * '_moauthFormDecode()' - Decode x-www-form-urlencoded variables.
  */
 
 int					/* O - Number of form variables or 0 on error */
-moauthFormDecode(const char    *data,	/* I - Form data */
-                 cups_option_t **vars)	/* O - Form variables or @code NULL@ on error */
+_moauthFormDecode(const char    *data,	/* I - Form data */
+                  cups_option_t **vars)	/* O - Form variables or @code NULL@ on error */
 {
   int	num_vars = 0;			/* Number of form variables */
   char	name[1024],			/* Variable name */
@@ -90,14 +90,15 @@ moauthFormDecode(const char    *data,	/* I - Form data */
 
 
 /*
- * 'moauthFormEncode()' - Encode variables in the x-www-form-urlencoded format.
+ * '_moauthFormEncode()' - Encode variables in the x-www-form-urlencoded format.
  *
  * The caller is responsible for calling @code free@ on the returned string.
  */
 
 char *					/* O - Encoded data or @code NULL@ on error */
-moauthFormEncode(int           num_vars,/* I - Number of form variables */
-                 cups_option_t *vars)	/* I - Form variables */
+_moauthFormEncode(
+    int           num_vars,		/* I - Number of form variables */
+    cups_option_t *vars)		/* I - Form variables */
 {
   char	buffer[65536],			/* Temporary buffer */
 	*bufptr = buffer,		/* Current position in buffer */
