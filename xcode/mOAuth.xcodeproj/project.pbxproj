@@ -216,8 +216,8 @@
 				270E13A71FC31D220053DAE4 /* config.h */,
 				270E13A61FC31D000053DAE4 /* libmoauth */,
 				270E13A51FC31CF80053DAE4 /* moauthd */,
-				270E139C1FC31A530053DAE4 /* Products */,
 				270E13E11FC31E650053DAE4 /* Tests */,
+				270E139C1FC31A530053DAE4 /* Products */,
 				278AC4591FC3216100588F26 /* Frameworks */,
 			);
 			sourceTree = "<group>";

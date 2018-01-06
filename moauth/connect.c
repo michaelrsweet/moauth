@@ -59,14 +59,20 @@ moauthConnect(
     return (NULL);
   }
 
-  /* TODO: recognize common domains and override the resource to point to the right endpoint - OAuth has no standard endpoint for authorization... */
-
+  strncpy(server->host, host, sizeof(server->host) - 1);
   server->port = port;
 
-  strncpy(server->host, host, sizeof(server->host) - 1);
+ /*
+  * TODO:
+  *
+  * - Recognize common domains and override the resource to point to the
+  *   right endpoint - OAuth has no standard endpoint for authorization...
+  * - Support IndieAuth Profile URL links - basically do a GET of the URI
+  *   and then extract the authorization and token URIs.
+  */
+
   strncpy(server->authorize_resource, "/authorize", sizeof(server->authorize_resource) - 1);
   strncpy(server->token_resource, "/token", sizeof(server->token_resource) - 1);
 
   return (server);
 }
-
