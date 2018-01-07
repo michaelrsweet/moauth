@@ -77,9 +77,10 @@ typedef struct moauthd_token_s		/**** Token ****/
 {
   moauthd_toktype_t	type;		/* Type of token */
   char			*token,		/* Token string */
-			*redirect_uri,	/* Redirection URI used */
 			*user;		/* Authenticated user */
-  cups_array_t		*scopes;	/* Scope(s) */
+  moauthd_application_t	*application;	/* Client ID/redirection URI used */
+  char			*scopes;	/* Scope(s) string */
+  cups_array_t		*scopes_array;	/* Scope(s) array */
   uid_t			uid;		/* Authenticated UID */
   time_t		expires;	/* When the token expires */
 } moauthd_token_t;
@@ -148,9 +149,10 @@ extern int		moauthdAuthenticateUser(moauthd_server_t *server, const char *userna
 extern moauthd_client_t	*moauthdCreateClient(moauthd_server_t *server, int fd);
 extern moauthd_resource_t *moauthdCreateResource(moauthd_server_t *server, moauthd_restype_t type, const char *remote_path, const char *local_path, const char *scope);
 extern moauthd_server_t	*moauthdCreateServer(const char *configfile, int verbosity);
-extern moauthd_token_t	*moauthdCreateToken(moauthd_server_t *server, moauthd_toktype_t type, const char *redirect_uri, const char *user, const char *scopes);
+extern moauthd_token_t	*moauthdCreateToken(moauthd_server_t *server, moauthd_toktype_t type, moauthd_application_t *application, const char *user, const char *scopes);
 extern void		moauthdDeleteClient(moauthd_client_t *client);
 extern void		moauthdDeleteServer(moauthd_server_t *server);
+extern void		moauthdDeleteToken(moauthd_server_t *server, moauthd_token_t *token);
 extern moauthd_application_t *moauthdFindApplication(moauthd_server_t *server, const char *client_id, const char *redirect_uri);
 extern moauthd_resource_t *moauthdFindResource(moauthd_server_t *server, const char *path_info, char *name, size_t namesize, struct stat *info);
 extern moauthd_token_t	*moauthdFindToken(moauthd_server_t *server, const char *token_id);

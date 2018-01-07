@@ -551,6 +551,8 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         username      = cupsGetOption("username", num_vars, vars);
         password      = cupsGetOption("password", num_vars, vars);
 
+	free(data);
+
         if (!client_id || !response_type || strcmp(response_type, "code"))
         {
 	 /*
@@ -592,7 +594,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         {
           snprintf(uri, sizeof(uri), "%s%serror=access_denied&error_description=Bad+username+or+password.%s%s", redirect_uri, prefix, state ? "&state=" : "", state ? state : "");
         }
-        else if ((token = moauthdCreateToken(client->server, MOAUTHD_TOKTYPE_GRANT, redirect_uri, username, scope)) == NULL)
+        else if ((token = moauthdCreateToken(client->server, MOAUTHD_TOKTYPE_GRANT, app, username, scope)) == NULL)
         {
           snprintf(uri, sizeof(uri), "%s%serror=server_error&error_description=Unable+to+create+grant.%s%s", redirect_uri, prefix, state ? "&state=" : "", state ? state : "");
         }
@@ -620,6 +622,137 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
 static int				/* O - 1 on success, 0 on failure */
 do_token(moauthd_client_t *client)	/* I - Client object */
 {
+  int		num_vars;		/* Number of form (request) variables */
+  cups_option_t	*vars;			/* Form (request) variables */
+  char		*data;			/* Form data */
+  const char	*client_id,		/* client_id variable (REQUIRED) */
+		*code,			/* code variable (REQUIRED) */
+		*grant_type,		/* grant_type variable (REQUIRED) */
+		*redirect_uri;		/* redirect_uri variable (OPTIONAL) */
+  moauthd_application_t *app;		/* Application */
+  moauthd_token_t *grant_token,		/* Grant token */
+		*access_token;		/* Access token */
+  int		num_json = 0;		/* Number of JSON (response) variables */
+  cups_option_t	*json = NULL;		/* JSON (response) variables */
+  size_t	datalen;		/* Length of JSON data */
+  char		expires_in[32];		/* Expiration time */
+
+
+  if ((data = _moauthGetPostData(client->http)) == NULL)
+    return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+
+  num_vars      = _moauthFormDecode(data, &vars);
+  client_id     = cupsGetOption("client_id", num_vars, vars);
+  code          = cupsGetOption("code", num_vars, vars);
+  grant_type    = cupsGetOption("grant_type", num_vars, vars);
+  redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
+
+  free(data);
+
+  if (!client_id || !code || !grant_type || strcmp(grant_type, "authorization_code"))
+  {
+   /*
+    * Missing required variables!
+    */
+
+    if (!client_id)
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing client_id in token request.");
+    if (!code)
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing code in token request.");
+    if (!grant_type)
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing grant_type in token request.");
+    else if (strcmp(grant_type, "authorization_code"))
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad grant_type in token request.");
+
+    goto bad_request;
+  }
+
+  if ((app = moauthdFindApplication(client->server, client_id, redirect_uri)) == NULL)
+  {
+    if (redirect_uri)
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id/redirect_uri in token request.");
+    else
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id in token request.");
+
+    goto bad_request;
+  }
+
+  if ((grant_token = moauthdFindToken(client->server, code)) == NULL)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad code in token request.");
+
+    goto bad_request;
+  }
+
+  if (grant_token->application != app)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id or redirect_uri in token request.");
+
+    goto bad_request;
+  }
+
+  if (grant_token->expires <= time(NULL))
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Grant token has expired.");
+
+    moauthdDeleteToken(client->server, grant_token);
+
+    goto bad_request;
+  }
+
+  if ((access_token = moauthdCreateToken(client->server, MOAUTHD_TOKTYPE_ACCESS, app, grant_token->user, grant_token->scopes)) == NULL)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to create access token.");
+
+    goto bad_request;
+  }
+
+  moauthdDeleteToken(client->server, grant_token);
+
+  snprintf(expires_in, sizeof(expires_in), "%d", client->server->max_token_life);
+
+  num_json = cupsAddOption("access_token", access_token->token, num_json, &json);
+  num_json = cupsAddOption("token_type", "access", num_json, &json);
+  num_json = cupsAddOption("expires_in", expires_in, num_json, &json);
+
+  data = _moauthJSONEncode(num_json, json);
+  cupsFreeOptions(num_json, json);
+
+  if (!data)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to create JSON response.");
+
+    goto bad_request;
+  }
+
+  cupsFreeOptions(num_vars, vars);
+
+  datalen = strlen(data);
+
+  if (!moauthdRespondClient(client, HTTP_STATUS_OK, "application/json", NULL, 0, datalen))
+  {
+    free(data);
+    return (0);
+  }
+
+  if (httpWrite2(client->http, data, datalen) < datalen)
+  {
+    free(data);
+    return (0);
+  }
+
+  free(data);
+
+  return (1);
+
+ /*
+  * If we get here there was a bad request...
+  */
+
+  bad_request:
+
+  cupsFreeOptions(num_vars, vars);
+
   return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 }
 

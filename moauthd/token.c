@@ -1,7 +1,7 @@
 /*
  * Token handling for moauth daemon
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
@@ -24,11 +24,11 @@ static void	free_token(moauthd_token_t *token);
 
 moauthd_token_t *			/* O - New token */
 moauthdCreateToken(
-    moauthd_server_t  *server,		/* I - Server object */
-    moauthd_toktype_t type,		/* I - Token type */
-    const char        *redirect_uri,	/* I - Redirect URI */
-    const char        *user,		/* I - Authenticated user */
-    const char        *scopes)		/* I - Space-delimited list of scopes */
+    moauthd_server_t      *server,	/* I - Server object */
+    moauthd_toktype_t     type,		/* I - Token type */
+    moauthd_application_t *application,	/* I - Application */
+    const char            *user,	/* I - Authenticated user */
+    const char            *scopes)	/* I - Space-delimited list of scopes */
 {
   moauthd_token_t	*token;		/* New token */
   struct passwd		*passwd;	/* User info */
@@ -38,18 +38,19 @@ moauthdCreateToken(
 
   token = (moauthd_token_t *)calloc(1, sizeof(moauthd_token_t));
 
-  token->type         = type;
-  token->redirect_uri = strdup(redirect_uri);
-  token->user         = strdup(user);
+  token->type        = type;
+  token->application = application;
+  token->user        = strdup(user);
+  token->scopes      = strdup(scopes);
 
   strncpy(temp, scopes, sizeof(temp) - 1);
   temp[sizeof(temp) - 1] = '\0';
 
-  token->scopes = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0, (cups_acopy_func_t)strdup, (cups_afree_func_t)free);
+  token->scopes_array = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0, (cups_acopy_func_t)strdup, (cups_afree_func_t)free);
   if ((scope = strtok(temp, " \t")) != NULL)
-    cupsArrayAdd(token->scopes, scope);
+    cupsArrayAdd(token->scopes_array, scope);
   while ((scope = strtok(NULL, " \t")) != NULL)
-    cupsArrayAdd(token->scopes, scope);
+    cupsArrayAdd(token->scopes_array, scope);
 
   if ((passwd = getpwnam(user)) != NULL)
     token->uid = passwd->pw_uid;
@@ -80,6 +81,23 @@ moauthdCreateToken(
   pthread_rwlock_unlock(&server->tokens_lock);
 
   return (token);
+}
+
+
+/*
+ * 'moauthdDeleteToken()' - Delete a token from the server...
+ */
+
+void
+moauthdDeleteToken(
+    moauthd_server_t *server,		/* I - Server object */
+    moauthd_token_t  *token)		/* I - Token */
+{
+  pthread_rwlock_wrlock(&server->tokens_lock);
+
+  cupsArrayRemove(server->tokens, token);
+
+  pthread_rwlock_unlock(&server->tokens_lock);
 }
 
 
@@ -128,8 +146,8 @@ static void
 free_token(moauthd_token_t *token)	/* I - Token to free */
 {
   free(token->token);
-  free(token->redirect_uri);
   free(token->user);
-  cupsArrayDelete(token->scopes);
+  free(token->scopes);
+  cupsArrayDelete(token->scopes_array);
   free(token);
 }
