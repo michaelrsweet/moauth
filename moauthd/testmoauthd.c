@@ -48,7 +48,7 @@ static int	stop_tests = 0;
  * Local functions...
  */
 
-static int	open_auth_url(const char *state);
+static moauth_t	*open_auth_url(const char *url, const char *state);
 static void	*redirect_server(_moauth_redirect_t *data);
 static int	respond_client(http_t *http, http_status_t code, const char *message);
 static void	sig_handler(int sig);
@@ -67,6 +67,12 @@ main(void)
   _moauth_redirect_t	redirect_data;	/* Redirect server data */
   pthread_t		redirect_tid;	/* Thread ID */
   int			timeout;	/* Timeout counter */
+  char			host[256],	/* Hostname */
+			url[1024],	/* Authentication URL */
+			token[256],	/* Access token */
+			refresh[256];	/* Refresh token */
+  time_t		expires;	/* Expiration date/time */
+  moauth_t		*server;	/* Connection to moauthd*/
 
 
  /*
@@ -100,7 +106,15 @@ main(void)
   * Start authentication process...
   */
 
-  open_auth_url(redirect_data.state);
+  httpGetHostname(NULL, host, sizeof(host));
+
+  httpAssembleURI(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, 9000 + (getuid() % 1000), "/authorize");
+
+  if ((server = open_auth_url(url, redirect_data.state)) == NULL)
+  {
+    status = 1;
+    goto finish_up;
+  }
 
  /*
   * Wait up to 5 minutes for the response...
@@ -125,21 +139,46 @@ main(void)
 
   pthread_join(redirect_tid, NULL);
 
+  if (redirect_data.grant)
+  {
+    printf("PASS (grant code is \"%s\")\n", redirect_data.grant);
+  }
+  else if (!stop_tests)
+  {
+    puts("FAIL (no authorization response within 5 minutes)");
+    status = 1;
+  }
+  else
+    puts("FAIL (stopped)");
+
+  if (stop_tests || status)
+    goto finish_up;
+
+ /*
+  * Try to get an access token...
+  */
+
+  fputs("moauthGetToken: ", stdout);
+  if (moauthGetToken(server, "https://localhost:10000", "testmoauthd", redirect_data.grant, token, sizeof(token), refresh, sizeof(refresh), &expires))
+  {
+    printf("PASS (access token=\"%s\", refresh token=\"%s\", expires %s)\n", token, refresh, httpGetDateString(expires));
+  }
+  else
+  {
+    puts("FAIL");
+    status = 1;
+    goto finish_up;
+  }
+
  /*
   * Stop the test server...
   */
 
-  kill(moauthd_pid, SIGTERM);
+  finish_up:
 
-  if (redirect_data.grant)
-  {
-    fprintf(stderr, "Authorization grant code is \"%s\".\n", redirect_data.grant);
-  }
-  else if  (!stop_tests)
-  {
-    fputs("No authorization response within 5 minutes, failing.\n", stderr);
-    status = 1;
-  }
+  moauthClose(server);
+
+  kill(moauthd_pid, SIGTERM);
 
  /*
   * Return the test results...
@@ -153,27 +192,30 @@ main(void)
  * 'open_auth_url()' - Open the authentication URL for the OAuth server.
  */
 
-static int				/* O - 1 on success, 0 on failure */
-open_auth_url(const char *state)	/* I - Client state string */
+static moauth_t *			/* O - Server connection or @code NULL@ on failure */
+open_auth_url(const char *url,		/* I - OAuth server URL */
+              const char *state)	/* I - Client state string */
 {
   moauth_t	*server;		/* Connection to OAuth server */
-  char		host[256],		/* Hostname */
-		authenticate_url[1024];	/* Authentication URL */
-  int		status = 1;		/* Return status */
 
 
-  httpGetHostname(NULL, host, sizeof(host));
+  printf("moauthConnect(\"%s\", ...): ", url);
 
-  httpAssembleURI(HTTP_URI_CODING_ALL, authenticate_url, sizeof(authenticate_url), "https", NULL, host, 9000 + (getuid() % 1000), "/authorize");
+  if ((server = moauthConnect(url, 30000, NULL)) != NULL)
+  {
+    puts("PASS");
 
-  if ((server = moauthConnect(authenticate_url, 30000, NULL)) == NULL)
-    status = 0;
-  else if (!moauthAuthorize(server, "https://localhost:10000", "testmoauthd", state))
-    status = 0;
+    fputs("moauthAuthorize: ", stdout);
 
-  moauthClose(server);
+    if (!moauthAuthorize(server, "https://localhost:10000", "testmoauthd", state))
+    {
+      puts("FAIL (unable to open authorization page)");
+      moauthClose(server);
+      server = NULL;
+    }
+  }
 
-  return (status);
+  return (server);
 }
 
 
