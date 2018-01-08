@@ -52,7 +52,7 @@ static moauth_t	*open_auth_url(const char *url, const char *state);
 static void	*redirect_server(_moauth_redirect_t *data);
 static int	respond_client(http_t *http, http_status_t code, const char *message);
 static void	sig_handler(int sig);
-static pid_t	start_moauthd(void);
+static pid_t	start_moauthd(int verbosity);
 
 
 /*
@@ -60,8 +60,11 @@ static pid_t	start_moauthd(void);
  */
 
 int					/* O - Exit status */
-main(void)
+main(int  argc,				/* I - Number of command-line arguments */
+     char *argv[])			/* I - Command-line arguments */
 {
+  int			i,		/* Looping var */
+			verbosity = 0;	/* Verbosity for server */
   int			status = 0;	/* Exit status */
   pid_t			moauthd_pid;	/* moauthd Process ID */
   _moauth_redirect_t	redirect_data;	/* Redirect server data */
@@ -76,6 +79,23 @@ main(void)
 
 
  /*
+  * Parse command-line arguments...
+  */
+
+  for (i = 1; i < argc; i ++)
+  {
+    if (!strcmp(argv[i], "-v"))
+    {
+      verbosity ++;
+    }
+    else
+    {
+      puts("Usage: ./testmoauthd [-v]");
+      return (1);
+    }
+  }
+
+ /*
   * Catch signals...
   */
 
@@ -86,7 +106,7 @@ main(void)
   * Start daemon...
   */
 
-  moauthd_pid = start_moauthd();
+  moauthd_pid = start_moauthd(verbosity);
   sleep(1);
 
  /*
@@ -459,12 +479,20 @@ sig_handler(int sig)			/* I - Signal number */
  */
 
 static pid_t				/* O - Process ID */
-start_moauthd(void)
+start_moauthd(int verbosity)		/* I - Verbosity */
 {
   pid_t		pid = 0;		/* Process ID */
-  static char * const moauthd_argv[] =	/* moauthd arguments */
+  static char * const normal_argv[] =	/* moauthd arguments (normal) */
   {
     "moauthd",
+    "-c",
+    "test.conf",
+    NULL
+  };
+  static char * const verbose_argv[] =	/* moauthd arguments (verbose) */
+  {
+    "moauthd",
+    "-vvv",
     "-c",
     "test.conf",
     NULL
@@ -472,7 +500,10 @@ start_moauthd(void)
 
 
   chdir("..");
-  posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, moauthd_argv, environ);
+  if (verbosity)
+    posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, verbose_argv, environ);
+  else
+    posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, normal_argv, environ);
 
   return (pid);
 }

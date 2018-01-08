@@ -70,14 +70,32 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
   * Send a POST request with the form data...
   */
 
+  httpClearFields(server->http);
   httpSetField(server->http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
   httpSetLength(server->http, form_length);
 
   if (httpPost(server->http, server->token_resource))
-    goto done;
+  {
+//    fprintf(stderr, "moauthGetToken: Initial POST failed: %s\n", cupsLastErrorString());
+
+    if (httpReconnect2(server->http, 30000, NULL))
+    {
+//      fprintf(stderr, "moauthGetToken: Reconnect failed: %s\n", cupsLastErrorString());
+      goto done;
+    }
+
+    if (httpPost(server->http, server->token_resource))
+    {
+//      fprintf(stderr, "moauthGetToken: Secondary POST failed: %s\n", cupsLastErrorString());
+      goto done;
+    }
+  }
 
   if (httpWrite2(server->http, form_data, form_length) < form_length)
+  {
+//    fprintf(stderr, "moauthGetToken: Write failed: %s\n", cupsLastErrorString());
     goto done;
+  }
 
   while ((status = httpUpdate(server->http)) == HTTP_STATUS_CONTINUE);
 
@@ -101,6 +119,10 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
       refresh[refreshsize - 1] = '\0';
     }
   }
+//  else
+//  {
+//    fprintf(stderr, "moauthGetToken: Error - POST status %d\n", status);
+//  }
 
  /*
   * Return whatever we got...
@@ -177,11 +199,18 @@ moauthRefreshToken(
   * Send a POST request with the form data...
   */
 
+  httpClearFields(server->http);
   httpSetField(server->http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
   httpSetLength(server->http, form_length);
 
   if (httpPost(server->http, server->token_resource))
-    goto done;
+  {
+    if (httpReconnect2(server->http, 30000, NULL))
+      goto done;
+
+    if (httpPost(server->http, server->token_resource))
+      goto done;
+  }
 
   if (httpWrite2(server->http, form_data, form_length) < form_length)
     goto done;

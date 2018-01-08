@@ -13,6 +13,7 @@
  * Include necessary headers...
  */
 
+#  include <stdio.h>
 #  include <cups/cups.h>
 #  include "moauth.h"
 
