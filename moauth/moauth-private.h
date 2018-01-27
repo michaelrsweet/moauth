@@ -28,7 +28,8 @@ struct _moauth_s			/* OAuth server connection data */
   char		host[256];		/* Hostname */
   int		port;			/* Port number */
   char		authorize_resource[256],/* Resource path for authorization requests */
-		token_resource[256];	/* Resource path for token requests */
+		token_resource[256],	/* Resource path for token requests */
+		error[1024];		/* Last error message, if any */
 };
 
 

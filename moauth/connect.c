@@ -76,3 +76,15 @@ moauthConnect(
 
   return (server);
 }
+
+
+/*
+ * 'moauthErrorString()' - Return a description of the last error that occurred,
+ *                         if any.
+ */
+
+const char *				/* O - Last error description or @code NULL@ if none */
+moauthErrorString(moauth_t *server)	/* I - OAuth server connection */
+{
+  return ((server && server->error[0]) ? server->error : NULL);
+}

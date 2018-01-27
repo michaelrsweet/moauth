@@ -50,7 +50,12 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
     *expires = 0;
 
   if (!server || !redirect_uri || !client_id || !grant || !token || tokensize < 32)
+  {
+    if (server)
+      snprintf(server->error, sizeof(server->error), "Bad arguments to function.");
+
     return (NULL);
+  }
 
  /*
   * Prepare form data to get an access token...
@@ -62,7 +67,10 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
   num_form = cupsAddOption("client_id", client_id, num_form, &form);
 
   if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to encode form data.");
     goto done;
+  }
 
   form_length = strlen(form_data);
 
@@ -76,24 +84,22 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
 
   if (httpPost(server->http, server->token_resource))
   {
-//    fprintf(stderr, "moauthGetToken: Initial POST failed: %s\n", cupsLastErrorString());
-
     if (httpReconnect2(server->http, 30000, NULL))
     {
-//      fprintf(stderr, "moauthGetToken: Reconnect failed: %s\n", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect failed - %s", cupsLastErrorString());
       goto done;
     }
 
     if (httpPost(server->http, server->token_resource))
     {
-//      fprintf(stderr, "moauthGetToken: Secondary POST failed: %s\n", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "POST failed - %s", cupsLastErrorString());
       goto done;
     }
   }
 
   if (httpWrite2(server->http, form_data, form_length) < form_length)
   {
-//    fprintf(stderr, "moauthGetToken: Write failed: %s\n", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Write failed - %s", cupsLastErrorString());
     goto done;
   }
 
@@ -119,10 +125,10 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
       refresh[refreshsize - 1] = '\0';
     }
   }
-//  else
-//  {
-//    fprintf(stderr, "moauthGetToken: Error - POST status %d\n", status);
-//  }
+  else
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to get access token - POST status %d", status);
+  }
 
  /*
   * Return whatever we got...
@@ -181,7 +187,12 @@ moauthRefreshToken(
     *expires = 0;
 
   if (!server || !refresh || !token || tokensize < 32)
+  {
+    if (server)
+      snprintf(server->error, sizeof(server->error), "Bad arguments to function.");
+
     return (NULL);
+  }
 
  /*
   * Prepare form data to get an access token...
@@ -191,7 +202,10 @@ moauthRefreshToken(
   num_form = cupsAddOption("refresh_token", refresh, num_form, &form);
 
   if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to encode form data.");
     goto done;
+  }
 
   form_length = strlen(form_data);
 
@@ -206,14 +220,23 @@ moauthRefreshToken(
   if (httpPost(server->http, server->token_resource))
   {
     if (httpReconnect2(server->http, 30000, NULL))
+    {
+      snprintf(server->error, sizeof(server->error), "Reconnect failed - %s", cupsLastErrorString());
       goto done;
+    }
 
     if (httpPost(server->http, server->token_resource))
+    {
+      snprintf(server->error, sizeof(server->error), "POST failed - %s", cupsLastErrorString());
       goto done;
+    }
   }
 
   if (httpWrite2(server->http, form_data, form_length) < form_length)
+  {
+    snprintf(server->error, sizeof(server->error), "Write failed - %s", cupsLastErrorString());
     goto done;
+  }
 
   while ((status = httpUpdate(server->http)) == HTTP_STATUS_CONTINUE);
 
@@ -236,6 +259,10 @@ moauthRefreshToken(
       strncpy(new_refresh, value, new_refreshsize - 1);
       new_refresh[new_refreshsize - 1] = '\0';
     }
+  }
+  else
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to get access token - POST status %d", status);
   }
 
  /*

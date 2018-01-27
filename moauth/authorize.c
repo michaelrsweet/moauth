@@ -40,14 +40,23 @@ moauthAuthorize(
   */
 
   if (!server || !redirect_uri || !client_id)
+  {
+    if (server)
+      snprintf(server->error, sizeof(server->error), "Bad arguments to function.");
+
     return (0);
+  }
 
  /*
   * Make the authorization URL using the information supplied...
   */
 
   if (httpAssembleURIf(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, server->host, server->port, "%s%sresponse_type=code&client_id=%s&redirect_uri=%s%s%s", server->authorize_resource, strchr(server->authorize_resource, '?') != NULL ? "&" : "?", client_id, redirect_uri, state ? "&state=" : "", state ? state : "") < HTTP_URI_STATUS_OK)
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to create authorization URL.");
+
     return (0);				/* Probably the URL is too long */
+  }
 
 #ifdef __APPLE__
   CFURLRef cfurl = CFURLCreateWithBytes(kCFAllocatorDefault, (const UInt8 *)url, (CFIndex)strlen(url), kCFStringEncodingASCII, NULL);
@@ -55,12 +64,18 @@ moauthAuthorize(
   if (cfurl)
   {
     if (LSOpenCFURLRef(cfurl, NULL) != noErr)
+    {
+      snprintf(server->error, sizeof(server->error), "Unable to open authorization URL.");
       status = 0;			/* Couldn't open URL */
+    }
 
     CFRelease(cfurl);
   }
   else
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to create authorization URL.");
     status = 0;				/* Couldn't create CFURL object */
+  }
 
 #else
   pid_t		pid = 0;		/* Process ID */
@@ -80,6 +95,10 @@ moauthAuthorize(
     status = 0;				/* Couldn't get exit status */
   else if (estatus)
     status = 0;				/* Non-zero exit status */
+
+  if (!status)
+    snprintf(server->error, sizeof(server->error), "Unable to open authorization URL.");
+
 #endif /* __APPLE__ */
 
   return (status);
