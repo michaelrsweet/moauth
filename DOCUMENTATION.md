@@ -38,17 +38,24 @@ The following directives are currently recognized:
   syslog daemon, or "none" to disable logging.
 - `LogLevel`: Specifies the logging level - "error", "info", or "debug".  The
   default level is "error" so that only errors are logged.
+- `MaxGrantLife`: Specifies the maximum life of grants in seconds ("42"),
+  minutes ("42m"), hours ("42h"), days ("42d"), or weeks ("42w").  The default
+  is five minutes.
 - `MaxTokenLife`: Specifies the maximum life of issued tokens in seconds ("42"),
   minutes ("42m"), hours ("42h"), days ("42d"), or weeks ("42w").  The default
   is one week.
-- `Resource`: Specifies a remotely accessible file or directory resource.  See
-  below for examples and details.
+- `Option`: Specifies a server option to enable.  Currently only "BasicAuth" is
+  supported, which allows access to resources using HTTP Basic authentication
+  in addition to HTTP Bearer tokens.
+- `Resource`: Specifies a remotely accessible file or directory resource.  [See
+  below](#resources) for examples and details.
 - `ServerName`: Specifies the host name and (optionally) port number to bind to,
   separated by a colon.  For example, "oauth.example.com:9443" specifies a host
   name of "oauth.example.com" and a port number of 9443.  The default host name
   is the configured host name of the system.  The default port number is 9nnn
   where 'nnn' is the bottom three digits of your user UI.
-- `TestPassword`: Specifies a test password to use for all accounts.
+- `TestPassword`: Specifies a test password to use for all accounts, rather than
+  using PAM to authenticate the supplied username and password.
 
 The log level specified in the configuration file is also affected by the `-v`
 option, so if the configuration file specifies `LogLevel info` but you run
@@ -57,6 +64,9 @@ option, so if the configuration file specifies `LogLevel info` but you run
     moauthd -c /path/to/config/file -v
 
 then the log level will actually be set to "debug".
+
+
+### Resources
 
 Resources are specified using the `Resource` directive and allow remote access
 to a file or directory:
