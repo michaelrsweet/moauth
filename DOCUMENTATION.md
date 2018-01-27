@@ -15,7 +15,7 @@ hostname.  Log messages are written to the standard error file by default.
 
 The `-v` option increases the verbosity of the logging, with multiple v's making
 the logging progressively more verbose.  (Currently there are three levels of
-verbosity, so anything past `-vv` is silently ignored...)
+verbosity, so anything past `-vvv` is silently ignored...)
 
 The `-c` option specifies a plain text configuration file that consists of
 blank, comment, or "directive" lines, for example:
@@ -38,7 +38,9 @@ The following directives are currently recognized:
   syslog daemon, or "none" to disable logging.
 - `LogLevel`: Specifies the logging level - "error", "info", or "debug".  The
   default level is "error" so that only errors are logged.
-- `MaxTokenLife`: Specifies the maximum life of issued tokens in seconds ("42"), minutes ("42m"), hours ("42h"), days ("42d"), or weeks ("42w").  The default is one week.
+- `MaxTokenLife`: Specifies the maximum life of issued tokens in seconds ("42"),
+  minutes ("42m"), hours ("42h"), days ("42d"), or weeks ("42w").  The default
+  is one week.
 - `Resource`: Specifies a remotely accessible file or directory resource.  See
   below for examples and details.
 - `ServerName`: Specifies the host name and (optionally) port number to bind to,
