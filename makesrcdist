@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# makesrcdist - make a source distribution of mOAuth.
+#
+
+if test $# != 1; then
+	echo "Usage: ./makesrcdist version"
+	exit 1
+fi
+
+version=$1
+
+echo Creating tag for release...
+git tag -s -m "Tag $version" v$version
+git push origin v$version
+
+echo Creating moauth-$version.tar.gz...
+git archive --format tar HEAD | gzip -v9 >moauth-$version.tar.gz
