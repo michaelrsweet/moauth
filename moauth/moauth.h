@@ -23,7 +23,7 @@ typedef struct _moauth_s moauth_t;	/* OAuth server connection */
 extern int	moauthAuthorize(moauth_t *server, const char *redirect_uri, const char *client_id, const char *state);
 
 extern void	moauthClose(moauth_t *server);
-extern moauth_t	*moauthConnect(const char *oauth_uri, int msec, int *cancel);
+extern moauth_t	*moauthConnect(const char *oauth_uri);
 
 extern const char *moauthErrorString(moauth_t *server);
 

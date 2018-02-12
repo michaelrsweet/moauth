@@ -128,7 +128,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   httpGetHostname(NULL, host, sizeof(host));
 
-  httpAssembleURI(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, 9000 + (getuid() % 1000), "/authorize");
+  httpAssembleURI(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, 9000 + (getuid() % 1000), "/");
 
   if ((server = open_auth_url(url, redirect_data.state)) == NULL)
   {
@@ -221,7 +221,7 @@ open_auth_url(const char *url,		/* I - OAuth server URL */
 
   printf("moauthConnect(\"%s\", ...): ", url);
 
-  if ((server = moauthConnect(url, 30000, NULL)) != NULL)
+  if ((server = moauthConnect(url)) != NULL)
   {
     puts("PASS");
 
@@ -234,6 +234,8 @@ open_auth_url(const char *url,		/* I - OAuth server URL */
       server = NULL;
     }
   }
+  else
+    puts("FAIL (unable to connect to OAuth server)");
 
   return (server);
 }

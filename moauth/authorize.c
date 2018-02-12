@@ -31,6 +31,11 @@ moauthAuthorize(
     const char *client_id,		/* I - Client identifier */
     const char *state)			/* I - Client state string or @code NULL@ */
 {
+  char	scheme[32],			/* URI scheme */
+	userpass[256],			/* Username:password (unused) */
+	host[256],			/* Host */
+	resource[256];			/* Resource path */
+  int	port;				/* Port number */
   char	url[2048];			/* URL for authorization page */
   int	status = 1;			/* Return status */
 
@@ -51,7 +56,9 @@ moauthAuthorize(
   * Make the authorization URL using the information supplied...
   */
 
-  if (httpAssembleURIf(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, server->host, server->port, "%s%sresponse_type=code&client_id=%s&redirect_uri=%s%s%s", server->authorize_resource, strchr(server->authorize_resource, '?') != NULL ? "&" : "?", client_id, redirect_uri, state ? "&state=" : "", state ? state : "") < HTTP_URI_STATUS_OK)
+  httpSeparateURI(HTTP_URI_CODING_ALL, server->authorization_endpoint, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource));
+
+  if (httpAssembleURIf(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, port, "%s%sresponse_type=code&client_id=%s&redirect_uri=%s%s%s", resource, strchr(resource, '?') != NULL ? "&" : "?", client_id, redirect_uri, state ? "&state=" : "", state ? state : "") < HTTP_URI_STATUS_OK)
   {
     snprintf(server->error, sizeof(server->error), "Unable to create authorization URL.");
 

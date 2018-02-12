@@ -25,6 +25,8 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
 	       size_t     refreshsize,	/* I - Size of refresh token buffer */
 	       time_t     *expires)	/* O - Expiration date/time, if known */
 {
+  http_t	*http = NULL;		/* HTTP connection */
+  char		resource[256];		/* Token endpoint resource */
   http_status_t	status;			/* Response status */
   int		num_form = 0;		/* Number of form variables */
   cups_option_t	*form = NULL;		/* Form variables */
@@ -78,36 +80,42 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
   * Send a POST request with the form data...
   */
 
-  httpClearFields(server->http);
-  httpSetField(server->http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
-  httpSetLength(server->http, form_length);
-
-  if (httpPost(server->http, server->token_resource))
+  if ((http = _moauthConnect(server->token_endpoint, resource, sizeof(resource))) == NULL)
   {
-    if (httpReconnect2(server->http, 30000, NULL))
+    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed - %s", cupsLastErrorString());
+    goto done;
+  }
+
+  httpClearFields(http);
+  httpSetField(http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
+  httpSetLength(http, form_length);
+
+  if (httpPost(http, resource))
+  {
+    if (httpReconnect2(http, 30000, NULL))
     {
       snprintf(server->error, sizeof(server->error), "Reconnect failed - %s", cupsLastErrorString());
       goto done;
     }
 
-    if (httpPost(server->http, server->token_resource))
+    if (httpPost(http, resource))
     {
       snprintf(server->error, sizeof(server->error), "POST failed - %s", cupsLastErrorString());
       goto done;
     }
   }
 
-  if (httpWrite2(server->http, form_data, form_length) < form_length)
+  if (httpWrite2(http, form_data, form_length) < form_length)
   {
     snprintf(server->error, sizeof(server->error), "Write failed - %s", cupsLastErrorString());
     goto done;
   }
 
-  while ((status = httpUpdate(server->http)) == HTTP_STATUS_CONTINUE);
+  while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
 
   if (status == HTTP_STATUS_OK)
   {
-    json_data = _moauthCopyMessageBody(server->http);
+    json_data = _moauthCopyMessageBody(http);
     num_json  = _moauthJSONDecode(json_data, &json);
 
     if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
@@ -136,6 +144,8 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
 
   done:
 
+  httpClose(http);
+
   cupsFreeOptions(num_form, form);
   if (form_data)
     free(form_data);
@@ -162,6 +172,8 @@ moauthRefreshToken(
     size_t     new_refreshsize,		/* I - Size of refresh token buffer */
     time_t     *expires)		/* O - Expiration date/time, if known */
 {
+  http_t	*http = NULL;		/* HTTP connection */
+  char		resource[256];		/* Token endpoint resource */
   http_status_t	status;			/* Response status */
   int		num_form = 0;		/* Number of form variables */
   cups_option_t	*form = NULL;		/* Form variables */
@@ -213,36 +225,42 @@ moauthRefreshToken(
   * Send a POST request with the form data...
   */
 
-  httpClearFields(server->http);
-  httpSetField(server->http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
-  httpSetLength(server->http, form_length);
-
-  if (httpPost(server->http, server->token_resource))
+  if ((http = _moauthConnect(server->token_endpoint, resource, sizeof(resource))) == NULL)
   {
-    if (httpReconnect2(server->http, 30000, NULL))
+    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed - %s", cupsLastErrorString());
+    goto done;
+  }
+
+  httpClearFields(http);
+  httpSetField(http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
+  httpSetLength(http, form_length);
+
+  if (httpPost(http, resource))
+  {
+    if (httpReconnect2(http, 30000, NULL))
     {
-      snprintf(server->error, sizeof(server->error), "Reconnect failed - %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect to token endpoint failed - %s", cupsLastErrorString());
       goto done;
     }
 
-    if (httpPost(server->http, server->token_resource))
+    if (httpPost(http, resource))
     {
       snprintf(server->error, sizeof(server->error), "POST failed - %s", cupsLastErrorString());
       goto done;
     }
   }
 
-  if (httpWrite2(server->http, form_data, form_length) < form_length)
+  if (httpWrite2(http, form_data, form_length) < form_length)
   {
     snprintf(server->error, sizeof(server->error), "Write failed - %s", cupsLastErrorString());
     goto done;
   }
 
-  while ((status = httpUpdate(server->http)) == HTTP_STATUS_CONTINUE);
+  while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
 
   if (status == HTTP_STATUS_OK)
   {
-    json_data = _moauthCopyMessageBody(server->http);
+    json_data = _moauthCopyMessageBody(http);
     num_json  = _moauthJSONDecode(json_data, &json);
 
     if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
@@ -270,6 +288,8 @@ moauthRefreshToken(
   */
 
   done:
+
+  httpClose(http);
 
   cupsFreeOptions(num_form, form);
   if (form_data)

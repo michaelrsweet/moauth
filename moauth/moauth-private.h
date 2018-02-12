@@ -24,12 +24,9 @@
 
 struct _moauth_s			/* OAuth server connection data */
 {
-  http_t	*http;			/* HTTP connection */
-  char		host[256];		/* Hostname */
-  int		port;			/* Port number */
-  char		authorize_resource[256],/* Resource path for authorization requests */
-		token_resource[256],	/* Resource path for token requests */
-		error[1024];		/* Last error message, if any */
+  char		error[1024];		/* Last error message, if any */
+  const char	*authorization_endpoint,/* Authorization endpoint */
+		*token_endpoint;	/* Token endpoint */
   int		num_metadata;		/* Number of metadata values */
   cups_option_t	*metadata;		/* Metadata values */
 };
@@ -39,6 +36,7 @@ struct _moauth_s			/* OAuth server connection data */
  * Private functions...
  */
 
+extern http_t	*_moauthConnect(const char *uri, char *resource, size_t resourcelen);
 extern int	_moauthFormDecode(const char *data, cups_option_t **vars);
 extern char	*_moauthFormEncode(int num_vars, cups_option_t *vars);
 

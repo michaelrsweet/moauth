@@ -380,7 +380,7 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
     else
     {
      /*
-      * Server any other file...
+      * Serve any other file...
       */
 
       int	fd;			/* File descriptor */
