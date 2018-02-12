@@ -45,6 +45,9 @@ moauthdCreateServer(
 		*addr;			/* Current address */
   char		temp[1024];		/* Temporary filename */
   struct stat	tempinfo;		/* Temporary information */
+  int		num_json;		/* Number of OpenID JSON variables */
+  cups_option_t	*json;			/* OpenID JSON variables */
+  moauthd_resource_t *r;		/* Resource */
 
 
  /*
@@ -260,7 +263,7 @@ moauthdCreateServer(
 	  goto create_failed;
         }
 
-        moauthdCreateResource(server, S_ISREG(local_info.st_mode) ? MOAUTHD_RESTYPE_FILE : MOAUTHD_RESTYPE_DIR, remote_path, local_path, scope);
+        moauthdCreateResource(server, S_ISREG(local_info.st_mode) ? MOAUTHD_RESTYPE_FILE : MOAUTHD_RESTYPE_DIR, remote_path, local_path, NULL, scope);
       }
       else if (!strcasecmp(line, "ServerName"))
       {
@@ -371,6 +374,119 @@ moauthdCreateServer(
   cupsSetServerCredentials(NULL, server->name, 1);
 
  /*
+  * Generate OpenID JSON metadata...
+  */
+
+  num_json = 0;
+  json     = NULL;
+
+ /*
+  * issuer
+  *
+  * REQUIRED. URL using the https scheme with no query or fragment component
+  * that the OP asserts as its Issuer Identifier. If Issuer discovery is
+  * supported (see Section 2), this value MUST be identical to the issuer value
+  * returned by WebFinger. This also MUST be identical to the iss Claim value
+  * in ID Tokens issued from this Issuer.
+  */
+
+  snprintf(temp, sizeof(temp), "https://%s:%d/", server_name, server_port);
+  num_json = cupsAddOption("issuer", temp, num_json, &json);
+
+ /*
+  * authorization_endpoint
+  *
+  * REQUIRED. URL of the OP's OAuth 2.0 Authorization Endpoint [OpenID.Core].
+  */
+
+  snprintf(temp, sizeof(temp), "https://%s:%d/authorize", server_name, server_port);
+  num_json = cupsAddOption("authorization_endpoint", temp, num_json, &json);
+
+ /*
+  * token_endpoint
+  *
+  * URL of the OP's OAuth 2.0 Token Endpoint [OpenID.Core]. This is REQUIRED
+  * unless only the Implicit Flow is used.
+  */
+
+  snprintf(temp, sizeof(temp), "https://%s:%d/token", server_name, server_port);
+  num_json = cupsAddOption("token_endpoint", temp, num_json, &json);
+
+ /*
+  * scopes_supported
+  *
+  * RECOMMENDED. JSON array containing a list of the OAuth 2.0 [RFC6749]
+  * scope values that this server supports. The server MUST support the
+  * openid scope value. Servers MAY choose not to advertise some supported
+  * scope values even when this parameter is used, although those defined in
+  * [OpenID.Core] SHOULD be listed, if supported.
+  */
+
+ /*
+  * response_types_supported
+  *
+  * REQUIRED. JSON array containing a list of the OAuth 2.0 response_type
+  * values that this OP supports. Dynamic OpenID Providers MUST support the
+  * code, id_token, and the token id_token Response Type values.
+  */
+
+
+#if 0 /* Issue #7: Implement JSON Web Key Set */
+ /*
+  * jwks_uri
+  *
+  * REQUIRED. URL of the OP's JSON Web Key Set [RFC7517] document. This
+  * contains the signing key(s) the RP uses to validate signatures from the OP.
+  * The JWK Set MAY also contain the Server's encryption key(s), which are used
+  * by RPs to encrypt requests to the Server. When both signing and encryption
+  * keys are made available, a use (Key Use) parameter value is REQUIRED for
+  * all keys in the referenced JWK Set to indicate each key's intended usage.
+  * Although some algorithms allow the same key to be used for both signatures
+  * and encryption, doing so is NOT RECOMMENDED, as it is less secure. The JWK
+  * x5c parameter MAY be used to provide X.509 representations of keys
+  * provided. When used, the bare key values MUST still be present and MUST
+  * match those in the certificate.
+  */
+
+  snprintf(temp, sizeof(temp), "https://%s:%d/jwks", server_name, server_port);
+  num_json = cupsAddOption("token_endpoint", temp, num_json, &json);
+
+ /*
+  * subject_types_supported
+  *
+  * REQUIRED. JSON array containing a list of the Subject Identifier types
+  * that this OP supports. Valid types include pairwise and public.
+  */
+
+ /*
+  * id_token_signing_alg_values_supported
+  *
+  * REQUIRED. JSON array containing a list of the JWS signing algorithms (alg
+  * values) supported by the OP for the ID Token to encode the Claims in a
+  * JWT [JWT]. The algorithm RS256 MUST be included. The value none MAY be
+  * supported, but MUST NOT be used unless the Response Type used returns no
+  * ID Token from the Authorization Endpoint (such as when using the
+  * Authorization Code Flow).
+  */
+#endif /* 0 */
+
+#if 0 /* Issue #8: Support OpenID Dynamic Client Registration API */
+ /*
+  * registration_endpoint
+  *
+  * RECOMMENDED. URL of the OP's Dynamic Client Registration Endpoint
+  * [OpenID.Registration].
+  */
+#endif /* 0 */
+
+ /*
+  * Encode the metadata for later delivery to clients...
+  */
+
+  server->openid_metadata = _moauthJSONEncode(num_json, json);
+  cupsFreeOptions(num_json, json);
+
+ /*
   * Final setup...
   */
 
@@ -392,13 +508,21 @@ moauthdCreateServer(
     server->secret = strdup(temp);
   }
 
+ /*
+  * Add OpenID configuration file.
+  */
+
+  r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/.well-known/openid-configuration", NULL, "text/json", "public");
+  r->data   = server->openid_metadata;
+  r->length = strlen(server->openid_metadata);
+
   if (!moauthdFindResource(server, "/moauth.png", temp, sizeof(temp), &tempinfo))
   {
    /*
     * Add default moauth.png file...
     */
 
-    moauthd_resource_t *r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/moauth.png", NULL, "public");
+    r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/moauth.png", NULL, "image/png", "public");
     r->data   = moauth_png;
     r->length = sizeof(moauth_png);
   }
@@ -409,7 +533,7 @@ moauthdCreateServer(
     * Add default style.css file...
     */
 
-    moauthd_resource_t *r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/style.css", NULL, "public");
+    r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/style.css", NULL, "text/css", "public");
     r->data   = style_css;
     r->length = strlen(style_css);
   }
@@ -459,6 +583,9 @@ moauthdDeleteServer(
 
   if (server->test_password)
     free(server->test_password);
+
+  if (server->openid_metadata)
+    free(server->openid_metadata);
 
   free(server);
 }

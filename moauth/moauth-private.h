@@ -30,6 +30,8 @@ struct _moauth_s			/* OAuth server connection data */
   char		authorize_resource[256],/* Resource path for authorization requests */
 		token_resource[256],	/* Resource path for token requests */
 		error[1024];		/* Last error message, if any */
+  int		num_metadata;		/* Number of metadata values */
+  cups_option_t	*metadata;		/* Metadata values */
 };
 
 
@@ -40,7 +42,7 @@ struct _moauth_s			/* OAuth server connection data */
 extern int	_moauthFormDecode(const char *data, cups_option_t **vars);
 extern char	*_moauthFormEncode(int num_vars, cups_option_t *vars);
 
-extern char	*_moauthGetPostData(http_t *http);
+extern char	*_moauthCopyMessageBody(http_t *http);
 
 extern int	_moauthJSONDecode(const char *data, cups_option_t **vars);
 extern char	*_moauthJSONEncode(int num_vars, cups_option_t *vars);

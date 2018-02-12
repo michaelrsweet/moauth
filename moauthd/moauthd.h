@@ -58,6 +58,7 @@ typedef struct moauthd_resource_s	/**** Resource ****/
   moauthd_restype_t	type;		/* Resource type */
   char			*remote_path,	/* Remote path */
 			*local_path,	/* Local path */
+			*content_type,	/* MIME media type, if any */
 			*scope;		/* Access scope */
   size_t		remote_len;	/* Length of remote path */
   const void		*data;		/* Data (static files) */
@@ -123,6 +124,7 @@ typedef struct moauthd_server_s		/**** Server ****/
   pthread_rwlock_t tokens_lock;		/* R/W lock for tokens array */
   time_t	start_time;		/* Startup time */
   char		*test_password;		/* Testing password */
+  char		*openid_metadata;	/* OpenID JSON metadata */
 } moauthd_server_t;
 
 
@@ -147,7 +149,7 @@ typedef struct moauthd_client_s		/**** Client Information ****/
 
 extern int		moauthdAuthenticateUser(moauthd_server_t *server, const char *username, const char *password);
 extern moauthd_client_t	*moauthdCreateClient(moauthd_server_t *server, int fd);
-extern moauthd_resource_t *moauthdCreateResource(moauthd_server_t *server, moauthd_restype_t type, const char *remote_path, const char *local_path, const char *scope);
+extern moauthd_resource_t *moauthdCreateResource(moauthd_server_t *server, moauthd_restype_t type, const char *remote_path, const char *local_path, const char *content_type, const char *scope);
 extern moauthd_server_t	*moauthdCreateServer(const char *configfile, int verbosity);
 extern moauthd_token_t	*moauthdCreateToken(moauthd_server_t *server, moauthd_toktype_t type, moauthd_application_t *application, const char *user, const char *scopes);
 extern void		moauthdDeleteClient(moauthd_client_t *client);

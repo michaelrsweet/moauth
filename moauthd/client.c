@@ -539,7 +539,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         break;
 
     case HTTP_STATE_POST :
-        if ((data = _moauthGetPostData(client->http)) == NULL)
+        if ((data = _moauthCopyMessageBody(client->http)) == NULL)
           return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
         num_vars      = _moauthFormDecode(data, &vars);
@@ -638,7 +638,7 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   char		expires_in[32];		/* Expiration time */
 
 
-  if ((data = _moauthGetPostData(client->http)) == NULL)
+  if ((data = _moauthCopyMessageBody(client->http)) == NULL)
     return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
   num_vars      = _moauthFormDecode(data, &vars);

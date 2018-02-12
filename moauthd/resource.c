@@ -34,6 +34,7 @@ moauthdCreateResource(
     moauthd_restype_t type,		/* I - Resource type */
     const char        *remote_path,	/* I - Remote path */
     const char        *local_path,	/* I - Local path, if any */
+    const char        *content_type,	/* I - MIME media type, if any */
     const char        *scope)		/* I - Scope string */
 {
   moauthd_resource_t	*resource;	/* Resource object */
@@ -51,11 +52,12 @@ moauthdCreateResource(
 
   resource = (moauthd_resource_t *)calloc(1, sizeof(moauthd_resource_t));
 
-  resource->type = type;
-  resource->remote_path = strdup(remote_path);
-  resource->remote_len  = strlen(remote_path);
-  resource->local_path  = local_path ? strdup(local_path) : NULL;
-  resource->scope       = strdup(scope);
+  resource->type         = type;
+  resource->remote_path  = strdup(remote_path);
+  resource->remote_len   = strlen(remote_path);
+  resource->local_path   = local_path ? strdup(local_path) : NULL;
+  resource->content_type = content_type ? strdup(content_type) : NULL;
+  resource->scope        = strdup(scope);
 
   pthread_rwlock_wrlock(&server->resources_lock);
 
@@ -282,25 +284,41 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
   * Serve the file...
   */
 
-  if ((ext = strrchr(uri, '.')) == NULL)
-    ext = ".txt";
+  if (best->content_type)
+  {
+   /*
+    * Content type is known...
+    */
 
-  if (!strcmp(ext, ".css"))
-    content_type = "text/css";
-  else if (!strcmp(ext, ".html") || !strcmp(ext, ".md"))
-    content_type = "text/html";
-  else if (!strcmp(ext, ".jpg"))
-    content_type = "image/jpg";
-  else if (!strcmp(ext, ".js"))
-    content_type = "text/javascript";
-  else if (!strcmp(ext, ".pdf"))
-    content_type = "application/pdf";
-  else if (!strcmp(ext, ".png"))
-    content_type = "image/png";
-  else if (!strcmp(ext, ".xml"))
-    content_type = "text/xml";
+    content_type = best->content_type;
+    ext          = "";
+  }
   else
-    content_type = "text/plain";
+  {
+   /*
+    * Unknown type, guess...
+    */
+
+    if ((ext = strrchr(uri, '.')) == NULL)
+      ext = ".txt";
+
+    if (!strcmp(ext, ".css"))
+      content_type = "text/css";
+    else if (!strcmp(ext, ".html") || !strcmp(ext, ".md"))
+      content_type = "text/html";
+    else if (!strcmp(ext, ".jpg"))
+      content_type = "image/jpg";
+    else if (!strcmp(ext, ".js"))
+      content_type = "text/javascript";
+    else if (!strcmp(ext, ".pdf"))
+      content_type = "application/pdf";
+    else if (!strcmp(ext, ".png"))
+      content_type = "image/png";
+    else if (!strcmp(ext, ".xml"))
+      content_type = "text/xml";
+    else
+      content_type = "text/plain";
+  }
 
   if (client->request_method == HTTP_STATE_GET)
   {
@@ -413,6 +431,8 @@ free_resource(
   free(resource->remote_path);
   if (resource->local_path)
     free(resource->local_path);
+  if (resource->content_type)
+    free(resource->content_type);
   free(resource->scope);
   free(resource);
 }

@@ -20,6 +20,7 @@ moauthClose(moauth_t *server)		/* I - OAuth server connection */
   if (server)
   {
     httpClose(server->http);
+    cupsFreeOptions(server->num_metadata, server->metadata);
     free(server);
   }
 }
@@ -59,20 +60,93 @@ moauthConnect(
     return (NULL);
   }
 
+  /**** TODO: enforce trust settings ****/
+
   strncpy(server->host, host, sizeof(server->host) - 1);
   server->port = port;
 
  /*
-  * TODO:
-  *
-  * - Recognize common domains and override the resource to point to the
-  *   right endpoint - OAuth has no standard endpoint for authorization...
-  * - Support IndieAuth Profile URL links - basically do a GET of the URI
-  *   and then extract the authorization and token URIs.
+  * Get the metadata from the specified URL.  If the resource is "/" (default)
+  * then grab the well-known OpenID configuration path.
   */
 
-  strncpy(server->authorize_resource, "/authorize", sizeof(server->authorize_resource) - 1);
-  strncpy(server->token_resource, "/token", sizeof(server->token_resource) - 1);
+  if (!strcmp(resource, "/"))
+  {
+    strncpy(resource, "/.well-known/openid-configuration", sizeof(resource) - 1);
+    resource[sizeof(resource) - 1] = '\0';
+  }
+
+  httpClearFields(server->http);
+
+  if (!httpGet(server->http, resource))
+  {
+   /*
+    * GET succeeded, grab the response...
+    */
+
+    http_status_t	status;		/* HTTP GET response status */
+    const char		*content_type;	/* Message body format */
+    char		*body;		/* HTTP message body */
+
+    while ((status = httpUpdate(server->http)) == HTTP_STATUS_CONTINUE);
+
+    content_type = httpGetField(server->http, HTTP_FIELD_CONTENT_TYPE);
+    body         = _moauthCopyMessageBody(server->http);
+
+    if (content_type && body && !strcmp(content_type, "text/json"))
+    {
+     /*
+      * OpenID JSON metadata...
+      */
+
+      const char *uri;			/* Authorization/token URI */
+
+      server->num_metadata = _moauthJSONDecode(body, &server->metadata);
+
+      if ((uri = cupsGetOption("authorization_endpoint", server->num_metadata, server->metadata)) != NULL)
+      {
+	if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK || strcmp(scheme, "https") || strcmp(host, server->host) || port != server->port)
+        {
+         /*
+          * Bad authorization URI...
+	  */
+
+          moauthClose(server);
+	  return (NULL);
+	}
+
+        strncpy(server->authorize_resource, resource, sizeof(server->authorize_resource) - 1);
+      }
+
+      if ((uri = cupsGetOption("token_endpoint", server->num_metadata, server->metadata)) != NULL)
+      {
+	if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK || strcmp(scheme, "https") || strcmp(host, server->host) || port != server->port)
+        {
+         /*
+          * Bad authorization URI...
+	  */
+
+          moauthClose(server);
+	  return (NULL);
+	}
+
+        strncpy(server->token_resource, resource, sizeof(server->token_resource) - 1);
+      }
+    }
+
+    if (body)
+      free(body);
+  }
+
+  if (!server->authorize_resource[0] || !server->token_resource[0])
+  {
+   /*
+    * Use the default values appropriate for mOAuth...
+    */
+
+    strncpy(server->authorize_resource, "/authorize", sizeof(server->authorize_resource) - 1);
+    strncpy(server->token_resource, "/token", sizeof(server->token_resource) - 1);
+  }
 
   return (server);
 }

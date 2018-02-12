@@ -107,7 +107,7 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
 
   if (status == HTTP_STATUS_OK)
   {
-    json_data = _moauthGetPostData(server->http);
+    json_data = _moauthCopyMessageBody(server->http);
     num_json  = _moauthJSONDecode(json_data, &json);
 
     if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
@@ -242,7 +242,7 @@ moauthRefreshToken(
 
   if (status == HTTP_STATUS_OK)
   {
-    json_data = _moauthGetPostData(server->http);
+    json_data = _moauthCopyMessageBody(server->http);
     num_json  = _moauthJSONDecode(json_data, &json);
 
     if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
