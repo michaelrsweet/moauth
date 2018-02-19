@@ -40,6 +40,8 @@ _moauthConnect(const char *uri,		/* I - URI to connect to */
 		host[256];		/* Host */
   int		port;			/* Port number */
   http_t	*http;			/* HTTP connection */
+  cups_array_t	*ccreds,		/* Connection TLS credentials */
+		*screds;		/* Saved TLS credentials */
 
 
   if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, (int)resourcelen) < HTTP_URI_STATUS_OK || strcmp(scheme, "https"))
@@ -47,7 +49,32 @@ _moauthConnect(const char *uri,		/* I - URI to connect to */
 
   http = httpConnect2(host, port, NULL, AF_UNSPEC, HTTP_ENCRYPTION_ALWAYS, 1, 30000, NULL);
 
-  /**** TODO: enforce trust settings ****/
+  if (httpCopyCredentials(http, &ccreds))
+  {
+    httpClose(http);
+    return (NULL);
+  }
+
+  switch (httpCredentialsGetTrust(ccreds, host))
+  {
+    case HTTP_TRUST_OK :      /* Credentials are OK/trusted */
+    case HTTP_TRUST_RENEWED : /* Credentials have been renewed */
+    case HTTP_TRUST_UNKNOWN : /* Credentials are unknown/new */
+        break;
+
+    case HTTP_TRUST_INVALID : /* Credentials are invalid */
+    case HTTP_TRUST_CHANGED : /* Credentials have changed */
+    case HTTP_TRUST_EXPIRED : /* Credentials are expired */
+        httpClose(http);
+        httpFreeCredentials(ccreds);
+        return (NULL);
+  }
+
+  if (!httpLoadCredentials(NULL, &screds, host) && !screds)
+    httpSaveCredentials(NULL, ccreds, host);
+
+  httpFreeCredentials(ccreds);
+  httpFreeCredentials(screds);
 
   return (http);
 }
