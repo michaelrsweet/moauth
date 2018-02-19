@@ -15,15 +15,17 @@
  */
 
 char *					/* O - Access token or @code NULL@ on error */
-moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
-               const char *redirect_uri,/* I - Redirection URI that was used */
-               const char *client_id,	/* I - Client ID that was used */
-               const char *grant,	/* I - Grant code */
-	       char       *token,	/* I - Access token buffer */
-	       size_t     tokensize,	/* I - Size of access token buffer */
-	       char       *refresh,	/* I - Refresh token buffer */
-	       size_t     refreshsize,	/* I - Size of refresh token buffer */
-	       time_t     *expires)	/* O - Expiration date/time, if known */
+moauthGetToken(
+    moauth_t   *server,			/* I - Connection to OAuth server */
+    const char *redirect_uri,		/* I - Redirection URI that was used */
+    const char *client_id,		/* I - Client ID that was used */
+    const char *grant,			/* I - Grant code */
+    const char *code_verifier,		/* I - Code verifier string, if any */
+    char       *token,			/* I - Access token buffer */
+    size_t     tokensize,		/* I - Size of access token buffer */
+    char       *refresh,		/* I - Refresh token buffer */
+    size_t     refreshsize,		/* I - Size of refresh token buffer */
+    time_t     *expires)		/* O - Expiration date/time, if known */
 {
   http_t	*http = NULL;		/* HTTP connection */
   char		resource[256];		/* Token endpoint resource */
@@ -67,6 +69,9 @@ moauthGetToken(moauth_t   *server,	/* I - Connection to OAuth server */
   num_form = cupsAddOption("code", grant, num_form, &form);
   num_form = cupsAddOption("redirect_uri", redirect_uri, num_form, &form);
   num_form = cupsAddOption("client_id", client_id, num_form, &form);
+
+  if (code_verifier)
+    num_form = cupsAddOption("code_verifier", code_verifier, num_form, &form);
 
   if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
   {

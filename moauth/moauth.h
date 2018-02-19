@@ -20,14 +20,14 @@ typedef struct _moauth_s moauth_t;	/* OAuth server connection */
  * Functions...
  */
 
-extern int	moauthAuthorize(moauth_t *server, const char *redirect_uri, const char *client_id, const char *state);
+extern int	moauthAuthorize(moauth_t *server, const char *redirect_uri, const char *client_id, const char *state, const char *code_verifier);
 
 extern void	moauthClose(moauth_t *server);
 extern moauth_t	*moauthConnect(const char *oauth_uri);
 
 extern const char *moauthErrorString(moauth_t *server);
 
-extern char	*moauthGetToken(moauth_t *server, const char *redirect_uri, const char *client_id, const char *grant, char *token, size_t tokensize, char *refresh, size_t refreshsize, time_t *expires);
+extern char	*moauthGetToken(moauth_t *server, const char *redirect_uri, const char *client_id, const char *grant, const char *code_verifier, char *token, size_t tokensize, char *refresh, size_t refreshsize, time_t *expires);
 
 extern char	*moauthRefreshToken(moauth_t *server, const char *refresh, char *token, size_t tokensize, char *new_refresh, size_t new_refreshsize, time_t *expires);
 

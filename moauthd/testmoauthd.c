@@ -33,6 +33,7 @@ extern char **environ;
 typedef struct _moauth_redirect_s
 {
   char	state[32];			/* State string */
+  char	verifier[45];			/* Verifier string */
   char	*grant;				/* Grant token */
 } _moauth_redirect_t;
 
@@ -48,7 +49,7 @@ static int	stop_tests = 0;
  * Local functions...
  */
 
-static moauth_t	*open_auth_url(const char *url, const char *state);
+static moauth_t	*open_auth_url(const char *url, const char *state, const char *verifier);
 static void	*redirect_server(_moauth_redirect_t *data);
 static int	respond_client(http_t *http, http_status_t code, const char *message);
 static void	sig_handler(int sig);
@@ -76,6 +77,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 			refresh[256];	/* Refresh token */
   time_t		expires;	/* Expiration date/time */
   moauth_t		*server;	/* Connection to moauthd*/
+  unsigned char		data[32];	/* Data for verifier string */
 
 
  /*
@@ -113,6 +115,10 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Start redirect server thread...
   */
 
+  for (i = 0; i < sizeof(data); i ++)
+    data[i] = (unsigned char)random();
+  httpEncode64_2(redirect_data.verifier, (int)sizeof(redirect_data.verifier), (char *)data, (int)sizeof(data));
+
   snprintf(redirect_data.state, sizeof(redirect_data.state), "%d", getpid());
   redirect_data.grant = NULL;
 
@@ -130,7 +136,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   httpAssembleURI(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, 9000 + (getuid() % 1000), "/");
 
-  if ((server = open_auth_url(url, redirect_data.state)) == NULL)
+  if ((server = open_auth_url(url, redirect_data.state, redirect_data.verifier)) == NULL)
   {
     status = 1;
     goto finish_up;
@@ -179,7 +185,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   */
 
   fputs("moauthGetToken: ", stdout);
-  if (moauthGetToken(server, "https://localhost:10000", "testmoauthd", redirect_data.grant, token, sizeof(token), refresh, sizeof(refresh), &expires))
+  if (moauthGetToken(server, "https://localhost:10000", "testmoauthd", redirect_data.grant, redirect_data.verifier, token, sizeof(token), refresh, sizeof(refresh), &expires))
   {
     printf("PASS (access token=\"%s\", refresh token=\"%s\", expires %s)\n", token, refresh, httpGetDateString(expires));
   }
@@ -214,7 +220,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 
 static moauth_t *			/* O - Server connection or @code NULL@ on failure */
 open_auth_url(const char *url,		/* I - OAuth server URL */
-              const char *state)	/* I - Client state string */
+              const char *state,	/* I - Client state string */
+              const char *verifier)	/* I - Verifier string */
 {
   moauth_t	*server;		/* Connection to OAuth server */
 
@@ -227,7 +234,7 @@ open_auth_url(const char *url,		/* I - OAuth server URL */
 
     fputs("moauthAuthorize: ", stdout);
 
-    if (!moauthAuthorize(server, "https://localhost:10000", "testmoauthd", state))
+    if (!moauthAuthorize(server, "https://localhost:10000", "testmoauthd", state, verifier))
     {
       puts("FAIL (unable to open authorization page)");
       moauthClose(server);
