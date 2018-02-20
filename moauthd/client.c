@@ -441,6 +441,8 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
 		*response_type,		/* response_type variable (REQUIRED) */
 		*scope,			/* scope variable (OPTIONAL) */
 		*state,			/* state variable (RECOMMENDED) */
+		*challenge,		/* code_challenge variable (OPTIONAL) */
+		*method,		/* code_challenge_method variable (OPTIONAL) */
 		*username,		/* username variable */
 		*password;		/* password variable */
   moauthd_application_t *app;		/* Application */
@@ -465,8 +467,10 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         response_type = cupsGetOption("response_type", num_vars, vars);
         scope         = cupsGetOption("scope", num_vars, vars);
         state         = cupsGetOption("state", num_vars, vars);
+        challenge     = cupsGetOption("code_challenge", num_vars, vars);
+        method        = cupsGetOption("code_challenge_method", num_vars, vars);
 
-        if (!client_id || !response_type || strcmp(response_type, "code"))
+        if (!client_id || !response_type || strcmp(response_type, "code") || (method && strcmp(method, "S256")))
         {
 	 /*
 	  * Missing required variables!
@@ -478,6 +482,8 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
             moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing response_type in authorize request.");
           else if (strcmp(response_type, "code"))
             moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad response_type in authorize request.");
+	  else if (method && strcmp(method, "S256"))
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad code_challenge_method \"%s\" in authorize request.", method);
 
 	  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Query string was \"%s\".", client->query_string);
 
@@ -530,6 +536,8 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
             client_id, app->redirect_uri, response_type, scope ? scope : "private shared");
         if (state)
           moauthdHTMLPrintf(client, "    <input type=\"hidden\" name=\"state\" value=\"%s\">\n", state);
+        if (challenge)
+          moauthdHTMLPrintf(client, "    <input type=\"hidden\" name=\"code_challenge\" value=\"%s\">\n", challenge);
 	moauthdHTMLPrintf(client,
             "  </form>\n"
             "</div>\n");
@@ -550,6 +558,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         state         = cupsGetOption("state", num_vars, vars);
         username      = cupsGetOption("username", num_vars, vars);
         password      = cupsGetOption("password", num_vars, vars);
+        challenge     = cupsGetOption("code_challenge", num_vars, vars);
 
 	free(data);
 
@@ -600,6 +609,9 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         }
         else
         {
+          if (challenge)
+            token->challenge = strdup(challenge);
+
           snprintf(uri, sizeof(uri), "%s%scode=%s%s%s", redirect_uri, prefix, token->token, state ? "&state=" : "", state ? state : "");
         }
 
@@ -628,7 +640,8 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   const char	*client_id,		/* client_id variable (REQUIRED) */
 		*code,			/* code variable (REQUIRED) */
 		*grant_type,		/* grant_type variable (REQUIRED) */
-		*redirect_uri;		/* redirect_uri variable (OPTIONAL) */
+		*redirect_uri,		/* redirect_uri variable (OPTIONAL) */
+		*verifier;		/* code_verify variable (OPTIONAL) */
   moauthd_application_t *app;		/* Application */
   moauthd_token_t *grant_token,		/* Grant token */
 		*access_token;		/* Access token */
@@ -646,6 +659,7 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   code          = cupsGetOption("code", num_vars, vars);
   grant_type    = cupsGetOption("grant_type", num_vars, vars);
   redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
+  verifier      = cupsGetOption("code_verifier", num_vars, vars);
 
   free(data);
 
@@ -698,6 +712,31 @@ do_token(moauthd_client_t *client)	/* I - Client object */
     moauthdDeleteToken(client->server, grant_token);
 
     goto bad_request;
+  }
+
+  if (grant_token->challenge)
+  {
+    if (verifier)
+    {
+      unsigned char	sha256[32];	/* SHA-256 hash of verifier */
+      char		challenge[45];	/* Base64 version of hash */
+
+      cupsHashData("sha2-256", verifier, strlen(verifier), sha256, sizeof(sha256));
+      httpEncode64_2(challenge, (int)sizeof(challenge), (char *)sha256, (int)sizeof(sha256));
+
+      if (strcmp(grant_token->challenge, challenge))
+      {
+	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad code_verifier in token request.");
+
+	goto bad_request;
+      }
+    }
+    else
+    {
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing code_verifier in token request.");
+
+      goto bad_request;
+    }
   }
 
   if ((access_token = moauthdCreateToken(client->server, MOAUTHD_TOKTYPE_ACCESS, app, grant_token->user, grant_token->scopes)) == NULL)

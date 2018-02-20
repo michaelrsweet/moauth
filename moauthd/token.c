@@ -145,6 +145,8 @@ compare_tokens(moauthd_token_t *a,	/* I - First token */
 static void
 free_token(moauthd_token_t *token)	/* I - Token to free */
 {
+  if (token->challenge)
+    free(token->challenge);
   free(token->token);
   free(token->user);
   free(token->scopes);

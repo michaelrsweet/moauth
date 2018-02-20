@@ -78,6 +78,7 @@ typedef struct moauthd_token_s		/**** Token ****/
 {
   moauthd_toktype_t	type;		/* Type of token */
   char			*token,		/* Token string */
+			*challenge,	/* Challenge string */
 			*user;		/* Authenticated user */
   moauthd_application_t	*application;	/* Client ID/redirection URI used */
   char			*scopes;	/* Scope(s) string */
