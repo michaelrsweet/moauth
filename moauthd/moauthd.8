@@ -1,0 +1,36 @@
+.\"
+.\" moauthd man page
+.\"
+.\" Copyright © 2018 by Michael R Sweet
+.\"
+.\" Licensed under Apache License v2.0.  See the file "LICENSE" for more
+.\" information.
+.\"
+.TH moauthd 8 "mOAuth" "2018-03-28" "Michael R Sweet"
+.SH NAME
+moauthd \- oauth 2.0 authorization and resource server
+.SH SYNOPSIS
+.B moauthd
+[
+.B \-c
+.I moauthd.conf
+] [
+.B \-v
+]
+.SH DESCRIPTION
+.B moauthd
+is an OAuth 2.0 authorization and resource server program.
+When run with no arguments, it binds to port 9nnn where 'nnn' is the bottom three digits of your user ID and is accessible on all addresses associated with your system's hostname.
+Log messages are written to the standard error file by default.
+.SH OPTIONS
+.TP 5
+\fB\-c \fImoauthd.conf\fR
+Specifies a plain text configuration file.
+.TP 5
+\fB\-v\fR
+Increases the verbosity of the logging.
+Multiple v's make the logging progressively more verbose.
+.SH SEE ALSO
+.BR moauthd.conf (5)
+.SH COPYRIGHT
+Copyright \[co] 2017-2018 by Michael R Sweet.

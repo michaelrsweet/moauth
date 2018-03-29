@@ -1,9 +1,10 @@
 #
 # moauth daemon makefile
 #
-# Copyright © 2017 by Michael R Sweet
+# Copyright © 2017-2018 by Michael R Sweet
 #
-# Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+# Licensed under Apache License v2.0.  See the file "LICENSE" for more
+# information.
 #
 
 # Include common stuff...
@@ -11,9 +12,22 @@ include ../Makedefs
 
 
 # Daemon targets...
-MOAUTHD_OBJS	=	auth.o client.o log.o main.o mmd.o resource.o server.o token.o web.o
-OBJS		=	$(MOAUTHD_OBJS) testmoauthd.o
-TARGETS		=	moauthd testmoauthd
+MOAUTHD_OBJS	=	\
+			auth.o \
+			client.o \
+			log.o \
+			main.o \
+			mmd.o \
+			resource.o \
+			server.o \
+			token.o \
+			web.o
+OBJS		=	\
+			$(MOAUTHD_OBJS) \
+			testmoauthd.o
+TARGETS		=	\
+			moauthd \
+			testmoauthd
 
 
 # Make everything...
@@ -27,6 +41,12 @@ clean:
 
 # Install everything...
 install:	all
+	$(INSTALL) -d -m 755 $(BUILDROOT)$(sbindir)
+	$(INSTALL) -c -m 755 moauthd $(BUILDROOT)$(sbindir)
+	$(INSTALL) -d -m 755 $(BUILDROOT)$(mandir)/man5
+	$(INSTALL) -c -m 644 moauthd.conf.5 $(BUILDROOT)$(mandir)/man5
+	$(INSTALL) -d -m 755 $(BUILDROOT)$(mandir)/man8
+	$(INSTALL) -c -m 644 moauthd.8 $(BUILDROOT)$(mandir)/man8
 
 
 # Test everything...

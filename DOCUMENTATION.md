@@ -8,7 +8,7 @@ mOAuth Documentation
 moauthd
 -------
 
-`moauthd` is the OAuth 2.0 authentication/resource server program.  When run
+`moauthd` is the OAuth 2.0 authorization and resource server program.  When run
 with no arguments, it binds to port 9nnn where 'nnn' is the bottom three digits
 of your user ID and is accessible on all addresses associated with your system's
 hostname.  Log messages are written to the standard error file by default.
@@ -53,7 +53,7 @@ The following directives are currently recognized:
   separated by a colon.  For example, "oauth.example.com:9443" specifies a host
   name of "oauth.example.com" and a port number of 9443.  The default host name
   is the configured host name of the system.  The default port number is 9nnn
-  where 'nnn' is the bottom three digits of your user UI.
+  where 'nnn' is the bottom three digits of your user ID.
 - `TestPassword`: Specifies a test password to use for all accounts, rather than
   using PAM to authenticate the supplied username and password.
 

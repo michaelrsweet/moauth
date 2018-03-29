@@ -1,0 +1,72 @@
+.\"
+.\" moauthd.conf man page
+.\"
+.\" Copyright © 2018 by Michael R Sweet
+.\"
+.\" Licensed under Apache License v2.0.  See the file "LICENSE" for more
+.\" information.
+.\"
+.TH moauthd.conf 5 "mOAuth" "2018-03-28" "Michael R Sweet"
+.SH NAME
+moauthd.conf \- moauthd configuration file format
+.SH DESCRIPTION
+The
+.I moauthd.conf
+file configures the mOAuth authorization and resource server
+.BR moauthd (8).
+Each line in the file can be a configuration directive, a blank line, or a comment.
+Configuration directives typically consist of a name and zero or more values separated by whitespace.
+The configuration directive name and values are case-insensitive.
+Comment lines start with the # character.
+.SH DIRECTIVES
+.TP 5
+\fBApplication \fIclient-id redirect-uri\fR
+Specifies a client ID and redirect URI pair to allow when authorizing.
+.TP 5
+\fBLogFile \fIfilename\fR
+Specifies the file for log messages.
+The filename can be "stderr" to send messages to the standard error file, "syslog" to send messages to the syslog daemon, or "none" to disable logging.
+.TP 5
+\fBLogLevel \fI{error,info,debug}\fR
+Specifies the logging level - "error", "info", or "debug".
+The default level is "error" so that only errors are logged.
+.TP 5
+\fBMaxGrantLife \fIinterval\fR
+Specifies the maximum life of grants in seconds ("42"), minutes ("42m"), hours ("42h"), days ("42d"), or weeks ("42w").
+The default is five minutes.
+.TP 5
+\fBMaxTokenLife \fIinterval\fR
+Specifies the maximum life of issued tokens in seconds ("42"), minutes ("42m"), hours ("42h"), days ("42d"), or weeks ("42w").
+The default is one week.
+.TP 5
+\fBOption \fIoption\fR
+Specifies a server option to enable.
+Currently only "BasicAuth" is supported, which allows access to resources using HTTP Basic authentication in addition to HTTP Bearer tokens.
+.TP 5
+\fBResource \fIscope /remote/path /local/path\fR
+Specifies a remotely accessible file or directory resource.
+The scope is "public" for resources that require no authentication, "private" for resources that can only be accessed by the resource owner or group (as defined by the local path permissions), or "shared" for resources that can be accessed by any valid user.
+Resources are matched using the longest matching remote path.
+Directory resources use the "index.md" or "index.html" file for viewing, while Markdown resources are automatically converted to HTML.
+See the examples below for details.
+.TP 5
+\fBServerName \fIhostname[:port\fR
+Specifies the host name and (optionally) port number to bind to, separated by a colon.
+For example, "oauth.example.com:9443" specifies a host name of "oauth.example.com" and a port number of 9443.
+The default host name is the configured host name of the system.
+The default port number is 9nnn where 'nnn' is the bottom three digits of your user ID.
+.TP 5
+\fBTestPassword \fIpassword\fR
+Specifies a test password to use for all accounts, rather than using PAM to authenticate the supplied username and password.
+.SH EXAMPLES
+The following directives setup a public web site directory under "/", a private directory under "/private", and a shared directory under "/shared":
+.nf
+
+    Resource public / public_files
+    Resource private /private private_files
+    Resource shared /shared shared_files
+.fi
+.SH SEE ALSO
+.BR moauthd (8)
+.SH COPYRIGHT
+Copyright \[co] 2017-2018 by Michael R Sweet.
