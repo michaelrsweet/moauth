@@ -15,6 +15,7 @@
  */
 
 static int	do_authorize(moauthd_client_t *client);
+static int	do_introspect(moauthd_client_t *client);
 static int	do_token(moauthd_client_t *client);
 
 
@@ -270,6 +271,18 @@ moauthdRunClient(
 	      moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authenticated as \"%s\" using Basic.", username);
 	      strncpy(client->remote_user, username, sizeof(client->remote_user) - 1);
 	      client->remote_uid = user->pw_uid;
+
+              client->num_remote_groups = (int)(sizeof(client->remote_groups) / sizeof(client->remote_groups[0]));
+
+#ifdef __APPLE__
+              if (getgrouplist(client->remote_user, (int)user->pw_gid, client->remote_groups, &client->num_remote_groups))
+#else
+              if (getgrouplist(client->remote_user, user->pw_gid, client->remote_groups, &client->num_remote_groups))
+#endif /* __APPLE__ */
+              {
+                moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup groups for user \"%s\": %s", username, strerror(errno));
+                client->num_remote_groups = 0;
+	      }
 	    }
 	    else
 	    {
@@ -322,6 +335,18 @@ moauthdRunClient(
           client->remote_token = token;
           client->remote_uid   = token->uid;
           strncpy(client->remote_user, token->user, sizeof(client->remote_user) - 1);
+
+	  client->num_remote_groups = (int)(sizeof(client->remote_groups) / sizeof(client->remote_groups[0]));
+
+#ifdef __APPLE__
+	  if (getgrouplist(token->user, (int)token->gid, client->remote_groups, &client->num_remote_groups))
+#else
+	  if (getgrouplist(token->user, token->gid, client->remote_groups, &client->num_remote_groups))
+#endif /* __APPLE__ */
+	  {
+	    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup groups for user \"%s\": %s", token->user, strerror(errno));
+	    client->num_remote_groups = 0;
+	  }
         }
       }
       else
@@ -403,6 +428,8 @@ moauthdRunClient(
       case HTTP_STATE_POST :
 	  if (!strcmp(client->path_info, "/authorize"))
 	    done = !do_authorize(client);
+	  else if (!strcmp(client->path_info, "/introspect"))
+	    done = !do_introspect(client);
 	  else if (!strcmp(client->path_info, "/token"))
 	    done = !do_token(client);
 	  else
@@ -624,6 +651,138 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
   }
 
   return (1);
+}
+
+
+/*
+ * 'do_introspect()' - Process a request for the /introspect endpoint.
+ */
+
+static int				/* O - 1 on success, 0 on failure */
+do_introspect(moauthd_client_t *client)	/* I - Client object */
+{
+  http_status_t	status = HTTP_STATUS_OK;/* Response status */
+  int		num_vars;		/* Number of form (request) variables */
+  cups_option_t	*vars;			/* Form (request) variables */
+  char		*data;			/* Form data */
+  const char	*token_var;		/* token variable (REQUIRED) */
+  moauthd_token_t *token;		/* Token */
+  int		num_json = 0;		/* Number of JSON (response) variables */
+  cups_option_t	*json = NULL;		/* JSON (response) variables */
+  size_t	datalen;		/* Length of JSON data */
+  char		exp[32],		/* Expiration time */
+		iat[32];		/* Issue time */
+  static const char * const types[] =	/* Token types */
+  {
+    "access",
+    "grant",
+    "renewal"
+  };
+
+
+  if (!client->remote_user[0])
+  {
+   /*
+    * Not yet authenticated...
+    */
+
+    status = HTTP_STATUS_UNAUTHORIZED;
+  }
+  else if (client->server->introspect_group != (gid_t)-1)
+  {
+   /*
+    * See if the authenticated user is in the specified group...
+    */
+
+    int i;				/* Looping var */
+
+    for (i = 0; i < client->num_remote_groups; i ++)
+      if (client->remote_groups[i] == client->server->introspect_group)
+        break;
+
+    if (i >= client->num_remote_groups)
+      status = HTTP_STATUS_FORBIDDEN;
+  }
+
+  if (status != HTTP_STATUS_OK)
+    return (moauthdRespondClient(client, status, NULL, NULL, 0, 0));
+
+  if ((data = _moauthCopyMessageBody(client->http)) == NULL)
+    return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+
+  num_vars  = _moauthFormDecode(data, &vars);
+  token_var = cupsGetOption("token", num_vars, vars);
+
+  free(data);
+
+  if (!token_var)
+  {
+   /*
+    * Missing required variables!
+    */
+
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing token in introspect request.");
+
+    goto bad_request;
+  }
+
+  if ((token = moauthdFindToken(client->server, token_var)) == NULL)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad token in introspect request.");
+
+    goto bad_request;
+  }
+
+  snprintf(exp, sizeof(exp), "%ld", (long)token->expires);
+  snprintf(iat, sizeof(iat), "%ld", (long)token->created);
+
+  num_json = cupsAddOption("active", token->expires > time(NULL) ? "true" : "false", num_json, &json);
+  num_json = cupsAddOption("scope", token->scopes, num_json, &json);
+  num_json = cupsAddOption("client_id", token->application->client_id, num_json, &json);
+  num_json = cupsAddOption("username", token->user, num_json, &json);
+  num_json = cupsAddOption("token_type", types[token->type], num_json, &json);
+  num_json = cupsAddOption("exp", exp, num_json, &json);
+  num_json = cupsAddOption("iat", iat, num_json, &json);
+
+  data = _moauthJSONEncode(num_json, json);
+  cupsFreeOptions(num_json, json);
+
+  if (!data)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to create JSON response.");
+
+    goto bad_request;
+  }
+
+  cupsFreeOptions(num_vars, vars);
+
+  datalen = strlen(data);
+
+  if (!moauthdRespondClient(client, HTTP_STATUS_OK, "application/json", NULL, 0, datalen))
+  {
+    free(data);
+    return (0);
+  }
+
+  if (httpWrite2(client->http, data, datalen) < datalen)
+  {
+    free(data);
+    return (0);
+  }
+
+  free(data);
+
+  return (1);
+
+ /*
+  * If we get here there was a bad request...
+  */
+
+  bad_request:
+
+  cupsFreeOptions(num_vars, vars);
+
+  return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 }
 
 

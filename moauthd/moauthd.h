@@ -84,6 +84,8 @@ typedef struct moauthd_token_s		/**** Token ****/
   char			*scopes;	/* Scope(s) string */
   cups_array_t		*scopes_array;	/* Scope(s) array */
   uid_t			uid;		/* Authenticated UID */
+  gid_t			gid;		/* Primary group ID */
+  time_t		created;	/* When the token was created */
   time_t		expires;	/* When the token expires */
 } moauthd_token_t;
 
@@ -113,6 +115,7 @@ typedef struct moauthd_server_s		/**** Server ****/
   struct pollfd	listeners[MOAUTHD_MAX_LISTENERS];
 					/* Listener sockets */
   unsigned	options;		/* Server option flags */
+  gid_t		introspect_group;	/* Group allowed to introspect tokens */
   int		max_grant_life,		/* Maximum life of a grant in seconds */
 		max_token_life;		/* Maximum life of a token in seconds */
   int		num_tokens;		/* Number of tokens issued */
@@ -140,6 +143,12 @@ typedef struct moauthd_client_s		/**** Client Information ****/
   char		remote_host[256],	/* Remote hostname */
 		remote_user[256];	/* Authenticated username, if any */
   uid_t		remote_uid;		/* Authenticated UID, if any */
+  int		num_remote_groups;	/* Number of remote groups, if any */
+#ifdef __APPLE__
+  int		remote_groups[32];	/* Authenticated groups, if any */
+#else
+  gid_t		remote_groups[32];	/* Authenticated groups, if any */
+#endif /* __APPLE__ */
   moauthd_token_t *remote_token;	/* Access token used, if any */
 } moauthd_client_t;
 
