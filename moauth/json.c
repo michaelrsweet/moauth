@@ -30,7 +30,8 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
   int	num_vars = 0;			/* Number of form variables */
   char	name[1024],			/* Variable name */
 	value[4096],			/* Variable value */
-	*ptr;				/* Pointer into value */
+	*ptr,				/* Pointer into value */
+	*end;				/* End of value */
 
 
  /*
@@ -87,10 +88,103 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
 
       data ++;
     }
-    else if (*data == '{' || *data == '[')
+    else if (*data == '[')
     {
      /*
-      * Unsupported object or array value...
+      * Array value...
+      */
+
+      ptr    = value;
+      end    = value + sizeof(value) - 1;
+      *ptr++ = '[';
+
+      for (data ++; *data && *data != ']';)
+      {
+        if (*data == ',')
+        {
+          if (ptr < end)
+            *ptr++ = *data++;
+	  else
+	    goto decode_error;
+        }
+        else if (*data == '\"')
+        {
+         /*
+          * Quoted string value...
+          */
+
+          do
+          {
+	    if (*data == '\\')
+	    {
+	      if (ptr < end)
+		*ptr++ = *data++;
+	      else
+		goto decode_error;
+
+              if (!strchr("\\\"/bfnrtu", *data))
+                goto decode_error;
+
+	      if (*data == 'u')
+	      {
+		if (ptr < (end - 5))
+		  *ptr++ = *data++;
+		else
+		  goto decode_error;
+
+	        if (isxdigit(data[0] & 255) && isxdigit(data[1] & 255) && isxdigit(data[2] & 255) && isxdigit(data[3] & 255))
+	        {
+		  *ptr++ = *data++;
+		  *ptr++ = *data++;
+		  *ptr++ = *data++;
+		  /* 4th character is copied below */
+	        }
+	        else
+	          goto decode_error;
+	      }
+	    }
+
+	    if (ptr < end)
+	      *ptr++ = *data++;
+	    else
+	      goto decode_error;
+	  }
+	  while (*data && *data != '\"');
+        }
+        else if (*data == '{' || *data == '[')
+        {
+         /*
+          * Unsupported nested array or object value...
+          */
+
+	  goto decode_error;
+	}
+	else
+	{
+	 /*
+	  * Number, boolean, etc.
+	  */
+
+          while (*data && *data != ',' && !isspace(*data & 255))
+          {
+            if (ptr < end)
+              *ptr++ = *data++;
+	    else
+	      goto decode_error;
+	  }
+	}
+      }
+
+      if (*data != ']' || ptr >= end)
+        goto decode_error;
+
+      *ptr++ = ']';
+      *ptr   = '\0';
+    }
+    else if (*data == '{')
+    {
+     /*
+      * Unsupported object value...
       */
 
       goto decode_error;
@@ -150,6 +244,7 @@ _moauthJSONEncode(
   int		is_number;		/* Is the value a number? */
 
   *bufptr++ = '{';
+  *bufend   = '\0';
 
   while (num_vars > 0)
   {
@@ -160,35 +255,47 @@ _moauthJSONEncode(
 
     *bufptr++ = ':';
 
-    is_number = 0;
-
-    if (vars->value[0] == '-' || isdigit(vars->value[0] & 255))
-    {
-      for (valptr = vars->value + 1; *valptr && (isdigit(*valptr & 255) || *valptr == '.'); valptr ++);
-
-      if (*valptr == 'e' || *valptr == 'E' || !*valptr)
-        is_number = 1;
-    }
-
-    if (is_number)
+    if (vars->value[0] == '[')
     {
      /*
-      * Copy number literal...
+      * Array value, already encoded...
       */
 
-      for (valptr = vars->value; *valptr; valptr ++)
-      {
-        if (bufptr < bufend)
-          *bufptr++ = *valptr;
-      }
+      strncpy(bufptr, vars->value, bufend - bufptr);
+      bufptr += strlen(bufptr);
     }
     else
     {
-     /*
-      * Copy string value...
-      */
+      is_number = 0;
 
-      bufptr = encode_string(vars->value, bufptr, bufend);
+      if (vars->value[0] == '-' || isdigit(vars->value[0] & 255))
+      {
+	for (valptr = vars->value + 1; *valptr && (isdigit(*valptr & 255) || *valptr == '.'); valptr ++);
+
+	if (*valptr == 'e' || *valptr == 'E' || !*valptr)
+	  is_number = 1;
+      }
+
+      if (is_number)
+      {
+       /*
+	* Copy number literal...
+	*/
+
+	for (valptr = vars->value; *valptr; valptr ++)
+	{
+	  if (bufptr < bufend)
+	    *bufptr++ = *valptr;
+	}
+      }
+      else
+      {
+       /*
+	* Copy string value...
+	*/
+
+	bufptr = encode_string(vars->value, bufptr, bufend);
+      }
     }
 
     num_vars --;

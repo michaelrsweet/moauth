@@ -19,6 +19,13 @@
 extern char **environ;
 
 
+#ifdef __APPLE__
+#  define RANDOM arc4random()
+#else
+#  define RANDOM random()
+#endif /* __APPLE__ */
+
+
 /*
  * Constants...
  */
@@ -116,7 +123,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   */
 
   for (i = 0; i < sizeof(data); i ++)
-    data[i] = (unsigned char)random();
+    data[i] = (unsigned char)RANDOM;
   httpEncode64_2(redirect_data.verifier, (int)sizeof(redirect_data.verifier), (char *)data, (int)sizeof(data));
 
   snprintf(redirect_data.state, sizeof(redirect_data.state), "%d", getpid());

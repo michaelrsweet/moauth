@@ -799,7 +799,10 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   const char	*client_id,		/* client_id variable (REQUIRED) */
 		*code,			/* code variable (REQUIRED) */
 		*grant_type,		/* grant_type variable (REQUIRED) */
+		*password,		/* password variable (REQURIED for Resource Owner Password Grant) */
 		*redirect_uri,		/* redirect_uri variable (OPTIONAL) */
+		*scope,			/* scope variable (OPTIONAL) */
+		*username,		/* username variable (REQURIED for Resource Owner Password Grant) */
 		*verifier;		/* code_verify variable (OPTIONAL) */
   moauthd_application_t *app;		/* Application */
   moauthd_token_t *grant_token,		/* Grant token */
@@ -817,12 +820,33 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   client_id     = cupsGetOption("client_id", num_vars, vars);
   code          = cupsGetOption("code", num_vars, vars);
   grant_type    = cupsGetOption("grant_type", num_vars, vars);
+  password      = cupsGetOption("password", num_vars, vars);
   redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
+  username      = cupsGetOption("username", num_vars, vars);
+  scope         = cupsGetOption("scope", num_vars, vars);
   verifier      = cupsGetOption("code_verifier", num_vars, vars);
 
   free(data);
 
-  if (!client_id || !code || !grant_type || strcmp(grant_type, "authorization_code"))
+  if (!grant_type || strcmp(grant_type, "authorization_code") || strcmp(grant_type, "password"))
+  {
+    if (!grant_type)
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing grant_type in token request.");
+    else
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad grant_type in token request.");
+
+    goto bad_request;
+  }
+  else if (!strcmp(grant_type, "password") && !username && !password)
+  {
+    if (!username)
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing username in token request.");
+    if (!password)
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing password in token request.");
+
+    goto bad_request;
+  }
+  else if (!client_id || !code)
   {
    /*
     * Missing required variables!
@@ -832,80 +856,86 @@ do_token(moauthd_client_t *client)	/* I - Client object */
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing client_id in token request.");
     if (!code)
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing code in token request.");
-    if (!grant_type)
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing grant_type in token request.");
-    else if (strcmp(grant_type, "authorization_code"))
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad grant_type in token request.");
 
     goto bad_request;
   }
 
-  if ((app = moauthdFindApplication(client->server, client_id, redirect_uri)) == NULL)
+  if (!strcmp(grant_type, "password"))
   {
-    if (redirect_uri)
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id/redirect_uri in token request.");
-    else
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id in token request.");
+    if (!moauthdAuthenticateUser(client->server, username, password))
+      goto bad_request;
 
-    goto bad_request;
+    access_token = moauthdCreateToken(client->server, MOAUTHD_TOKTYPE_ACCESS, NULL, username, scope);
   }
-
-  if ((grant_token = moauthdFindToken(client->server, code)) == NULL)
+  else
   {
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad code in token request.");
-
-    goto bad_request;
-  }
-
-  if (grant_token->application != app)
-  {
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id or redirect_uri in token request.");
-
-    goto bad_request;
-  }
-
-  if (grant_token->expires <= time(NULL))
-  {
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Grant token has expired.");
-
-    moauthdDeleteToken(client->server, grant_token);
-
-    goto bad_request;
-  }
-
-  if (grant_token->challenge)
-  {
-    if (verifier)
+    if ((app = moauthdFindApplication(client->server, client_id, redirect_uri)) == NULL)
     {
-      unsigned char	sha256[32];	/* SHA-256 hash of verifier */
-      char		challenge[45];	/* Base64 version of hash */
+      if (redirect_uri)
+	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id/redirect_uri in token request.");
+      else
+	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id in token request.");
 
-      cupsHashData("sha2-256", verifier, strlen(verifier), sha256, sizeof(sha256));
-      httpEncode64_2(challenge, (int)sizeof(challenge), (char *)sha256, (int)sizeof(sha256));
+      goto bad_request;
+    }
 
-      if (strcmp(grant_token->challenge, challenge))
+    if ((grant_token = moauthdFindToken(client->server, code)) == NULL)
+    {
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad code in token request.");
+
+      goto bad_request;
+    }
+
+    if (grant_token->application != app)
+    {
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad client_id or redirect_uri in token request.");
+
+      goto bad_request;
+    }
+
+    if (grant_token->expires <= time(NULL))
+    {
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Grant token has expired.");
+
+      moauthdDeleteToken(client->server, grant_token);
+
+      goto bad_request;
+    }
+
+    if (grant_token->challenge)
+    {
+      if (verifier)
       {
-	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad code_verifier in token request.");
+	unsigned char	sha256[32];	/* SHA-256 hash of verifier */
+	char		challenge[45];	/* Base64 version of hash */
+
+	cupsHashData("sha2-256", verifier, strlen(verifier), sha256, sizeof(sha256));
+	httpEncode64_2(challenge, (int)sizeof(challenge), (char *)sha256, (int)sizeof(sha256));
+
+	if (strcmp(grant_token->challenge, challenge))
+	{
+	  moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad code_verifier in token request.");
+
+	  goto bad_request;
+	}
+      }
+      else
+      {
+	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing code_verifier in token request.");
 
 	goto bad_request;
       }
     }
-    else
+
+    if ((access_token = moauthdCreateToken(client->server, MOAUTHD_TOKTYPE_ACCESS, app, grant_token->user, grant_token->scopes)) == NULL)
     {
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing code_verifier in token request.");
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to create access token.");
 
       goto bad_request;
     }
+
+    moauthdDeleteToken(client->server, grant_token);
   }
-
-  if ((access_token = moauthdCreateToken(client->server, MOAUTHD_TOKTYPE_ACCESS, app, grant_token->user, grant_token->scopes)) == NULL)
-  {
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to create access token.");
-
-    goto bad_request;
-  }
-
-  moauthdDeleteToken(client->server, grant_token);
 
   snprintf(expires_in, sizeof(expires_in), "%d", client->server->max_token_life);
 
@@ -947,6 +977,7 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   * If we get here there was a bad request...
   */
 
+  /* TODO: generate JSON error message body */
   bad_request:
 
   cupsFreeOptions(num_vars, vars);

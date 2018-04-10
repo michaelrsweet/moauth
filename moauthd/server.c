@@ -416,11 +416,23 @@ moauthdCreateServer(
  /*
   * introspection_endpoint
   *
-  * URL of the OP's OAuth 2.0 Introspection Endpoint [RFC7662].
+  * EXTENSION. URL of the OP's OAuth 2.0 Introspection Endpoint [RFC7662].
   */
 
   snprintf(temp, sizeof(temp), "https://%s:%d/introspect", server_name, server_port);
   num_json = cupsAddOption("introspection_endpoint", temp, num_json, &json);
+
+ /*
+  * grant_types_supported
+  *
+  * OPTIONAL. JSON array containing a list of the OAuth 2.0 Grant Type values
+  * that this OP supports. Dynamic OpenID Providers MUST support the
+  * authorization_code and implicit Grant Type values and MAY support other
+  * Grant Types. If omitted, the default value is
+  * ["authorization_code", "implicit"].
+  */
+
+  num_json = cupsAddOption("grant_types_supported", "[\"authorization_code\",\"password\",\"refresh_token\"]", num_json, &json);
 
  /*
   * scopes_supported
@@ -432,14 +444,19 @@ moauthdCreateServer(
   * [OpenID.Core] SHOULD be listed, if supported.
   */
 
+  /* TODO: Add "openid" scope once Issue #7 is resolved */
+  num_json = cupsAddOption("scopes_supported", "[\"private\",\"public\",\"shared\"]", num_json, &json);
+
  /*
   * response_types_supported
   *
   * REQUIRED. JSON array containing a list of the OAuth 2.0 response_type
   * values that this OP supports. Dynamic OpenID Providers MUST support the
-  * code, id_token, and the token id_token Response Type values.
+  * code, id_token, and the token Response Type values.
   */
 
+  /* TODO: Add "id_token" scope once Issue #7 is resolved */
+  num_json = cupsAddOption("response_types_supported", "[\"code\",\"token\"]", num_json, &json);
 
 #if 0 /* Issue #7: Implement JSON Web Key Set */
  /*

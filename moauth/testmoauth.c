@@ -49,6 +49,7 @@ main(void)
   static const char *json_in =
     "{\n"
     "\"access_token\":\"2YotnFZFEjr1zCsicMWpAA\",\n"
+    "\"example_array\":[\"value1\",\"value2\",\"value3\"],\n"
     "\"example_parameter\":\"example_value\",\n"
     "\"expires_in\":3600,\n"
     "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\",\n"
@@ -57,6 +58,7 @@ main(void)
   static const char *json_out =
     "{"
     "\"access_token\":\"2YotnFZFEjr1zCsicMWpAA\","
+    "\"example_array\":[\"value1\",\"value2\",\"value3\"],\n"
     "\"example_parameter\":\"example_value\","
     "\"expires_in\":3600,"
     "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\","
@@ -154,9 +156,9 @@ main(void)
 
   num_vars = _moauthJSONDecode(json_in, &vars);
 
-  if (num_vars != 5)
+  if (num_vars != 6)
   {
-    printf("FAIL (got %d vars, expected 5)\n", num_vars);
+    printf("FAIL (got %d vars, expected 6)\n", num_vars);
     status = 1;
   }
   else if ((value = cupsGetOption("access_token", num_vars, vars)) == NULL || strcmp(value, "2YotnFZFEjr1zCsicMWpAA"))
@@ -165,6 +167,15 @@ main(void)
       printf("FAIL (got \"%s\" for \"access_token\", expected \"2YotnFZFEjr1zCsicMWpAA\")\n", value);
     else
       puts("FAIL (missing \"access_token\")");
+
+    status = 1;
+  }
+  else if ((value = cupsGetOption("example_array", num_vars, vars)) == NULL || strcmp(value, "[\"value1\",\"value2\",\"value3\"]"))
+  {
+    if (value)
+      printf("FAIL (got \"%s\" for \"example_array\", expected '[\"value1\",\"value2\",\"value3\"]')\n", value);
+    else
+      puts("FAIL (missing \"example_array\")");
 
     status = 1;
   }
