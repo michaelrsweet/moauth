@@ -91,6 +91,9 @@ moauthConnect(
   http_t	*http;			/* Connection to OAuth server */
   char		resource[256];		/* Resource path */
   moauth_t	*server;		/* OAuth server connection */
+  http_status_t	status;			/* HTTP GET response status */
+  const char	*content_type = NULL;	/* Message body format */
+  char		*body = NULL;		/* HTTP message body */
 
 
  /*
@@ -105,35 +108,81 @@ moauthConnect(
 
  /*
   * Get the metadata from the specified URL.  If the resource is "/" (default)
-  * then grab the well-known OpenID configuration path.
+  * then grab the well-known RFC 8414 or OpenID configuration paths.
   */
 
   if (!strcmp(resource, "/"))
   {
-    strncpy(resource, "/.well-known/openid-configuration", sizeof(resource) - 1);
-    resource[sizeof(resource) - 1] = '\0';
+    httpClearFields(http);
+
+    if (!httpGet(http, "/.well-known/oauth-authorization-server"))
+    {
+     /*
+      * GET succeeded, grab the response...
+      */
+
+      while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+    }
+    else
+      status = HTTP_STATUS_ERROR;
+
+    if (status == HTTP_STATUS_OK)
+    {
+      content_type = httpGetField(http, HTTP_FIELD_CONTENT_TYPE);
+      body         = _moauthCopyMessageBody(http);
+    }
+    else
+      httpFlush(http);
   }
 
-  httpClearFields(http);
-
-  if (!httpGet(http, resource))
+  if (!strcmp(resource, "/") && !body)
   {
-   /*
-    * GET succeeded, grab the response...
-    */
+    httpClearFields(http);
 
-    http_status_t	status;		/* HTTP GET response status */
-    const char		*content_type;	/* Message body format */
-    char		*body;		/* HTTP message body */
+    if (!httpGet(http, "/.well-known/openid-configuration"))
+    {
+     /*
+      * GET succeeded, grab the response...
+      */
+
+      while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+    }
+    else
+      status = HTTP_STATUS_ERROR;
+
+    if (status == HTTP_STATUS_OK)
+    {
+      content_type = httpGetField(http, HTTP_FIELD_CONTENT_TYPE);
+      body         = _moauthCopyMessageBody(http);
+    }
+    else
+      httpFlush(http);
+  }
+
+  if (!body)
+  {
+    httpClearFields(http);
+
+    if (!httpGet(http, resource))
+    {
+     /*
+      * GET succeeded, grab the response...
+      */
+
+      while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+
+      content_type = httpGetField(http, HTTP_FIELD_CONTENT_TYPE);
+      body         = _moauthCopyMessageBody(http);
+    }
+  }
+
+  if (content_type && body)
+  {
     char		scheme[32],	/* URI scheme */
 			userpass[256],	/* Username:password (unused) */
 			host[256];	/* Host */
     int			port;		/* Port number */
 
-    while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
-
-    content_type = httpGetField(http, HTTP_FIELD_CONTENT_TYPE);
-    body         = _moauthCopyMessageBody(http);
 
     httpClose(http);
 

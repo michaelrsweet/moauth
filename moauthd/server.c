@@ -374,7 +374,7 @@ moauthdCreateServer(
   cupsSetServerCredentials(NULL, server->name, 1);
 
  /*
-  * Generate OpenID JSON metadata...
+  * Generate OpenID/RFC 8414 JSON metadata...
   */
 
   num_json = 0;
@@ -405,7 +405,7 @@ moauthdCreateServer(
  /*
   * token_endpoint
   *
-  * URL of the OP's OAuth 2.0 Token Endpoint [OpenID.Core]. This is REQUIRED
+  * URL of the OP's OAuth 2.0 Token Endpoint [RFC8414]. This is REQUIRED
   * unless only the Implicit Flow is used.
   */
 
@@ -416,7 +416,7 @@ moauthdCreateServer(
  /*
   * introspection_endpoint
   *
-  * EXTENSION. URL of the OP's OAuth 2.0 Introspection Endpoint [RFC7662].
+  * URL of the OP's OAuth 2.0 Introspection Endpoint [RFC8414] [RFC7662].
   */
 
   snprintf(temp, sizeof(temp), "https://%s:%d/introspect", server_name, server_port);
@@ -536,12 +536,24 @@ moauthdCreateServer(
   }
 
  /*
+  * Add RFC 8414 configuration file.
+  */
+
+  r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/.well-known/oauth-authorization-server", NULL, "text/json", "public");
+  r->data   = server->openid_metadata;
+  r->length = strlen(server->openid_metadata);
+
+ /*
   * Add OpenID configuration file.
   */
 
   r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/.well-known/openid-configuration", NULL, "text/json", "public");
   r->data   = server->openid_metadata;
   r->length = strlen(server->openid_metadata);
+
+ /*
+  * Add other standard resources...
+  */
 
   if (!moauthdFindResource(server, "/moauth.png", temp, sizeof(temp), &tempinfo))
   {
