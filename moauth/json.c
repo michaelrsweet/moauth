@@ -84,7 +84,7 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
       data = decode_string(data + 1, '\"', value, sizeof(value));
 
       if (*data != '\"')
-        goto decode_error;
+	goto decode_error;
 
       data ++;
     }
@@ -150,6 +150,14 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
 	      goto decode_error;
 	  }
 	  while (*data && *data != '\"');
+
+	  if (*data == '\"')
+	  {
+	    if (ptr < end)
+	      *ptr++ = *data++;
+	    else
+	      goto decode_error;
+	  }
         }
         else if (*data == '{' || *data == '[')
         {
@@ -178,8 +186,10 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
       if (*data != ']' || ptr >= end)
         goto decode_error;
 
-      *ptr++ = ']';
+      *ptr++ = *data++;
       *ptr   = '\0';
+
+      data ++;
     }
     else if (*data == '{')
     {
