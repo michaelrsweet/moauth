@@ -1,9 +1,10 @@
 /*
  * Stylesheet for moauth daemon web interface
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2018 by Michael R Sweet
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 /* Basic appearance */
@@ -98,6 +99,34 @@ blockquote {
 
 blockquote p {
   margin: 0;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+td {
+  border: solid 1px #777;
+  padding: 5px 10px;
+  vertical-align: top;
+}
+td.left {
+  text-align: left;
+}
+td.center {
+  text-align: center;
+}
+td.right {
+  text-align: right;
+}
+th {
+  border-bottom: solid 2px #000;
+  padding: 1px 5px;
+  text-align: center;
+  vertical-align: bottom;
+}
+tr:nth-child(odd) td {
+  background: #f8f8f8;
 }
 
 /* Logical row */

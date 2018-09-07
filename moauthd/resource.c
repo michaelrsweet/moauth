@@ -473,7 +473,8 @@ static void
 write_block(moauthd_client_t *client,	/* I - Client connection */
             mmd_t            *parent)	/* I - Parent node */
 {
-  const char    *element;               /* Enclosing element, if any */
+  const char	*element,		/* Enclosing element, if any */
+		*hclass = NULL;		/* HTML class, if any */
   mmd_t         *node;                  /* Current child node */
   mmd_type_t    type;                   /* Node type */
 
@@ -535,6 +536,40 @@ write_block(moauthd_client_t *client,	/* I - Client connection */
         write_string(client, "    <hr />\n");
         return;
 
+    case MMD_TYPE_TABLE :
+	element = "table";
+	break;
+
+    case MMD_TYPE_TABLE_HEADER :
+	element = "thead";
+	break;
+
+    case MMD_TYPE_TABLE_BODY :
+	element = "tbody";
+	break;
+
+    case MMD_TYPE_TABLE_ROW :
+	element = "tr";
+	break;
+
+    case MMD_TYPE_TABLE_HEADER_CELL :
+	element = "th";
+	break;
+
+    case MMD_TYPE_TABLE_BODY_CELL_LEFT :
+	element = "td";
+	break;
+
+    case MMD_TYPE_TABLE_BODY_CELL_CENTER :
+	element = "td";
+	hclass	= "center";
+	break;
+
+    case MMD_TYPE_TABLE_BODY_CELL_RIGHT :
+	element = "td";
+	hclass	= "right";
+	break;
+
     default :
         element = NULL;
         break;
@@ -546,7 +581,7 @@ write_block(moauthd_client_t *client,	/* I - Client connection */
     * Add an anchor for each heading...
     */
 
-    moauthdHTMLPrintf(client, "    <%s><a id=\"", element);
+    moauthdHTMLPrintf(client, "    <%s id=\"", element);
     for (node = mmdGetFirstChild(parent); node; node = mmdGetNextSibling(node))
     {
       char	anchor[1024];		/* Anchor string */
@@ -558,7 +593,7 @@ write_block(moauthd_client_t *client,	/* I - Client connection */
     write_string(client, "\">");
   }
   else if (element)
-    moauthdHTMLPrintf(client, "    <%s>%s", element, type <= MMD_TYPE_UNORDERED_LIST ? "\n" : "");
+    moauthdHTMLPrintf(client, "    <%s%s%s>%s", element, hclass ? " class=" : "", hclass ? hclass : "", type <= MMD_TYPE_UNORDERED_LIST ? "\n" : "");
 
   for (node = mmdGetFirstChild(parent); node; node = mmdGetNextSibling(node))
   {
@@ -568,9 +603,7 @@ write_block(moauthd_client_t *client,	/* I - Client connection */
       write_leaf(client, node);
   }
 
-  if (type >= MMD_TYPE_HEADING_1 && type <= MMD_TYPE_HEADING_6)
-    moauthdHTMLPrintf(client, "</a></%s>\n", element);
-  else if (element)
+  if (element)
     moauthdHTMLPrintf(client, "</%s>\n", element);
 }
 
