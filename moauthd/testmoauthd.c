@@ -301,6 +301,7 @@ get_url(const char *url,		/* I - URL to fetch */
 
   httpClearFields(http);
   httpSetAuthString(http, "Bearer", token);
+  httpSetField(http, HTTP_FIELD_AUTHORIZATION, httpGetAuthString(http));
 
   if (httpGet(http, resource))
   {
