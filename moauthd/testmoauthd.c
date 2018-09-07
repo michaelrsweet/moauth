@@ -56,6 +56,7 @@ static int	stop_tests = 0;
  * Local functions...
  */
 
+static char	*get_url(const char *url, const char *token, char *filename, size_t filesize);
 static moauth_t	*open_auth_url(const char *url, const char *state, const char *verifier);
 static void	*redirect_server(_moauth_redirect_t *data);
 static int	respond_client(http_t *http, http_status_t code, const char *message);
@@ -81,7 +82,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   char			host[256],	/* Hostname */
 			url[1024],	/* Authentication URL */
 			token[256],	/* Access token */
-			refresh[256];	/* Refresh token */
+			refresh[256],	/* Refresh token */
+			filename[256];	/* Temporary filename */
   time_t		expires;	/* Expiration date/time */
   moauth_t		*server;	/* Connection to moauthd*/
   unsigned char		data[32];	/* Data for verifier string */
@@ -204,6 +206,24 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
 
  /*
+  * Access a protected file using the token...
+  */
+
+  httpAssembleURI(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, 9000 + (getuid() % 1000), "/shared/shared.pdf");
+  printf("GET %s: ", url);
+  if (get_url(url, token, filename, sizeof(filename)))
+  {
+    printf("PASS (filename=\"%s\")\n", filename);
+    unlink(filename);
+  }
+  else
+  {
+    printf("FAIL (%s)\n", filename);
+    status = 1;
+    goto finish_up;
+  }
+
+ /*
   * Stop the test server...
   */
 
@@ -218,6 +238,101 @@ main(int  argc,				/* I - Number of command-line arguments */
   */
 
   return (status);
+}
+
+
+/*
+ * 'get_url()' - Fetch a URL using the specified Bearer token.
+ */
+
+static char *				/* O - Temporary filenane or `NULL` on failure */
+get_url(const char *url,		/* I - URL to fetch */
+        const char *token,		/* I - Bearer token */
+	char       *filename,		/* I - Filename buffer */
+	size_t     filesize)		/* I - Size of filename buffer */
+{
+  char			scheme[32],	/* URL scheme */
+			userpass[32],	/* URL username:password */
+			host[256],	/* URL hostname */
+			resource[256];	/* URL resource */
+  int			port;		/* URL port number */
+  http_encryption_t	encryption;	/* Encrypt the connection? */
+  http_t		*http;		/* HTTP connection */
+  http_status_t		status;		/* HTTP status */
+  int			fd;		/* Temporary file */
+  char			buffer[8192];	/* Copy buffer */
+  ssize_t		bytes;		/* Bytes read/written */
+
+
+ /*
+  * Validate URL and separate it into its components...
+  */
+
+  if (httpSeparateURI(HTTP_URI_CODING_ALL, url, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK)
+  {
+    snprintf(filename, filesize, "Bad URL \"%s\".", url);
+    return (NULL);
+  }
+
+  if (strcmp(scheme, "http") && strcmp(scheme, "https"))
+  {
+    snprintf(filename, filesize, "Unsupported URL scheme \"%s\".", scheme);
+    return (NULL);
+  }
+
+ /*
+  * Connect to the server...
+  */
+
+  if (!strcmp(scheme, "https") || port == 443)
+    encryption = HTTP_ENCRYPTION_ALWAYS;
+  else
+    encryption = HTTP_ENCRYPTION_IF_REQUESTED;
+
+  if ((http = httpConnect2(host, port, NULL, AF_UNSPEC, encryption, 1, 30000, NULL)) == NULL)
+  {
+    snprintf(filename, filesize, "Unable to connect to \"%s\" on port %d: %s", host, port, cupsLastErrorString());
+    return (NULL);
+  }
+
+ /*
+  * Send a GET request with the Bearer token...
+  */
+
+  httpClearFields(http);
+  httpSetAuthString(http, "Bearer", token);
+
+  if (httpGet(http, resource))
+  {
+    snprintf(filename, filesize, "\"GET %s\" failed: %s", resource, cupsLastErrorString());
+    httpClose(http);
+    return (NULL);
+  }
+
+  while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+
+  if (status != HTTP_STATUS_OK)
+  {
+    snprintf(filename, filesize, "GET returned status %d.", status);
+    httpClose(http);
+    return (NULL);
+  }
+
+  if ((fd = cupsTempFd(filename, (int)filesize)) < 0)
+  {
+    snprintf(filename, filesize, "Unable to create temporary file: %s", strerror(errno));
+    httpClose(http);
+    return (NULL);
+  }
+
+  while ((bytes = httpRead2(http, buffer, sizeof(buffer))) > 0)
+    write(fd, buffer, (size_t)bytes);
+
+  close(fd);
+
+  httpClose(http);
+
+  return (filename);
 }
 
 

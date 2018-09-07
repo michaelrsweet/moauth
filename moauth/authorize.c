@@ -43,6 +43,9 @@ moauthAuthorize(
   int		status = 1;		/* Return status */
   unsigned char	sha256[32];		/* SHA-256 hash of code verifier */
   char		code_challenge[64];	/* Hashed code verifier string */
+  int		num_vars = 0;		/* Number of form variables */
+  cups_option_t	*vars = NULL;		/* Form variables */
+  char		*formdata;		/* Encoded form data */
 
 
  /*
@@ -63,22 +66,38 @@ moauthAuthorize(
 
   httpSeparateURI(HTTP_URI_CODING_ALL, server->authorization_endpoint, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource));
 
+  num_vars = cupsAddOption("response_type", "code", num_vars, &vars);
+  num_vars = cupsAddOption("client_id", client_id, num_vars, &vars);
+  num_vars = cupsAddOption("redirect_uri", redirect_uri, num_vars, &vars);
+
+  if (state)
+    num_vars = cupsAddOption("state", state, num_vars, &vars);
+
   if (code_verifier)
   {
     cupsHashData("sha2-256", code_verifier, strlen(code_verifier), sha256, sizeof(sha256));
     httpEncode64_2(code_challenge, (int)sizeof(code_challenge), (char *)sha256, (int)sizeof(sha256));
-  }
-  else
-  {
-    code_challenge[0] = '\0';
+    num_vars = cupsAddOption("code_challenge", code_challenge, num_vars, &vars);
   }
 
-  if (httpAssembleURIf(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, port, "%s%sresponse_type=code&client_id=%s&redirect_uri=%s%s%s%s%s", resource, strchr(resource, '?') != NULL ? "&" : "?", client_id, redirect_uri, state ? "&state=" : "", state ? state : "", code_verifier ? "&code_challenge=" : "", code_challenge) < HTTP_URI_STATUS_OK)
+  formdata = _moauthFormEncode(num_vars, vars);
+
+  if (snprintf(url, sizeof(url), "https://%s:%d%s%s%s", host, port, resource, strchr(resource, '?') != NULL ? "&" : "?", formdata) >= sizeof(url))
   {
+   /*
+    * URL is too long...
+    */
+
     snprintf(server->error, sizeof(server->error), "Unable to create authorization URL.");
 
-    return (0);				/* Probably the URL is too long */
+    free(formdata);
+    cupsFreeOptions(num_vars, vars);
+
+    return (0);
   }
+
+  free(formdata);
+  cupsFreeOptions(num_vars, vars);
 
 #ifdef __APPLE__
   CFURLRef cfurl = CFURLCreateWithBytes(kCFAllocatorDefault, (const UInt8 *)url, (CFIndex)strlen(url), kCFStringEncodingASCII, NULL);
@@ -120,7 +139,6 @@ moauthAuthorize(
 
   if (!status)
     snprintf(server->error, sizeof(server->error), "Unable to open authorization URL.");
-
 #endif /* __APPLE__ */
 
   return (status);

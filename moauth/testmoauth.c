@@ -36,7 +36,8 @@ main(void)
     "0?name=value&",
     "2?name1=value1&name2=value2",
     "1?name+with+spaces=value+with+spaces",
-    "1?quotes=%22value%22"
+    "1?quotes=%22value%22",
+    "1?challenge=zUbp6O0S%2Byxx1VwQkOU9clcNDoBTddyY2e2SDwV1ha0%3D"
   };
   static const char * const encodes[][3] =
   {                                     /* Encode string tests */
@@ -109,7 +110,12 @@ main(void)
     }
     else if ((value = cupsGetOption("quotes", num_vars, vars)) != NULL && strcmp(value, "\"value\""))
     {
-      printf("FAIL (got \"quotes=%s\", expected \"quotes=\\\"value\\\"\")\n", value);
+      printf("FAIL (got \"quotes=%s\", expected \"quotes=\"value\"\")\n", value);
+      status = 1;
+    }
+    else if ((value = cupsGetOption("challenge", num_vars, vars)) != NULL && strcmp(value, "zUbp6O0S+yxx1VwQkOU9clcNDoBTddyY2e2SDwV1ha0="))
+    {
+      printf("FAIL (got \"challenge=%s\", expected \"challenge=zUbp6O0S+yxx1VwQkOU9clcNDoBTddyY2e2SDwV1ha0=\")\n", value);
       status = 1;
     }
     else
