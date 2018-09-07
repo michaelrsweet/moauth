@@ -224,6 +224,38 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
 
  /*
+  * Now authenticate as the current user with the test password directly
+  * (resource owner grant) and see if we can access a private file...
+  */
+
+  fputs("moauthPasswordToken: ", stdout);
+
+  if (moauthPasswordToken(server, cupsUser(), "test123", NULL, token, sizeof(token), refresh, sizeof(refresh), &expires))
+  {
+    printf("PASS (access token=\"%s\", refresh token=\"%s\", expires %s)\n", token, refresh, httpGetDateString(expires));
+  }
+  else
+  {
+    puts("FAIL");
+    status = 1;
+    goto finish_up;
+  }
+
+  httpAssembleURI(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, 9000 + (getuid() % 1000), "/private/private.pdf");
+  printf("GET %s: ", url);
+  if (get_url(url, token, filename, sizeof(filename)))
+  {
+    printf("PASS (filename=\"%s\")\n", filename);
+    unlink(filename);
+  }
+  else
+  {
+    printf("FAIL (%s)\n", filename);
+    status = 1;
+    goto finish_up;
+  }
+
+ /*
   * Stop the test server...
   */
 
@@ -357,7 +389,7 @@ open_auth_url(const char *url,		/* I - OAuth server URL */
 
     fputs("moauthAuthorize: ", stdout);
 
-    if (!moauthAuthorize(server, "https://localhost:10000", "testmoauthd", state, verifier))
+    if (!moauthAuthorize(server, "https://localhost:10000", "testmoauthd", state, verifier, NULL))
     {
       puts("FAIL (unable to open authorization page)");
       moauthClose(server);

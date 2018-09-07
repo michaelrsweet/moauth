@@ -36,6 +36,9 @@ moauthdCreateToken(
 			*scope;		/* Current scope */
 
 
+  if (!scopes || !*scopes)
+    scopes = "private shared";
+
   token = (moauthd_token_t *)calloc(1, sizeof(moauthd_token_t));
 
   token->type        = type;

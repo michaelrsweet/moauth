@@ -32,7 +32,8 @@ moauthAuthorize(
     const char *redirect_uri,		/* I - Redirection URI */
     const char *client_id,		/* I - Client identifier */
     const char *state,			/* I - Client state string or @code NULL@ */
-    const char *code_verifier)		/* I - Code verifier string or @code NULL@ if none */
+    const char *code_verifier,		/* I - Code verifier string or @code NULL@ if none */
+    const char *scope)			/* I - Scope to request or `NULL` */
 {
   char		scheme[32],		/* URI scheme */
 		userpass[256],		/* Username:password (unused) */
@@ -69,6 +70,9 @@ moauthAuthorize(
   num_vars = cupsAddOption("response_type", "code", num_vars, &vars);
   num_vars = cupsAddOption("client_id", client_id, num_vars, &vars);
   num_vars = cupsAddOption("redirect_uri", redirect_uri, num_vars, &vars);
+
+  if (scope)
+    num_vars = cupsAddOption("scope", scope, num_vars, &vars);
 
   if (state)
     num_vars = cupsAddOption("state", state, num_vars, &vars);

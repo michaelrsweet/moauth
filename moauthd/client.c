@@ -637,10 +637,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         else
         {
           if (challenge)
-          {
             token->challenge = strdup(challenge);
-            moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "code_challenge is \"%s\".", challenge);
-	  }
 
           snprintf(uri, sizeof(uri), "%s%scode=%s%s%s", redirect_uri, prefix, token->token, state ? "&state=" : "", state ? state : "");
         }
@@ -849,7 +846,7 @@ do_token(moauthd_client_t *client)	/* I - Client object */
 
     goto bad_request;
   }
-  else if (!client_id || !code)
+  else if (strcmp(grant_type, "password") && (!client_id || !code))
   {
    /*
     * Missing required variables!
@@ -918,7 +915,6 @@ do_token(moauthd_client_t *client)	/* I - Client object */
 	if (strcmp(grant_token->challenge, challenge))
 	{
 	  moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Incorrect code_verifier in token request.");
-	  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Got \"%s\", expected \"%s\".", challenge, grant_token->challenge);
 
 	  goto bad_request;
 	}

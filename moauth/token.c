@@ -164,6 +164,157 @@ moauthGetToken(
 
 
 /*
+ * 'moauthPasswordToken()' - Get an access token using a username and password
+ *                           (if supported by the OAuth server)
+ */
+
+char *					/* O - Access token or `NULL` on error */
+moauthPasswordToken(
+    moauth_t   *server,			/* I - Connection to OAuth server */
+    const char *username,		/* I - Username string */
+    const char *password,		/* I - Password string */
+    const char *scope,			/* I - Scope to request or `NULL` */
+    char       *token,			/* I - Access token buffer */
+    size_t     tokensize,		/* I - Size of access token buffer */
+    char       *refresh,		/* I - Refresh token buffer */
+    size_t     refreshsize,		/* I - Size of refresh token buffer */
+    time_t     *expires)		/* O - Expiration date/time, if known */
+{
+  http_t	*http = NULL;		/* HTTP connection */
+  char		resource[256];		/* Token endpoint resource */
+  http_status_t	status;			/* Response status */
+  int		num_form = 0;		/* Number of form variables */
+  cups_option_t	*form = NULL;		/* Form variables */
+  char		*form_data = NULL;	/* POST form data */
+  size_t	form_length;		/* Length of data */
+  char		*json_data = NULL;	/* JSON response data */
+  int		num_json = 0;		/* Number of JSON variables */
+  cups_option_t	*json = NULL;		/* JSON variables */
+  const char	*value;			/* JSON value */
+
+
+ /*
+  * Range check input...
+  */
+
+  if (token)
+    *token = '\0';
+
+  if (refresh)
+    *refresh = '\0';
+
+  if (expires)
+    *expires = 0;
+
+  if (!server || !username || !password || !token || tokensize < 32)
+  {
+    if (server)
+      snprintf(server->error, sizeof(server->error), "Bad arguments to function.");
+
+    return (NULL);
+  }
+
+ /*
+  * Prepare form data to get an access token...
+  */
+
+  num_form = cupsAddOption("grant_type", "password", num_form, &form);
+  num_form = cupsAddOption("username", username, num_form, &form);
+  num_form = cupsAddOption("password", password, num_form, &form);
+  if (scope)
+    num_form = cupsAddOption("scope", scope, num_form, &form);
+
+  if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to encode form data.");
+    goto done;
+  }
+
+  form_length = strlen(form_data);
+
+ /*
+  * Send a POST request with the form data...
+  */
+
+  if ((http = _moauthConnect(server->token_endpoint, resource, sizeof(resource))) == NULL)
+  {
+    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed - %s", cupsLastErrorString());
+    goto done;
+  }
+
+  httpClearFields(http);
+  httpSetField(http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
+  httpSetLength(http, form_length);
+
+  if (httpPost(http, resource))
+  {
+    if (httpReconnect2(http, 30000, NULL))
+    {
+      snprintf(server->error, sizeof(server->error), "Reconnect failed - %s", cupsLastErrorString());
+      goto done;
+    }
+
+    if (httpPost(http, resource))
+    {
+      snprintf(server->error, sizeof(server->error), "POST failed - %s", cupsLastErrorString());
+      goto done;
+    }
+  }
+
+  if (httpWrite2(http, form_data, form_length) < form_length)
+  {
+    snprintf(server->error, sizeof(server->error), "Write failed - %s", cupsLastErrorString());
+    goto done;
+  }
+
+  while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+
+  if (status == HTTP_STATUS_OK)
+  {
+    json_data = _moauthCopyMessageBody(http);
+    num_json  = _moauthJSONDecode(json_data, &json);
+
+    if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
+    {
+      strncpy(token, value, tokensize - 1);
+      token[tokensize - 1] = '\0';
+    }
+
+    if (expires && (value = cupsGetOption("expires_in", num_json, json)) != NULL)
+      *expires = time(NULL) + atoi(value);
+
+    if (refresh && (value = cupsGetOption("refresh_token", num_json, json)) != NULL)
+    {
+      strncpy(refresh, value, refreshsize - 1);
+      refresh[refreshsize - 1] = '\0';
+    }
+  }
+  else
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to get access token - POST status %d", status);
+  }
+
+ /*
+  * Return whatever we got...
+  */
+
+  done:
+
+  httpClose(http);
+
+  cupsFreeOptions(num_form, form);
+  if (form_data)
+    free(form_data);
+
+  cupsFreeOptions(num_json, json);
+  if (json_data)
+    free(json_data);
+
+  return (*token ? token : NULL);
+}
+
+
+/*
  * 'moauthRefreshToken()' - Refresh an access token from the OAuth server.
  */
 
