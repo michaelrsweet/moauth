@@ -828,12 +828,12 @@ do_token(moauthd_client_t *client)	/* I - Client object */
 
   free(data);
 
-  if (!grant_type || strcmp(grant_type, "authorization_code") || strcmp(grant_type, "password"))
+  if (!grant_type || (strcmp(grant_type, "authorization_code") && strcmp(grant_type, "password")))
   {
     if (!grant_type)
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing grant_type in token request.");
     else
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad grant_type in token request.");
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad grant_type '%s' in token request.", grant_type);
 
     goto bad_request;
   }
