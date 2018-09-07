@@ -1,4 +1,4 @@
-name: moauthd
+name: moauth
 version: 1.0
 summary: OAuth 2.0 Authorization and Resource Server
 description: |
