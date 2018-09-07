@@ -58,7 +58,7 @@ main(void)
   static const char *json_out =
     "{"
     "\"access_token\":\"2YotnFZFEjr1zCsicMWpAA\","
-    "\"example_array\":[\"value1\",\"value2\",\"value3\"],\n"
+    "\"example_array\":[\"value1\",\"value2\",\"value3\"],"
     "\"example_parameter\":\"example_value\","
     "\"expires_in\":3600,"
     "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\","
