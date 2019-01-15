@@ -1,9 +1,10 @@
 /*
  * Resource handling for moauth daemon
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2019 by Michael R Sweet
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 #include "moauthd.h"
@@ -201,8 +202,14 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
 
   if ((best = moauthdFindResource(client->server, client->path_info, localfile, sizeof(localfile), &localinfo)) == NULL)
   {
-    moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, NULL, 0, 0);
-    return (HTTP_STATUS_NOT_FOUND);
+    if (!strcmp(client->path_info, "/"))
+      best = moauthdFindResource(client->server, "/index.md", localfile, sizeof(localfile), &localinfo);
+
+    if (!best)
+    {
+      moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, NULL, 0, 0);
+      return (HTTP_STATUS_NOT_FOUND);
+    }
   }
 
  /*
@@ -270,7 +277,7 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
 
         httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, "%sindex.html", client->path_info);
       }
-      else
+      else if (!strcmp(client->path_info, "/") && (best = moauthdFindResource(client->server, "/index.md", localfile, sizeof(localfile), &localinfo)) == NULL)
       {
 	moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, NULL, 0, 0);
 	return (HTTP_STATUS_NOT_FOUND);
@@ -290,8 +297,16 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
     * Content type is known...
     */
 
-    content_type = best->content_type;
-    ext          = "";
+    if (!strcmp(best->content_type, "text/markdown"))
+    {
+      content_type = "text/html";
+      ext          = ".md";
+    }
+    else
+    {
+      content_type = best->content_type;
+      ext          = "";
+    }
   }
   else
   {
@@ -322,29 +337,27 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
 
   if (client->request_method == HTTP_STATE_GET)
   {
-    if (best->data)
-    {
-     /*
-      * Serve a static/cached file...
-      */
-
-      moauthdRespondClient(client, HTTP_STATUS_OK, content_type, uri, localinfo.st_mtime, best->length);
-
-      if (httpWrite2(client->http, best->data, best->length) < best->length)
-        return (HTTP_STATUS_BAD_REQUEST);
-    }
-    else if (!strcmp(ext, ".md"))
+    if (!strcmp(ext, ".md"))
     {
      /*
       * Serve a Markdown file...
       */
 
-      mmd_t *doc = mmdLoad(localfile);	/* Markdown document */
-      const char *title = mmdGetMetadata(doc, "title");
-					/* Document title */
-      char buffer[1024], *bufptr;	/* Temporary buffer */
+      FILE	*fp;			/* File */
+      mmd_t	*doc;			/* Markdown document */
+      const char *title;		/* Document title */
+      char	buffer[1024],		/* Temporary buffer */
+		*bufptr;		/* Pointer into buffer */
 
-      if (!title)
+      if (best->data)
+        fp = fmemopen((void *)best->data, best->length, "rb");
+      else
+        fp = fopen(localfile, "rb");
+
+      doc = mmdLoadFile(fp);
+      fclose(fp);
+
+      if ((title = mmdGetMetadata(doc, "title")) == NULL)
       {
         mmd_t *node;			/* Current Markdown node */
 
@@ -376,6 +389,18 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
       moauthdHTMLHeader(client, title);
       write_block(client, doc);
       moauthdHTMLFooter(client);
+      mmdFree(doc);
+    }
+    else if (best->data)
+    {
+     /*
+      * Serve a static/cached file...
+      */
+
+      moauthdRespondClient(client, HTTP_STATUS_OK, content_type, uri, localinfo.st_mtime, best->length);
+
+      if (httpWrite2(client->http, best->data, best->length) < best->length)
+        return (HTTP_STATUS_BAD_REQUEST);
     }
     else
     {

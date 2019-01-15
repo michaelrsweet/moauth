@@ -142,7 +142,7 @@ moauthdRunClient(
     if (state == HTTP_STATE_ERROR)
     {
       if (httpError(client->http) == EPIPE || httpError(client->http) == ETIMEDOUT || httpError(client->http) == 0)
-	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Client closed connection.");
+	moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Client closed connection.");
       else
 	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad request line (%s).", strerror(httpError(client->http)));
 
@@ -236,9 +236,27 @@ moauthdRunClient(
       * Bad "Host:" field...
       */
 
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Bad Host: header value \"%s\" (expected \"%s:%d\").", httpGetField(client->http, HTTP_FIELD_HOST), client->server->name, client->server->port);
-      moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
-      break;
+      if (!strcasecmp(host_value, "localhost"))
+      {
+       /*
+        * Redirect to the correct server name...
+        */
+
+        char uri[1024];			/* Redirection URI */
+
+        httpAssembleURI(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, client->path_info);
+        moauthdRespondClient(client, HTTP_STATUS_MOVED_PERMANENTLY, NULL, uri, 0, 0);
+      }
+      else
+      {
+       /*
+        * Log it...
+        */
+
+	moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Bad Host: header value \"%s\" (expected \"%s:%d\").", httpGetField(client->http, HTTP_FIELD_HOST), client->server->name, client->server->port);
+	moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
+	break;
+      }
     }
 
     client->remote_user[0] = '\0';

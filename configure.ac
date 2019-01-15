@@ -7,7 +7,7 @@ dnl Licensed under Apache License v2.0.  See the file "LICENSE" for more
 dnl information.
 dnl
 
-AC_INIT([moauth], [0.1], [https://github.com/michaelrsweet/moauth/issues], [moauth], [https://michaelrsweet.github.io/moauth])
+AC_INIT([moauth], [1.0], [https://github.com/michaelrsweet/moauth/issues], [moauth], [https://michaelrsweet.github.io/moauth])
 AC_CONFIG_HEADERS(config.h)
 
 dnl Define the version number...

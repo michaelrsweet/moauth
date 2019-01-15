@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <syslog.h>
+#include "index-md.h"
 #include "moauth-png.h"
 #include "style-css.h"
 
@@ -558,6 +559,17 @@ moauthdCreateServer(
  /*
   * Add other standard resources...
   */
+
+  if (!moauthdFindResource(server, "/index.html", temp, sizeof(temp), &tempinfo) && !moauthdFindResource(server, "/index.md", temp, sizeof(temp), &tempinfo))
+  {
+   /*
+    * Add default home page file...
+    */
+
+    r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/index.md", NULL, "text/markdown", "public");
+    r->data   = index_md;
+    r->length = strlen(index_md);
+  }
 
   if (!moauthdFindResource(server, "/moauth.png", temp, sizeof(temp), &tempinfo))
   {

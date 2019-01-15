@@ -16,7 +16,7 @@ The server is both an Authorization Server and a Resource Server that supports:
 
 mOAuth currently requires CUPS for its HTTPS support.
 
-Copyright © 2017-2018 by Michael R Sweet.
+Copyright © 2017-2019 by Michael R Sweet.
 
 mOAuth is licensed under the Apache License Version 2.0 with an exception to
 allow linking against GPL2/LGPL2 software (like older versions of CUPS).  See

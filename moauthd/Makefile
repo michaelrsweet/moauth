@@ -1,7 +1,7 @@
 #
 # moauth daemon makefile
 #
-# Copyright © 2017-2018 by Michael R Sweet
+# Copyright © 2017-2019 by Michael R Sweet
 #
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more
 # information.
@@ -77,6 +77,12 @@ testmoauthd:	testmoauthd.o ../moauth/libmoauth.a
 
 
 # Default resource files for daemon web UI
+index-md.h:	index.md Makefile
+	echo "Generating index-md.h from index.md..."
+	echo "static const char *index_md =" >index-md.h
+	sed -e '1,$$s/"/\\"/g' <index.md | awk '{printf("\n  \"%s\\n\"", $$0);}' >>index-md.h
+	echo ";" >>index-md.h
+
 moauth-png.h:	../moauth.png Makefile
 	echo "Generating moauth-png.h from moauth.png..."
 	echo "static const unsigned char moauth_png[] =" >moauth-png.h
@@ -96,4 +102,4 @@ $(MOAUTHD_OBJS): moauthd.h
 $(OBJS):	../moauth/moauth.h
 mmd.o:		mmd.h
 resource.o:	mmd.h
-server.o:	moauth-png.h style-css.h
+server.o:	index-md.h moauth-png.h style-css.h
