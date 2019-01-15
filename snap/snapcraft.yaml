@@ -21,7 +21,7 @@ icon: moauth.png
 
 apps:
     moauthd:
-        command: $SNAP/sbin/moauthd
+        command: sbin/moauthd
         daemon: simple
         plugs: [home, network, network-bind]
 
@@ -30,4 +30,4 @@ parts:
         plugin: autotools
         source: .
 
-build-packages: [libcups2-dev]
+build-packages: [libavahi-client-dev, libcups2-dev]
