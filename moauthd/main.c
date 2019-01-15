@@ -90,6 +90,13 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
 
  /*
+  * Default config file for snaps is /etc/moauthd.conf...
+  */
+
+  if (!configfile && getenv("SNAP") && !access("/etc/moauthd.conf", 0))
+    configfile = "/etc/moauthd.conf";
+
+ /*
   * Create the server object and run it...
   */
 
