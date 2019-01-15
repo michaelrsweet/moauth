@@ -374,7 +374,7 @@ moauthdCreateServer(
 
   moauthdLogs(server, MOAUTHD_LOGLEVEL_INFO, "Authorization server is \"https://%s:%d\".", server_name, server_port);
 
-  cupsSetServerCredentials(NULL, server->name, 1);
+  cupsSetServerCredentials(getenv("SNAP_DATA"), server->name, 1);
 
  /*
   * Generate OpenID/RFC 8414 JSON metadata...

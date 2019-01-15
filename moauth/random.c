@@ -11,12 +11,14 @@
 #include "moauth-private.h"
 #include <stdlib.h>
 
-#ifdef HAVE_SYS_RANDOM_H
-#  include <sys/random.h>
-#elif !defined(HAVE_ARC4RANDOM)
+#ifndef HAVE_ARC4RANDOM
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <sys/time.h>
+#endif /* !HAVE_ARC4RANDOM */
+
+#ifdef HAVE_SYS_RANDOM_H
+#  include <sys/random.h>
 #endif /* HAVE_SYS_RANDOM_H */
 
 
@@ -44,16 +46,18 @@ _moauthGetRandomBytes(void   *data,	/* I - Buffer */
     bytes --;
   }
 
-#elif defined(HAVE_SYS_RANDOM_H)
+#else
+#  if defined(HAVE_SYS_RANDOM_H)
  /*
   * Linux provides the getrandom function to get high-quality random data from
   * the hardware entropy pool and/or a high-quality pseudo-random number
   * generator...
   */
 
-  getrandom(data, bytes, 0);
+  if (getrandom(data, bytes, 0) >= (ssize_t)bytes)
+    return;
+#  endif /* HAVE_SYS_RANDOM_H */
 
-#else
  /*
   * The default random number generator needs a seed.  We use the current time
   * (seconds and microseconds) if /dev/urandom cannot be read...
@@ -64,7 +68,6 @@ _moauthGetRandomBytes(void   *data,	/* I - Buffer */
   struct timeval	curtime;	/* Current time */
   unsigned char		*ptr = (unsigned char *)data;
 					/* Pointer to byte data */
-
 
   if ((fd = open("/dev/urandom", O_RDONLY)) < 0)
   {
