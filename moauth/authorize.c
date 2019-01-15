@@ -1,9 +1,10 @@
 /*
  * Authorization support for moauth library
  *
- * Copyright © 2017-2018 by Michael R Sweet
+ * Copyright © 2017-2019 by Michael R Sweet
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 #include <config.h>
@@ -14,6 +15,7 @@
 #  include <CoreServices/CoreServices.h>
 #else
 #  include <spawn.h>
+#  include <sys/wait.h>
 extern char **environ;
 #endif /* __APPLE__ */
 
@@ -125,14 +127,12 @@ moauthAuthorize(
 #else
   pid_t		pid = 0;		/* Process ID */
   int		estatus;		/* Exit status */
-  static char * const xdg_open_argv[] =	/* xdg-open arguments */
-  {
-    "xdg-open",
-    NULL,
-    NULL
-  };
+  const char	*xdg_open_argv[3];	/* xdg-open arguments */
 
+
+  xgd_open_argv[0] = "xdg-open";
   xdg_open_argv[1] = url;
+  xdg_open_argv[2] = NULL;
 
   if (posix_spawnp(&pid, "xdg-open", NULL, NULL, xdg_open_argv, environ))
     status = 0;				/* Couldn't run xdg-open */

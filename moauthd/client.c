@@ -1,13 +1,15 @@
 /*
  * Client support for moauth daemon
  *
- * Copyright © 2017-2018 by Michael R Sweet
+ * Copyright © 2017-2019 by Michael R Sweet
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 #include "moauthd.h"
 #include <pwd.h>
+#include <grp.h>
 
 
 /*
