@@ -30,4 +30,4 @@ parts:
         plugin: autotools
         source: .
 
-build-packages: [libcups-dev]
+build-packages: [libcups2-dev]
