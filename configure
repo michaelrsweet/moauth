@@ -2993,8 +2993,8 @@ fi
 
 
 CFLAGS="$CFLAGS `cups-config --cflags`"
-LDFLAGS="$LDFLAGS `cups-config --ldflags`"
-LIBS="$LIBS `cups-config --libs`"
+LDFLAGS="$LDFLAGS `cups-config --static --ldflags`"
+LIBS="$LIBS `cups-config --static --libs`"
 
 
 ac_ext=c

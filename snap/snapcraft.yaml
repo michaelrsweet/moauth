@@ -26,8 +26,20 @@ apps:
         plugs: [home, network, network-bind]
 
 parts:
+    libcups:
+        plugin: autotools
+        configflags: [--disable-shared, --enable-static, --with-components=core]
+        source: https://github.com/apple/cups/releases/download/v2.2.10/cups-2.2.10-source.tar.gz
+        install-via: prefix
+        prime:
+            - -bin/*
+            - -include/*
+            - -lib/*
+            - -share/*
+
     main:
+        after: [libcups]
         plugin: autotools
         source: .
 
-build-packages: [libavahi-client-dev, libcups2-dev]
+build-packages: [libavahi-client-dev, libgnutls28-dev, zlib1g-dev]

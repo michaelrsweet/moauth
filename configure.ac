@@ -53,8 +53,8 @@ AC_ARG_ENABLE(debug, [  --enable-debug          turn on debugging, default=no],
 
 dnl CUPS library...
 CFLAGS="$CFLAGS `cups-config --cflags`"
-LDFLAGS="$LDFLAGS `cups-config --ldflags`"
-LIBS="$LIBS `cups-config --libs`"
+LDFLAGS="$LDFLAGS `cups-config --static --ldflags`"
+LIBS="$LIBS `cups-config --static --libs`"
 
 dnl POSIX threads...
 AC_CHECK_HEADER(pthread.h, AC_DEFINE(HAVE_PTHREAD_H))

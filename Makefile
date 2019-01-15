@@ -34,6 +34,11 @@ clean:
 	done
 
 
+# Really clean everything...
+distclean:	clean
+	$(RM) config.h config.log config.status Makedefs
+
+
 # Install everything...
 install:	all
 	for dir in $(SUBDIRS); do \
