@@ -21,7 +21,7 @@ icon: moauth.png
 
 apps:
     moauthd:
-        command: sbin/moauthd
+        command: sbin/moauthd -v
         daemon: simple
         plugs: [home, network, network-bind]
 
