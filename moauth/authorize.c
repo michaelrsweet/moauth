@@ -130,11 +130,11 @@ moauthAuthorize(
   const char	*xdg_open_argv[3];	/* xdg-open arguments */
 
 
-  xgd_open_argv[0] = "xdg-open";
+  xdg_open_argv[0] = "xdg-open";
   xdg_open_argv[1] = url;
   xdg_open_argv[2] = NULL;
 
-  if (posix_spawnp(&pid, "xdg-open", NULL, NULL, xdg_open_argv, environ))
+  if (posix_spawnp(&pid, "xdg-open", NULL, NULL, (char * const *)xdg_open_argv, environ))
     status = 0;				/* Couldn't run xdg-open */
   else if (waitpid(pid, &estatus, 0))
     status = 0;				/* Couldn't get exit status */

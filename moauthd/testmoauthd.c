@@ -10,12 +10,16 @@
 #include <config.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include <spawn.h>
 #include <pthread.h>
+#include <signal.h>
 #include <sys/poll.h>
 #include <moauth/moauth-private.h>
-#include <CoreFoundation/CoreFoundation.h>
-#include <CoreServices/CoreServices.h>
+#ifdef __APPLE__
+#  include <CoreFoundation/CoreFoundation.h>
+#  include <CoreServices/CoreServices.h>
+#endif /* __APPLE__ */
 
 extern char **environ;
 
@@ -361,7 +365,15 @@ get_url(const char *url,		/* I - URL to fetch */
   }
 
   while ((bytes = httpRead2(http, buffer, sizeof(buffer))) > 0)
-    write(fd, buffer, (size_t)bytes);
+    if (write(fd, buffer, (size_t)bytes) < 0)
+    {
+      close(fd);
+      unlink(filename);
+
+      snprintf(filename, filesize, "Unable to write to temporary file: %s", strerror(errno));
+      httpClose(http);
+      return (NULL);
+    }
 
   close(fd);
 
@@ -665,7 +677,9 @@ start_moauthd(int verbosity)		/* I - Verbosity */
   };
 
 
-  chdir("..");
+  if (chdir(".."))
+    abort();
+
   if (verbosity)
     posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, verbose_argv, environ);
   else
