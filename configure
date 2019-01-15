@@ -684,6 +684,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_debug
+enable_static_cups
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1315,6 +1316,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          turn on debugging, default=no
+  --enable-static-cups    use static CUPS libraries, default=no
 
 Some influential environment variables:
   CC          C compiler command
@@ -2992,9 +2994,21 @@ if test "${enable_debug+set}" = set; then :
 fi
 
 
-CFLAGS="$CFLAGS `cups-config --cflags`"
-LDFLAGS="$LDFLAGS `cups-config --static --ldflags`"
-LIBS="$LIBS `cups-config --static --libs`"
+# Check whether --enable-static_cups was given.
+if test "${enable_static_cups+set}" = set; then :
+  enableval=$enable_static_cups;
+fi
+
+
+if test x$enable_static_cups = xyes; then
+	CFLAGS="$CFLAGS `cups-config --static --cflags`"
+	LDFLAGS="$LDFLAGS `cups-config --static --ldflags`"
+	LIBS="$LIBS `cups-config --static --libs`"
+else
+	CFLAGS="$CFLAGS `cups-config --cflags`"
+	LDFLAGS="$LDFLAGS `cups-config --ldflags`"
+	LIBS="$LIBS `cups-config --libs`"
+fi
 
 
 ac_ext=c

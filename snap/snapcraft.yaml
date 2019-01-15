@@ -28,7 +28,7 @@ apps:
 parts:
     libcups:
         plugin: autotools
-        configflags: [--disable-shared, --enable-static, --disable-avahi, --disable-dnssd, --with-components=core]
+        configflags: [--enable-static, --disable-avahi, --disable-dnssd, --disable-gssapi, --with-components=core]
         source: https://github.com/apple/cups/releases/download/v2.2.10/cups-2.2.10-source.tar.gz
         install-via: prefix
         prime:
@@ -40,6 +40,7 @@ parts:
     main:
         after: [libcups]
         plugin: autotools
+        configflags: [--enable-static-cups]
         source: .
 #        stage-packages:
 #        - libidn2-0

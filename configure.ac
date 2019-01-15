@@ -52,9 +52,17 @@ AC_ARG_ENABLE(debug, [  --enable-debug          turn on debugging, default=no],
     fi])
 
 dnl CUPS library...
-CFLAGS="$CFLAGS `cups-config --cflags`"
-LDFLAGS="$LDFLAGS `cups-config --static --ldflags`"
-LIBS="$LIBS `cups-config --static --libs`"
+AC_ARG_ENABLE(static_cups, [  --enable-static-cups    use static CUPS libraries, default=no])
+
+if test x$enable_static_cups = xyes; then
+	CFLAGS="$CFLAGS `cups-config --static --cflags`"
+	LDFLAGS="$LDFLAGS `cups-config --static --ldflags`"
+	LIBS="$LIBS `cups-config --static --libs`"
+else
+	CFLAGS="$CFLAGS `cups-config --cflags`"
+	LDFLAGS="$LDFLAGS `cups-config --ldflags`"
+	LIBS="$LIBS `cups-config --libs`"
+fi
 
 dnl POSIX threads...
 AC_CHECK_HEADER(pthread.h, AC_DEFINE(HAVE_PTHREAD_H))
