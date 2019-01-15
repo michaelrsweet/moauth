@@ -16,3 +16,4 @@ git push origin v$version
 
 echo Creating moauth-$version.tar.gz...
 git archive --format tar HEAD | gzip -v9 >moauth-$version.tar.gz
+gpg --detach-sign moauth-$version.tar.gz
