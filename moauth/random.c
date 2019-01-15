@@ -9,17 +9,15 @@
 
 #include <config.h>
 #include "moauth-private.h"
+#include <stdlib.h>
 
-#ifdef M__APPLE__
-#  include <stdlib.h>
-#elif defined(__linux__)
+#ifdef HAVE_SYS_RANDOM_H
 #  include <sys/random.h>
-#else
-#  include <stdlib.h>
+#elif !defined(HAVE_ARC4RANDOM)
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <sys/time.h>
-#endif /* __APPLE__ */
+#endif /* HAVE_SYS_RANDOM_H */
 
 
 /*
@@ -31,7 +29,7 @@ void
 _moauthGetRandomBytes(void   *data,	/* I - Buffer */
                       size_t bytes)	/* I - Number of bytes to generate */
 {
-#ifdef __APPLE__
+#ifdef HAVE_ARC4RANDOM
  /*
   * macOS/iOS provide the arc4random generator which uses hardware entropy as a
   * seed...
@@ -46,7 +44,7 @@ _moauthGetRandomBytes(void   *data,	/* I - Buffer */
     bytes --;
   }
 
-#elif defined(__linux__)
+#elif defined(HAVE_SYS_RANDOM_H)
  /*
   * Linux provides the getrandom function to get high-quality random data from
   * the hardware entropy pool and/or a high-quality pseudo-random number
@@ -93,5 +91,6 @@ _moauthGetRandomBytes(void   *data,	/* I - Buffer */
     *ptr++ = (unsigned char)random();
     bytes --;
   }
-#endif /* __APPLE__ */
+#endif /* HAVE_ARC4RANDOM */
 }
+

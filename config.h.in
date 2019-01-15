@@ -1,10 +1,18 @@
 /*
  * moauth configuration header
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2019 by Michael R Sweet
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 /* Version number... */
 #define MOAUTH_VERSION ""
+
+/* Do we have the <sys/random.h> header? */
+#undef HAVE_SYS_RANDOM_H
+
+/* Do we have the arc4random function? */
+#undef HAVE_ARC4RANDOM
+

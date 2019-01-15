@@ -1,9 +1,10 @@
 dnl
 dnl moauth configuration script
 dnl
-dnl Copyright © 2017 by Michael R Sweet
+dnl Copyright © 2017-2019 by Michael R Sweet
 dnl
-dnl Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+dnl Licensed under Apache License v2.0.  See the file "LICENSE" for more
+dnl information.
 dnl
 
 AC_INIT([moauth], [0.1], [https://github.com/michaelrsweet/moauth/issues], [moauth], [https://michaelrsweet.github.io/moauth])
@@ -90,6 +91,10 @@ for flag in -lpthreads -lpthread -pthread; do
         AC_MSG_RESULT([no])
     fi
 done
+
+dnl Random number support...
+AC_CHECK_HEADER(sys/random.h, AC_DEFINE(HAVE_SYS_RANDOM_H))
+AC_CHECK_FUNC(arc4random, AC_DEFINE(HAVE_ARC4RANDOM))
 
 dnl Generate the Makedefs file...
 AC_OUTPUT(Makedefs)
