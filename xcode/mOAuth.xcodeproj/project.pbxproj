@@ -49,6 +49,7 @@
 		27960FFA1FD4774C000D20A7 /* web.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FF81FD4774B000D20A7 /* web.c */; };
 		27960FFB1FD4774C000D20A7 /* mmd.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FF91FD4774B000D20A7 /* mmd.c */; };
 		27960FFD1FD4D20F000D20A7 /* auth.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FFC1FD4D20F000D20A7 /* auth.c */; };
+		27BF7AE121EE3E0A00A7D756 /* random.c in Sources */ = {isa = PBXBuildFile; fileRef = 27BF7AE021EE3E0A00A7D756 /* random.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -170,6 +171,7 @@
 		27960FF81FD4774B000D20A7 /* web.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = web.c; sourceTree = "<group>"; };
 		27960FF91FD4774B000D20A7 /* mmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mmd.c; sourceTree = "<group>"; };
 		27960FFC1FD4D20F000D20A7 /* auth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = auth.c; sourceTree = "<group>"; };
+		27BF7AE021EE3E0A00A7D756 /* random.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = random.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -264,6 +266,7 @@
 				270E13A91FC31D3E0053DAE4 /* form.c */,
 				270D41EE1FF7257800EFA9B4 /* json.c */,
 				279187221FE5EFA800FBA1E3 /* post.c */,
+				27BF7AE021EE3E0A00A7D756 /* random.c */,
 				270D41EB1FF698AF00EFA9B4 /* token.c */,
 			);
 			name = libmoauth;
@@ -380,7 +383,7 @@
 		270E13931FC31A530053DAE4 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0930;
+				LastUpgradeCheck = 1010;
 				ORGANIZATIONNAME = "Michael R Sweet";
 				TargetAttributes = {
 					270E139A1FC31A530053DAE4 = {
@@ -448,6 +451,7 @@
 				270D41EC1FF698AF00EFA9B4 /* connect.c in Sources */,
 				270D41E91FF6909A00EFA9B4 /* authorize.c in Sources */,
 				270E13B31FC31D750053DAE4 /* form.c in Sources */,
+				27BF7AE121EE3E0A00A7D756 /* random.c in Sources */,
 				270D41ED1FF698AF00EFA9B4 /* token.c in Sources */,
 				279187231FE5EFC300FBA1E3 /* post.c in Sources */,
 				270D41EF1FF7257900EFA9B4 /* json.c in Sources */,
@@ -551,7 +555,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0.1;
@@ -581,7 +585,7 @@
 					.,
 					..,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				ONLY_ACTIVE_ARCH = YES;
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = macosx;
@@ -624,7 +628,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0.1;
@@ -648,7 +652,7 @@
 					.,
 					..,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = macosx;
 				VERSIONING_SYSTEM = "apple-generic";

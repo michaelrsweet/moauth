@@ -16,12 +16,6 @@
 #include "style-css.h"
 
 
-/* TODO: Need to implement a proper random seed for random() */
-#ifdef __APPLE__
-#  define RANDOM arc4random()
-#else
-#  define RANDOM random()
-#endif /* __APPLE__ */
 
 
 /*
@@ -538,8 +532,9 @@ moauthdCreateServer(
     * Generate a random secret string that is used when creating token UUIDs.
     */
 
+    _moauthGetRandomBytes(temp, sizeof(temp) - 1);
     for (ptr = temp; ptr < (temp + sizeof(temp) - 1); ptr ++)
-      *ptr = (RANDOM % 95) + ' ';
+      *ptr = (*ptr % 95) + ' ';
     *ptr = '\0';
     server->secret = strdup(temp);
   }

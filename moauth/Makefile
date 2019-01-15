@@ -1,7 +1,7 @@
 #
 # moauth library makefile
 #
-# Copyright © 2017-2018 by Michael R Sweet
+# Copyright © 2017-2019 by Michael R Sweet
 #
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
 #
@@ -11,7 +11,7 @@ include ../Makedefs
 
 
 # Library targets...
-LIBOBJS	=	authorize.o connect.o form.o json.o post.o token.o
+LIBOBJS	=	authorize.o connect.o form.o json.o post.o random.o token.o
 
 OBJS	=	$(LIBOBJS) testmoauth.o
 

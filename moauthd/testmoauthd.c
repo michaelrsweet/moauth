@@ -24,14 +24,6 @@
 extern char **environ;
 
 
-/* TODO: Need to implement a proper random seed for random() */
-#ifdef __APPLE__
-#  define RANDOM arc4random()
-#else
-#  define RANDOM random()
-#endif /* __APPLE__ */
-
-
 /*
  * Constants...
  */
@@ -130,8 +122,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Start redirect server thread...
   */
 
-  for (i = 0; i < sizeof(data); i ++)
-    data[i] = (unsigned char)RANDOM;
+  _moauthGetRandomBytes(data, sizeof(data));
   httpEncode64_2(redirect_data.verifier, (int)sizeof(redirect_data.verifier), (char *)data, (int)sizeof(data));
 
   snprintf(redirect_data.state, sizeof(redirect_data.state), "%d", getpid());
