@@ -41,9 +41,9 @@ parts:
         after: [libcups]
         plugin: autotools
         source: .
-        stage-packages:
-        - libidn2-0
-        - libunistring2
+#        stage-packages:
+#        - libidn2-0
+#        - libunistring2
 
 build-packages: [libgnutls28-dev, zlib1g-dev]
 
