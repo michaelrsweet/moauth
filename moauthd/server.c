@@ -15,6 +15,14 @@
 #include "style-css.h"
 
 
+/* TODO: Need to implement a proper random seed for random() */
+#ifdef __APPLE__
+#  define RANDOM arc4random()
+#else
+#  define RANDOM random()
+#endif /* __APPLE__ */
+
+
 /*
  * Local functions...
  */
@@ -530,7 +538,7 @@ moauthdCreateServer(
     */
 
     for (ptr = temp; ptr < (temp + sizeof(temp) - 1); ptr ++)
-      *ptr = (arc4random() % 95) + ' ';
+      *ptr = (RANDOM % 95) + ' ';
     *ptr = '\0';
     server->secret = strdup(temp);
   }

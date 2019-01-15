@@ -19,6 +19,7 @@
 extern char **environ;
 
 
+/* TODO: Need to implement a proper random seed for random() */
 #ifdef __APPLE__
 #  define RANDOM arc4random()
 #else
