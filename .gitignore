@@ -1,5 +1,6 @@
 *.a
 *.o
+*.snap
 /autom4te.cache
 /config.h
 /config.log
@@ -10,4 +11,8 @@ moauth/libmoauth.a
 moauth/testmoauth
 moauthd/moauthd
 moauthd/testmoauthd
+parts
+prime
+snap/.snapcraft
+stage
 xcuserdata
