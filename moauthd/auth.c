@@ -76,7 +76,7 @@ moauthdAuthenticateUser(
     int			pamerr;		/* PAM error code */
     struct pam_conv	pamdata;	/* PAM conversation data */
 
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Using PAM authentication.");
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Using PAM authentication.");
 
     data.username = username;
     data.password = password;
@@ -124,10 +124,6 @@ moauthdAuthenticateUser(
     {
       moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "PAM authentication of \"%s\" succeeded.", username);
       status = 1;
-    }
-    else
-    {
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "PAM authentication of \"%s\" failed (%d).", username, pamerr);
     }
   }
 #endif /* HAVE_LIBPAM */

@@ -474,7 +474,9 @@ redirect_server(
 			*query_string;	/* Query string */
           int		num_vars;	/* Number of form variables */
           cups_option_t	*vars;		/* Form variables */
-          const char	*state_string,	/* State string */
+          const char	*error,		/* Error message */
+			*description,	/* Error description */
+		      	*state_string,	/* State string */
 			*grant;		/* Grant code */
 	  static const char * const states[] =
 	  {				/* Strings for logging HTTP method */
@@ -564,6 +566,8 @@ redirect_server(
           num_vars     = _moauthFormDecode(query_string, &vars);
           grant        = cupsGetOption("code", num_vars, vars);
           state_string = cupsGetOption("state", num_vars, vars);
+          error        = cupsGetOption("error", num_vars, vars);
+          description  = cupsGetOption("error_description", num_vars, vars);
 
           if (grant && state_string && !strcmp(state_string, data->state))
 	  {
@@ -573,6 +577,13 @@ redirect_server(
 	  }
 	  else if (grant)
 	    respond_client(http, HTTP_STATUS_OK, "Missing or bad state string.\n");
+	  else if (error)
+	  {
+	    char	message[2048];	/* Error message */
+
+            snprintf(message, sizeof(message), "Authorization failed: %s - %s\n", error, description);
+	    respond_client(http, HTTP_STATUS_OK, message);
+	  }
 	  else
 	    respond_client(http, HTTP_STATUS_OK, "Missing grant code.\n");
 
