@@ -6,7 +6,7 @@
 .\" Licensed under Apache License v2.0.  See the file "LICENSE" for more
 .\" information.
 .\"
-.TH moauthd 8 "mOAuth" "2018-03-28" "Michael R Sweet"
+.TH moauthd 8 "mOAuth" "2019-01-17" "Michael R Sweet"
 .SH NAME
 moauthd \- oauth 2.0 authorization and resource server
 .SH SYNOPSIS
@@ -16,6 +16,10 @@ moauthd \- oauth 2.0 authorization and resource server
 .I moauthd.conf
 ] [
 .B \-v
+] [
+.B \-\-help
+] [
+.B \-\-version
 ]
 .SH DESCRIPTION
 .B moauthd
@@ -27,9 +31,15 @@ Log messages are written to the standard error file by default.
 \fB\-c \fImoauthd.conf\fR
 Specifies a plain text configuration file.
 .TP 5
+\fB\-\-help
+Shows program usage.
+.TP 5
 \fB\-v\fR
 Increases the verbosity of the logging.
 Multiple v's make the logging progressively more verbose.
+.TP 5
+\-\-version
+Shows the mOAuth version number and exits.
 .SH SEE ALSO
 .BR moauthd.conf (5)
 .SH COPYRIGHT
