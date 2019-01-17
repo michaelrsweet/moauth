@@ -29,8 +29,29 @@ clean:
 	$(RM) $(TARGETS) $(OBJS)
 
 
+# Make documentation using codedoc (https://www.msweet.org/codedoc)
+CODEDOC_OPTIONS = \
+		libmoauth.xml \
+		--author "Michael R Sweet" \
+		--copyright "Copyright (c) 2017-2019" \
+		--docversion "$(MOAUTH_VERSION)" \
+		--title "mOAuth API Reference" \
+		--body libmoauth-body.md
+
+doc:
+	echo Generating documentation...
+	$(RM) libmoauth.xml
+	codedoc $(CODEDOC_OPTIONS) $(LIBOBJS:.o=.c) $(HEADERS) >libmoauth.html
+	codedoc $(CODEDOC_OPTIONS) --man libmoauth >libmoauth.3
+	$(RM) libmoauth.xml
+
+
 # Install everything...
 install:	all
+	$(INSTALL) -d -m 755 $(BUILDROOT)$(includedir)
+	$(INSTALL) -c -m 644 moauth.h $(BUILDROOT)$(includedir)
+	$(INSTALL) -d -m 755 $(BUILDROOT)$(mandir)/man3
+	$(INSTALL) -c -m 644 libmoauth.3 $(BUILDROOT)$(mandir)/man3
 
 
 # Test everything...

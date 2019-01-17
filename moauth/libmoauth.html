@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>mOAuth API Reference</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <meta name="creator" content="codedoc v3.1">
+    <meta name="author" content="Michael R Sweet">
+    <meta name="copyright" content="Copyright (c) 2017-2019">
+    <meta name="version" content="">
+    <style type="text/css"><!--
+body, p, h1, h2, h3, h4 {
+  font-family: sans-serif;
+}
+div.body h1 {
+  font-size: 250%;
+  font-weight: bold;
+  margin: 0;
+}
+div.body h2 {
+  font-size: 250%;
+  margin-top: 1.5em;
+}
+div.body h3 {
+  font-size: 150%;
+  margin-bottom: 0.5em;
+  margin-top: 1.5em;
+}
+div.body h4 {
+  font-size: 110%;
+  margin-bottom: 0.5em;
+  margin-top: 1.5em;
+}
+div.body h5 {
+  font-size: 100%;
+  margin-bottom: 0.5em;
+  margin-top: 1.5em;
+}
+div.contents {
+  background: #e8e8e8;
+  border: solid thin black;
+  padding: 10px;
+}
+div.contents h1 {
+  font-size: 110%;
+}
+div.contents h2 {
+  font-size: 100%;
+}
+div.contents ul.contents {
+  font-size: 80%;
+}
+.class {
+  border-bottom: solid 2px gray;
+}
+.constants {
+}
+.description {
+  margin-top: 0.5em;
+}
+.discussion {
+}
+.enumeration {
+  border-bottom: solid 2px gray;
+}
+.function {
+  border-bottom: solid 2px gray;
+  margin-bottom: 0;
+}
+.members {
+}
+.method {
+}
+.parameters {
+}
+.returnvalue {
+}
+.struct {
+  border-bottom: solid 2px gray;
+}
+.typedef {
+  border-bottom: solid 2px gray;
+}
+.union {
+  border-bottom: solid 2px gray;
+}
+.variable {
+}
+h1, h2, h3, h4, h5, h6 {
+  page-break-inside: avoid;
+}
+blockquote {
+  border: solid thin gray;
+  box-shadow: 3px 3px 5px rgba(0,0,0,0.5);
+  padding: 0px 10px;
+  page-break-inside: avoid;
+}
+p code, li code, p.code, pre, ul.code li {
+  background: rgba(127,127,127,0.1);
+  border: thin dotted gray;
+  font-family: monospace;
+  font-size: 90%;
+  hyphens: manual;
+  -webkit-hyphens: manual;
+  page-break-inside: avoid;
+}
+p.code, pre, ul.code li {
+  padding: 10px;
+}
+p code, li code {
+  padding: 2px 5px;
+}
+a:link, a:visited {
+  text-decoration: none;
+}
+span.info {
+  background: black;
+  border: solid thin black;
+  color: white;
+  font-size: 80%;
+  font-style: italic;
+  font-weight: bold;
+  white-space: nowrap;
+}
+h3 span.info, h4 span.info {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  float: right;
+  padding: 3px 6px;
+}
+ul.code, ul.contents, ul.subcontents {
+  list-style-type: none;
+  margin: 0;
+  padding-left: 0;
+}
+ul.code li {
+  margin: 0;
+}
+ul.contents > li {
+  margin-top: 1em;
+}
+ul.contents li ul.code, ul.contents li ul.subcontents {
+  padding-left: 2em;
+}
+table.list {
+  border-collapse: collapse;
+  width: 100%;
+}
+table.list tr:nth-child(even) {
+  background: rgba(127,127,127,0.1);]n}
+table.list th {
+  border-right: 2px solid gray;
+  font-family: monospace;
+  padding: 5px 10px 5px 2px;
+  text-align: right;
+  vertical-align: top;
+}
+table.list td {
+  padding: 5px 2px 5px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+h1.title {
+}
+h2.title {
+  border-bottom: solid 2px black;
+}
+h3.title {
+  border-bottom: solid 2px black;
+}
+--></style>
+  </head>
+  <body>
+    <h1 class="title">mOAuth API Reference</h1>
+    <p>Michael R Sweet</p>
+    <p>Copyright (c) 2017-2019</p>
+    <div class="contents">
+      <h2 class="title">Contents</h2>
+      <ul class="contents">
+        <li><a href="#introduction">Introduction</a></li>
+        <li><a href="#getting-started">Getting Started</a></li>
+        <li><a href="#FUNCTIONS">Functions</a><ul class="subcontents">
+          <li><a href="#moauthAuthorize">moauthAuthorize</a></li>
+          <li><a href="#moauthClose">moauthClose</a></li>
+          <li><a href="#moauthConnect">moauthConnect</a></li>
+          <li><a href="#moauthErrorString">moauthErrorString</a></li>
+          <li><a href="#moauthGetToken">moauthGetToken</a></li>
+          <li><a href="#moauthPasswordToken">moauthPasswordToken</a></li>
+          <li><a href="#moauthRefreshToken">moauthRefreshToken</a></li>
+        </ul></li>
+        <li><a href="#TYPES">Data Types</a><ul class="subcontents">
+          <li><a href="#moauth_t">moauth_t</a></li>
+        </ul></li>
+      </ul>
+    </div>
+    <div class="body">
+    <h2><a id="introduction">Introduction</a></h2>
+    <p>The &quot;moauth&quot; library provides a simple API for performing OAuth 2.0 authorization. A single <code>&lt;moauth.h&gt;</code> header file needs to be included in your code:</p>
+    <pre><code>#include &lt;moauth.h&gt;
+</code></pre>
+    <p>When linking your program, include both the &quot;moauth&quot; and &quot;cups&quot; libraries, for example:</p>
+    <pre><code>gcc -o myprogram myprogram.c -lmoauth -lcups
+</code></pre>
+    <h2><a id="getting-started">Getting Started</a></h2>
+    <p>The connection to the OAuth Authorization Server is represented by a <code>moauth_t</code> pointer. Provide the URI for the server to the <code>moauthConnect</code> function to create a connection to the server:</p>
+    <pre><code>moauth_t *server = moauthConnect(&quot;https://oauth.example.net&quot;);
+</code></pre>
+    <p>When you are done communicating with the server, use the <code>moauthClose</code> function to close the connection to the server:</p>
+    <pre><code>moauthClose(server);
+</code></pre>
+    <p>To authorize access, call the <code>moauthAuthorize</code> function, which handles opening a web browser as needed:</p>
+    <pre><code>extern int
+moauthAuthorize(moauth_t *server,
+                const char *redirect_uri,
+                const char *client_id,
+                const char *state,
+                const char *code_verifier,
+                const char *scope);
+</code></pre>
+    <p>Typically the <code>redirect_uri</code> will use a scheme related to your program name, for example &quot;myprogram://authorize&quot; - these URI schemes must be registered with the local operating system. You can also use &quot;https&quot; URIs pointing to the local system, assuming that you have a local service running, however registering clients using local addresses and port numbers can be tricky - most &quot;native&quot; applications use a custom URI scheme.</p>
+    <blockquote>
+    <p>TODO: Add example registration process/links for Linux and macOS/iOS.</p>
+</blockquote>
+    <p>The <code>client_id</code> string is an identifier that is provided when you register your application with the OAuth provider, for example &quot;5C87D618-A5AE-4A48-B04B-E1BCE501ED75&quot;.</p>
+    <p>The <code>state</code> string is some data you provide for local state tracking, for example &quot;Snoopy&quot;.</p>
+    <p>The <code>code_verifier</code> string is used to prevent man-in-the-middle attacks and should be a random string, for example &quot;aBrh14x01-fjh552&quot;.</p>
+    <p>The <code>scope</code> string is used to request specific privileges. If <code>NULL</code> the authorization server will grant the default privileges.</p>
+    <p>Putting that all together yields the following example code:</p>
+    <pre><code>if (!moauthAuthorize(server, &quot;myprogram://authorize&quot;,
+                     &quot;5C87D618-A5AE-4A48-B04B-E1BCE501ED75&quot;, &quot;Snoopy&quot;,
+                     &quot;aBrh14x01-fjh552&quot;, NULL))
+    fprintf(stderr, &quot;Unable to authorize access: %s\n&quot;, moauthErrorString(server));
+</code></pre>
+    <p>Once authorization is complete your program will be notified using the redirect URI followed by several form variables, for example:</p>
+    <pre><code>myprogram://authorize?code=ABCDEFG0123456789&amp;state=Snoopy
+</code></pre>
+    <p>Your program needs to verify the state string matches what you used in the initial authorization request (&quot;Snoopy&quot;) and then uses the code value to request an access token using the <code>moauthGetToken</code> function:</p>
+    <pre><code>extern char *
+moauthGetToken(moauth_t *server,
+               const char *redirect_uri,
+               const char *client_id,
+               const char *grant,
+               const char *code_verifier,
+               char *token,
+               size_t tokensize,
+               char *refresh,
+               size_t refreshsize,
+               time_t *expires);
+</code></pre>
+    <p>The <code>server</code>, <code>redirect_uri</code>, <code>client_id</code>, and <code>code_verifier</code> arguments are the same as before.</p>
+    <p>The <code>grant</code> string is the &quot;code&quot; value from the redirect URI your program received.</p>
+    <p>The <code>token</code> argument is a pointer to a character buffer of <code>tokensize</code> bytes and will be filled with the access token.</p>
+    <p>The <code>refresh</code> argument is a pointer to a character buffer of <code>refreshsize</code> bytes and will be filled with a refresh token, if any. If you don't care about the refresh token you can pass <code>NULL</code> and <code>0</code> for these arguments.</p>
+    <p>The <code>expires</code> argument is a pointer to a <code>time_t</code> variable and will be filled with the expiration date/time for the access token. If you don't care about the expiration date/time you can pass <code>NULL</code>.</p>
+    <p>For example:</p>
+    <pre><code>char access_token[1024];
+
+if (!moauthGetToken(server, &quot;myprogram://authorize&quot;,
+                    &quot;5C87D618-A5AE-4A48-B04B-E1BCE501ED75&quot;,
+                    &quot;ABCDEFG0123456789&quot;, &quot;aBrh14x01-fjh552&quot;,
+                    access_token, sizeof(access_token),
+                    NULL, 0, NULL))
+    fprintf(stderr, &quot;Unable to get access token: %s\n&quot;, moauthErrorString(server));
+else
+    printf(&quot;Access token is \&quot;%s\&quot;.\n&quot;, access_token);
+</code></pre>
+      <h2 class="title"><a id="FUNCTIONS">Functions</a></h2>
+<h3 class="function"><a id="moauthAuthorize">moauthAuthorize</a></h3>
+        <p class="description">Open the authorization web page for an OAuth server.</p>
+<p class="code">
+int moauthAuthorize(<a href="#moauth_t">moauth_t</a> *server, const char *redirect_uri, const char *client_id, const char *state, const char *code_verifier, const char *scope);</p>
+<h4 class="parameters">Parameters</h4>
+<table class="list"><tbody>
+<tr><th>server</th>
+        <td class="description">OAuth server connection</td></tr>
+<tr><th>redirect_uri</th>
+        <td class="description">Redirection URI</td></tr>
+<tr><th>client_id</th>
+        <td class="description">Client identifier</td></tr>
+<tr><th>state</th>
+        <td class="description">Client state string or <code>NULL</code></td></tr>
+<tr><th>code_verifier</th>
+        <td class="description">Code verifier string or <code>NULL</code> if none</td></tr>
+<tr><th>scope</th>
+        <td class="description">Scope to request or <code>NULL</code></td></tr>
+</tbody></table>
+<h4 class="returnvalue">Return Value</h4>
+        <p class="description">1 on success, 0 on error</p>
+<h4 class="discussion">Discussion</h4>
+        <p class="discussion">This function returns as soon as the web page has been opened.<br>
+<br>
+The &quot;code_verifier&quot; string is transformed using the S256 method.</p>
+<h3 class="function"><a id="moauthClose">moauthClose</a></h3>
+        <p class="description">Close an OAuth server connection.</p>
+<p class="code">
+void moauthClose(<a href="#moauth_t">moauth_t</a> *server);</p>
+<h4 class="parameters">Parameters</h4>
+<table class="list"><tbody>
+<tr><th>server</th>
+        <td class="description">OAuth server connection</td></tr>
+</tbody></table>
+<h3 class="function"><a id="moauthConnect">moauthConnect</a></h3>
+        <p class="description">Open a connection to an OAuth server.</p>
+<p class="code">
+<a href="#moauth_t">moauth_t</a> *moauthConnect(const char *oauth_uri);</p>
+<h4 class="parameters">Parameters</h4>
+<table class="list"><tbody>
+<tr><th>oauth_uri</th>
+        <td class="description">Authorization URI</td></tr>
+</tbody></table>
+<h4 class="returnvalue">Return Value</h4>
+        <p class="description">OAuth server connection or <code>NULL</code></p>
+<h3 class="function"><a id="moauthErrorString">moauthErrorString</a></h3>
+        <p class="description">Return a description of the last error that occurred,
+if any.</p>
+<p class="code">
+const char *moauthErrorString(<a href="#moauth_t">moauth_t</a> *server);</p>
+<h4 class="parameters">Parameters</h4>
+<table class="list"><tbody>
+<tr><th>server</th>
+        <td class="description">OAuth server connection</td></tr>
+</tbody></table>
+<h4 class="returnvalue">Return Value</h4>
+        <p class="description">Last error description or <code>NULL</code> if none</p>
+<h3 class="function"><a id="moauthGetToken">moauthGetToken</a></h3>
+        <p class="description">Get an access token from a grant from the OAuth server.</p>
+<p class="code">
+char *moauthGetToken(<a href="#moauth_t">moauth_t</a> *server, const char *redirect_uri, const char *client_id, const char *grant, const char *code_verifier, char *token, size_t tokensize, char *refresh, size_t refreshsize, time_t *expires);</p>
+<h4 class="parameters">Parameters</h4>
+<table class="list"><tbody>
+<tr><th>server</th>
+        <td class="description">Connection to OAuth server</td></tr>
+<tr><th>redirect_uri</th>
+        <td class="description">Redirection URI that was used</td></tr>
+<tr><th>client_id</th>
+        <td class="description">Client ID that was used</td></tr>
+<tr><th>grant</th>
+        <td class="description">Grant code</td></tr>
+<tr><th>code_verifier</th>
+        <td class="description">Code verifier string, if any</td></tr>
+<tr><th>token</th>
+        <td class="description">Access token buffer</td></tr>
+<tr><th>tokensize</th>
+        <td class="description">Size of access token buffer</td></tr>
+<tr><th>refresh</th>
+        <td class="description">Refresh token buffer</td></tr>
+<tr><th>refreshsize</th>
+        <td class="description">Size of refresh token buffer</td></tr>
+<tr><th>expires</th>
+        <td class="description">Expiration date/time, if known</td></tr>
+</tbody></table>
+<h4 class="returnvalue">Return Value</h4>
+        <p class="description">Access token or <code>NULL</code> on error</p>
+<h3 class="function"><a id="moauthPasswordToken">moauthPasswordToken</a></h3>
+        <p class="description">Get an access token using a username and password
+(if supported by the OAuth server)</p>
+<p class="code">
+char *moauthPasswordToken(<a href="#moauth_t">moauth_t</a> *server, const char *username, const char *password, const char *scope, char *token, size_t tokensize, char *refresh, size_t refreshsize, time_t *expires);</p>
+<h4 class="parameters">Parameters</h4>
+<table class="list"><tbody>
+<tr><th>server</th>
+        <td class="description">Connection to OAuth server</td></tr>
+<tr><th>username</th>
+        <td class="description">Username string</td></tr>
+<tr><th>password</th>
+        <td class="description">Password string</td></tr>
+<tr><th>scope</th>
+        <td class="description">Scope to request or <code>NULL</code></td></tr>
+<tr><th>token</th>
+        <td class="description">Access token buffer</td></tr>
+<tr><th>tokensize</th>
+        <td class="description">Size of access token buffer</td></tr>
+<tr><th>refresh</th>
+        <td class="description">Refresh token buffer</td></tr>
+<tr><th>refreshsize</th>
+        <td class="description">Size of refresh token buffer</td></tr>
+<tr><th>expires</th>
+        <td class="description">Expiration date/time, if known</td></tr>
+</tbody></table>
+<h4 class="returnvalue">Return Value</h4>
+        <p class="description">Access token or <code>NULL</code> on error</p>
+<h3 class="function"><a id="moauthRefreshToken">moauthRefreshToken</a></h3>
+        <p class="description">Refresh an access token from the OAuth server.</p>
+<p class="code">
+char *moauthRefreshToken(<a href="#moauth_t">moauth_t</a> *server, const char *refresh, char *token, size_t tokensize, char *new_refresh, size_t new_refreshsize, time_t *expires);</p>
+<h4 class="parameters">Parameters</h4>
+<table class="list"><tbody>
+<tr><th>server</th>
+        <td class="description">Connection to OAuth server</td></tr>
+<tr><th>refresh</th>
+        <td class="description">Refresh token</td></tr>
+<tr><th>token</th>
+        <td class="description">Access token buffer</td></tr>
+<tr><th>tokensize</th>
+        <td class="description">Size of access token buffer</td></tr>
+<tr><th>new_refresh</th>
+        <td class="description">Refresh token buffer</td></tr>
+<tr><th>new_refreshsize</th>
+        <td class="description">Size of refresh token buffer</td></tr>
+<tr><th>expires</th>
+        <td class="description">Expiration date/time, if known</td></tr>
+</tbody></table>
+<h4 class="returnvalue">Return Value</h4>
+        <p class="description">Access token or <code>NULL</code> on error</p>
+      <h2 class="title"><a id="TYPES">Data Types</a></h2>
+      <h3 class="typedef"><a id="moauth_t">moauth_t</a></h3>
+        <p class="description">OAuth server connection</p>
+      <p class="code">
+typedef struct _moauth_s moauth_t;
+</p>
+    </div>
+  </body>
+</html>

@@ -16,7 +16,7 @@
 #else
 #  include <spawn.h>
 #  include <sys/wait.h>
-extern char **environ;
+extern char **environ;			/* @private@ */
 #endif /* __APPLE__ */
 
 
