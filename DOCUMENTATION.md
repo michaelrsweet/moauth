@@ -1,11 +1,10 @@
 mOAuth Documentation
 ====================
 
-mOAuth is a basic OAuth 2.0 client/server implementation that is geared towards
-testing and development of OAuth-based services.  The client library supports
-authorization of native macOS, iOS, and Linux applications with PKCE.
-
-The server is both an Authorization Server and a Resource Server that supports:
+mOAuth is a basic OAuth 2.0 client/server implementation designed for testing
+and development of OAuth-based services.  The client library supports
+authorization of native macOS, iOS, and Linux applications with PKCE.  The
+server is both an Authorization Server and a Resource Server that supports:
 
 - User account authentication/authorization using PAM
 - Traditional web-based authorization grants with redirection as well as
@@ -14,7 +13,7 @@ The server is both an Authorization Server and a Resource Server that supports:
 - Basic Resource Server functionality with implicit and explicit ACLs
 - Customizable web interface
 
-mOAuth currently requires CUPS for its HTTPS support.
+mOAuth currently requires CUPS 2.2 or later for its HTTPS support.
 
 Copyright © 2017-2019 by Michael R Sweet.
 
@@ -94,10 +93,15 @@ LogLevel debug
 LogFile /var/log/moauthd.log
 ```
 
+If no configuration file is specified, `moauthd` will look for a "moauthd.conf"
+file in "/etc" or "/usr/local/etc".
+
 The following directives are currently recognized:
 
 - `Application`: Specifies a client ID and redirect URI pair to allow when
   authorizing.
+- `AuthService`: Specifies a PAM authorization service to use.  The default is
+  "login".
 - `LogFile`: Specifies the file for log messages.  The filename can be "stderr"
   to send messages to the standard error file, "syslog" to send messages to the
   syslog daemon, or "none" to disable logging.

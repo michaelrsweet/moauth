@@ -1,11 +1,10 @@
 mOAuth - A Basic OAuth 2.0 Client/Server Implementation
 =======================================================
 
-mOAuth is a basic OAuth 2.0 client/server implementation that is geared towards
-testing and development of OAuth-based services.  The client library supports
-authorization of native macOS, iOS, and Linux applications with PKCE.
-
-The server is both an Authorization Server and a Resource Server that supports:
+mOAuth is a basic OAuth 2.0 client/server implementation designed for testing
+and development of OAuth-based services.  The client library supports
+authorization of native macOS, iOS, and Linux applications with PKCE.  The
+server is both an Authorization Server and a Resource Server that supports:
 
 - User account authentication/authorization using PAM
 - Traditional web-based authorization grants with redirection as well as
@@ -14,7 +13,26 @@ The server is both an Authorization Server and a Resource Server that supports:
 - Basic Resource Server functionality with implicit and explicit ACLs
 - Customizable web interface
 
-mOAuth currently requires CUPS for its HTTPS support.
+
+Requirements
+------------
+
+mOAuth requires CUPS 2.2 or later for its HTTPS support.  If you are compiling
+from source you'll need a C compiler (GCC and clang are fine) and a make
+program that supports the "include" directive (like GNU make).
+
+
+Standards Implemented
+---------------------
+
+The specific standards mOAuth currently implements are:
+
+- The OAuth2 Authentication Framework [RFC6749](https://tools.ietf.org/html/rfc6749)
+- The OAuth2 Bearer Token [RFC6750](https://tools.ietf.org/html/rfc6750)
+- Proof Key for Code Exchange by OAuth Public Clients [RFC7636](https://tools.ietf.org/html/rfc7636)
+- OAuth 2.0 Token Introspection [RFC7662](https://tools.ietf.org/html/rfc7662)
+- OAuth 2.0 for Native Apps [RFC8252](https://tools.ietf.org/html/rfc8252)
+- OAuth 2.0 Authorization Server Metadata [RFC8414](https://tools.ietf.org/html/rfc8414)
 
 
 Using mOAuth
