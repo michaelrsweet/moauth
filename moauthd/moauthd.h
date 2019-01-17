@@ -110,6 +110,7 @@ typedef struct moauthd_server_s		/**** Server ****/
   int		port;			/* Server port */
   int		log_file;		/* Log file descriptor */
   moauthd_loglevel_t log_level;		/* Log level */
+  char		*auth_service;		/* PAM authentication service */
   int		num_clients;		/* Number of clients served */
   int		num_listeners;		/* Number of listener sockets */
   struct pollfd	listeners[MOAUTHD_MAX_LISTENERS];
@@ -157,7 +158,7 @@ typedef struct moauthd_client_s		/**** Client Information ****/
  * Functions...
  */
 
-extern int		moauthdAuthenticateUser(moauthd_server_t *server, const char *username, const char *password);
+extern int		moauthdAuthenticateUser(moauthd_client_t *client, const char *username, const char *password);
 extern moauthd_client_t	*moauthdCreateClient(moauthd_server_t *server, int fd);
 extern moauthd_resource_t *moauthdCreateResource(moauthd_server_t *server, moauthd_restype_t type, const char *remote_path, const char *local_path, const char *content_type, const char *scope);
 extern moauthd_server_t	*moauthdCreateServer(const char *configfile, int verbosity);

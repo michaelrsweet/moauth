@@ -1,9 +1,10 @@
 #
 # Common moauth makefile definitions
 #
-# Copyright © 2017 by Michael R Sweet
+# Copyright © 2017-2019 by Michael R Sweet
 #
-# Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+# Licensed under Apache License v2.0.  See the file "LICENSE" for more
+# information.
 #
 
 # Be silent...
@@ -19,6 +20,7 @@ INSTALL		=	@INSTALL@
 LDFLAGS		=	-L../moauth @LDFLAGS@
 LIBS		=	@LIBS@
 MKDIR           =       @MKDIR@ -p
+PAMLIBS		=	@PAMLIBS@
 RANLIB		=	@RANLIB@
 RM		=	@RM@ -f
 RMDIR		=	@RMDIR@

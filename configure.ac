@@ -92,6 +92,33 @@ for flag in -lpthreads -lpthread -pthread; do
     fi
 done
 
+dnl PAM support...
+AC_ARG_ENABLE(pam, [  --disable-pam           disable PAM support])
+
+PAMLIBS=""
+
+if test x$enable_pam != xno; then
+    SAVELIBS="$LIBS"
+
+    AC_CHECK_LIB(dl,dlopen)
+    AC_CHECK_LIB(pam,pam_start)
+    AC_CHECK_HEADER(security/pam_appl.h, AC_DEFINE(HAVE_SECURITY_PAM_APPL_H))
+    AC_CHECK_HEADER(pam/pam_appl.h, AC_DEFINE(HAVE_PAM_PAM_APPL_H))
+
+    if test x$ac_cv_lib_pam_pam_start != xno; then
+	# Set the necessary libraries for PAM...
+	if test x$ac_cv_lib_dl_dlopen != xno; then
+	    PAMLIBS="-lpam -ldl"
+	else
+	    PAMLIBS="-lpam"
+	fi
+    fi
+
+    LIBS="$SAVELIBS"
+fi
+
+AC_SUBST(PAMLIBS)
+
 dnl Random number support...
 AC_CHECK_HEADER(sys/random.h, AC_DEFINE(HAVE_SYS_RANDOM_H))
 AC_CHECK_FUNC(arc4random, AC_DEFINE(HAVE_ARC4RANDOM))

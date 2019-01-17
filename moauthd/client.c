@@ -284,7 +284,7 @@ moauthdRunClient(
         {
           *password++ = '\0';
 
-          if (moauthdAuthenticateUser(client->server, username, password))
+          if (moauthdAuthenticateUser(client, username, password))
           {
             if ((user = getpwnam(username)) != NULL)
 	    {
@@ -646,7 +646,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
 	else
 	  prefix = "?";
 
-        if (!username || !password || !moauthdAuthenticateUser(client->server, username, password))
+        if (!username || !password || !moauthdAuthenticateUser(client, username, password))
         {
           snprintf(uri, sizeof(uri), "%s%serror=access_denied&error_description=Bad+username+or+password.%s%s", redirect_uri, prefix, state ? "&state=" : "", state ? state : "");
         }
@@ -882,7 +882,7 @@ do_token(moauthd_client_t *client)	/* I - Client object */
 
   if (!strcmp(grant_type, "password"))
   {
-    if (!moauthdAuthenticateUser(client->server, username, password))
+    if (!moauthdAuthenticateUser(client, username, password))
       goto bad_request;
 
     access_token = moauthdCreateToken(client->server, MOAUTHD_TOKTYPE_ACCESS, NULL, username, scope);

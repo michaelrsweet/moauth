@@ -375,6 +375,9 @@ moauthdCreateServer(
 
   moauthdLogs(server, MOAUTHD_LOGLEVEL_INFO, "Authorization server is \"https://%s:%d\".", server_name, server_port);
 
+  if (!server->auth_service)
+    server->auth_service = strdup("login");
+
   cupsSetServerCredentials(getenv("SNAP_DATA"), server->name, 1);
 
  /*
@@ -400,7 +403,7 @@ moauthdCreateServer(
  /*
   * authorization_endpoint
   *
-  * REQUIRED. URL of the OP's OAuth 2.0 Authorization Endpoint [OpenID.Core].
+  * REQUIRED. URL of the OP's OAuth 2.0 Authorization Endpoint [RFC8414].
   */
 
   snprintf(temp, sizeof(temp), "https://%s:%d/authorize", server_name, server_port);
@@ -625,6 +628,9 @@ moauthdDeleteServer(
 
   if (server->name)
     free(server->name);
+
+  if (server->auth_service)
+    free(server->auth_service);
 
   for (i = 0; i < server->num_listeners; i ++)
     httpAddrClose(NULL, server->listeners[i].fd);

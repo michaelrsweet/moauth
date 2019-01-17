@@ -6,7 +6,7 @@
 .\" Licensed under Apache License v2.0.  See the file "LICENSE" for more
 .\" information.
 .\"
-.TH moauthd.conf 5 "mOAuth" "2018-03-28" "Michael R Sweet"
+.TH moauthd.conf 5 "mOAuth" "2019-01-17" "Michael R Sweet"
 .SH NAME
 moauthd.conf \- moauthd configuration file format
 .SH DESCRIPTION
@@ -22,6 +22,10 @@ Comment lines start with the # character.
 .TP 5
 \fBApplication \fIclient-id redirect-uri\fR
 Specifies a client ID and redirect URI pair to allow when authorizing.
+.TP 5
+\fBAuthService \fIservice-name\fR
+Specifies a PAM authentication service to use.
+The default is "login".
 .TP 5
 \fBLogFile \fIfilename\fR
 Specifies the file for log messages.

@@ -57,7 +57,8 @@ test:	$(TARGETS)
 # Daemon program...
 moauthd:	$(MOAUTHD_OBJS) ../moauth/libmoauth.a
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ $(MOAUTHD_OBJS) ../moauth/libmoauth.a $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ $(MOAUTHD_OBJS) ../moauth/libmoauth.a \
+		$(PAMLIBS) $(LIBS)
 	if test `uname` = Darwin; then \
 		echo Code-signing $@...; \
 		codesign -s "$(CODESIGN_IDENTITY)" $@; \

@@ -16,3 +16,7 @@
 /* Do we have the arc4random function? */
 #undef HAVE_ARC4RANDOM
 
+/* PAM stuff... */
+#undef HAVE_LIBPAM
+#undef HAVE_SECURITY_PAM_APPL_H
+#undef HAVE_PAM_PAM_APPL_H
