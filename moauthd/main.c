@@ -1,9 +1,10 @@
 /*
  * Main entry for moauth daemon
  *
- * Copyright © 2017 by Michael R Sweet
+ * Copyright © 2017-2019 by Michael R Sweet
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 #include "moauthd.h"
@@ -43,6 +44,15 @@ main(int  argc,				/* I - Number of command-line arguments */
       */
 
       usage();
+      return (0);
+    }
+    else if (!strcmp(argv[i], "--version"))
+    {
+     /*
+      * Show version and exit...
+      */
+
+      puts(MOAUTH_VERSION);
       return (0);
     }
     else if (argv[i][0] == '-' && argv[i][1] != '-')
@@ -90,11 +100,16 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
 
  /*
-  * Default config file for snaps is /etc/moauthd.conf...
+  * Default config file is /etc/moauthd.conf or /usr/local/etc/moauthd.conf...
   */
 
-  if (!configfile && getenv("SNAP") && !access("/etc/moauthd.conf", 0))
-    configfile = "/etc/moauthd.conf";
+  if (!configfile)
+  {
+    if (!access("/etc/moauthd.conf", 0))
+      configfile = "/etc/moauthd.conf";
+    else if (!access("/usr/local/etc/moauthd.conf", 0))
+      configfile = "/usr/local/etc/moauthd.conf";
+  }
 
  /*
   * Create the server object and run it...
@@ -114,6 +129,8 @@ usage(void)
   fputs("Usage: moauthd [options]\n", stderr);
   fputs("Options:\n", stderr);
   fputs("-c configfile     Specify configuration file.\n", stderr);
+  fputs("-v                Be verbose (more v's increase the verbosity).\n", stderr);
   fputs("--help            Show usage help.\n", stderr);
+  fputs("--version         Show mOAuth version.\n", stderr);
 }
 

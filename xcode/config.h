@@ -8,7 +8,7 @@
  */
 
 /* Version number... */
-#define MOAUTH_VERSION "1.0"
+#define MOAUTH_VERSION "1.1"
 
 /* Do we have the <sys/random.h> header? */
 #define HAVE_SYS_RANDOM_H 1

@@ -16,6 +16,51 @@ The server is both an Authorization Server and a Resource Server that supports:
 
 mOAuth currently requires CUPS for its HTTPS support.
 
+
+Using mOAuth
+------------
+
+The simplest way to use mOAuth on Linux is to install the moauth snap with:
+
+    sudo snap install moauth
+
+You can also build and install from source (see commands below) and then run
+`moauthd` by hand.
+
+
+Building mOAuth from Source
+---------------------------
+
+mOAuth uses the typical configure script and makefile build system and requires
+a recent version of CUPS (2.2 or later) to provide the necessary HTTPS support.
+On Ubuntu 18.04 and later you'll want to install the "libcups2-dev" package to
+satisfy that requirement.
+
+Assuming everything in in the normal locations the following commands will
+build and install mOAuth on your system to "/usr/local":
+
+    ./configure
+    make
+    make install
+
+The `--prefix` option can be used to override the default installation prefix,
+for example:
+
+    ./configure --prefix=/opt/moauth
+
+
+Change History
+--------------
+
+Changes in v1.1:
+
+- Updated `moauthd` to look for "/etc/moauthd.conf" and
+  "/usr/local/etc/moauthd.conf" as the default configuration file.
+
+
+Legal Stuff
+-----------
+
 Copyright © 2017-2019 by Michael R Sweet.
 
 mOAuth is licensed under the Apache License Version 2.0 with an exception to
