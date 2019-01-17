@@ -56,6 +56,7 @@ Changes in v1.1:
 
 - Updated `moauthd` to look for "/etc/moauthd.conf" and
   "/usr/local/etc/moauthd.conf" as the default configuration file.
+- Now install libmoauth and the `<moauth.h>` header.
 
 
 Legal Stuff
