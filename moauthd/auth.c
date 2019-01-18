@@ -76,8 +76,6 @@ moauthdAuthenticateUser(
     int			pamerr;		/* PAM error code */
     struct pam_conv	pamdata;	/* PAM conversation data */
 
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Using PAM authentication.");
-
     data.username = username;
     data.password = password;
 

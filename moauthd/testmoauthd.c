@@ -82,6 +82,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 			token[256],	/* Access token */
 			refresh[256],	/* Refresh token */
 			filename[256];	/* Temporary filename */
+  const char		*password;	/* Password to use for password auth test */
   time_t		expires;	/* Expiration date/time */
   moauth_t		*server;	/* Connection to moauthd*/
   unsigned char		data[32];	/* Data for verifier string */
@@ -225,9 +226,12 @@ main(int  argc,				/* I - Number of command-line arguments */
   * (resource owner grant) and see if we can access a private file...
   */
 
+  if ((password = getenv("TEST_PASSWORD")) == NULL)
+    password = "test123";
+
   fputs("moauthPasswordToken: ", stdout);
 
-  if (moauthPasswordToken(server, cupsUser(), "test123", NULL, token, sizeof(token), refresh, sizeof(refresh), &expires))
+  if (moauthPasswordToken(server, cupsUser(), password, NULL, token, sizeof(token), refresh, sizeof(refresh), &expires))
   {
     printf("PASS (access token=\"%s\", refresh token=\"%s\", expires %s)\n", token, refresh, httpGetDateString(expires));
   }
