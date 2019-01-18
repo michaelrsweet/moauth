@@ -39,7 +39,11 @@
 typedef struct moauthd_application_s	/**** Application (Client) ****/
 {
   char	*client_id,			/* Client identifier */
-	*redirect_uri;			/* Redirection URI */
+	*redirect_uri,			/* Redirection URI */
+	*client_name,			/* Name, if any */
+	*client_uri,			/* Web page, if any */
+	*logo_uri,			/* Logo URI, if any */
+	*tos_uri;			/* Terms-of-service URI, if any */
 } moauthd_application_t;
 
 
@@ -158,6 +162,7 @@ typedef struct moauthd_client_s		/**** Client Information ****/
  * Functions...
  */
 
+extern moauthd_application_t *moauthdAddApplication(moauthd_server_t *server, const char *client_id, const char *redirect_uri, const char *client_name, const char *client_uri, const char *logo_uri, const char *tos_uri);
 extern int		moauthdAuthenticateUser(moauthd_client_t *client, const char *username, const char *password);
 extern moauthd_client_t	*moauthdCreateClient(moauthd_server_t *server, int fd);
 extern moauthd_resource_t *moauthdCreateResource(moauthd_server_t *server, moauthd_restype_t type, const char *remote_path, const char *local_path, const char *content_type, const char *scope);

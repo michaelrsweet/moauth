@@ -30,6 +30,45 @@ static int	get_seconds(const char *value);
 
 
 /*
+ * 'moauthdAddApplication()' - Add an application (OAuth client) to the server.
+ */
+
+moauthd_application_t *			/* O - New application object */
+moauthdAddApplication(
+    moauthd_server_t *server,		/* I - Server */
+    const char       *client_id,	/* I - Client ID */
+    const char       *redirect_uri,	/* I - Redirection URI */
+    const char       *client_name,	/* I - Human-readable name or `NULL` for none */
+    const char       *client_uri,	/* I - Web page or `NULL` for none */
+    const char       *logo_uri,		/* I - Logo URI or `NULL` for none */
+    const char       *tos_uri)		/* I - Terms-of-service URI or `NULL` for none */
+{
+  moauthd_application_t	temp,		/* Temporary application data */
+			*app;		/* New application */
+
+  temp.client_id    = (char *)client_id;
+  temp.redirect_uri = (char *)redirect_uri;
+  temp.client_name  = (char *)client_name;
+  temp.client_uri   = (char *)client_uri;
+  temp.logo_uri     = (char *)logo_uri;
+  temp.tos_uri      = (char *)tos_uri;
+
+  pthread_mutex_lock(&server->applications_lock);
+
+  if (!server->applications)
+    server->applications = cupsArrayNew3((cups_array_func_t)compare_applications, NULL, NULL, 0, (cups_acopy_func_t)copy_application, (cups_afree_func_t)free_application);
+
+  cupsArrayAdd(server->applications, &temp);
+
+  app = (moauthd_application_t *)cupsArrayFind(server->applications, &temp);
+
+  pthread_mutex_unlock(&server->applications_lock);
+
+  return (app);
+}
+
+
+/*
  * 'moauthdCreateServer()' - Create a new server object and load the specified config file.
  */
 
@@ -70,6 +109,10 @@ moauthdCreateServer(
 
   server = calloc(1, sizeof(moauthd_server_t));
 
+  pthread_mutex_init(&server->applications_lock, NULL);
+  pthread_rwlock_init(&server->resources_lock, NULL);
+  pthread_rwlock_init(&server->tokens_lock, NULL);
+
   server->log_file       = 2;		/* stderr */
   server->log_level      = MOAUTHD_LOGLEVEL_ERROR;
   server->max_grant_life = 300;		/* 5 minutes */
@@ -95,30 +138,30 @@ moauthdCreateServer(
       if (!strcasecmp(line, "Application"))
       {
        /*
-        * Application client-id redirect-uri
+        * Application client-id redirect-uri client-name
         */
 
-        moauthd_application_t temp;	/* New application object */
+        const char	*client_id,	/* Client ID */
+			*client_name,	/* Client name */
+			*redirect_uri;	/* Redirection URI */
 
         if (!value)
         {
-          fprintf(stderr, "moauthd: Missing client ID and redirect URI on line %d of \"%s\".\n", linenum, configfile);
+          fprintf(stderr, "moauthd: Missing client ID, redirect URI, and name on line %d of \"%s\".\n", linenum, configfile);
           goto create_failed;
         }
 
-        temp.client_id    = strtok(value, " \t");
-        temp.redirect_uri = strtok(NULL, " \t");
+        client_id    = strtok(value, " \t");
+        redirect_uri = strtok(NULL, " \t");
+        client_name  = strtok(NULL, " \t");
 
-        if (!temp.client_id || !*temp.client_id || !temp.redirect_uri || !*temp.redirect_uri)
+        if (!client_id || !*client_id || !redirect_uri || !*redirect_uri)
         {
           fprintf(stderr, "moauthd: Missing client ID and redirect URI on line %d of \"%s\".\n", linenum, configfile);
           goto create_failed;
         }
 
-        if (!server->applications)
-          server->applications = cupsArrayNew3((cups_array_func_t)compare_applications, NULL, NULL, 0, (cups_acopy_func_t)copy_application, (cups_afree_func_t)free_application);
-
-        cupsArrayAdd(server->applications, &temp);
+        moauthdAddApplication(server, client_id, redirect_uri, client_name, NULL, NULL, NULL);
       }
       else if (!strcasecmp(line, "LogFile"))
       {
@@ -526,10 +569,6 @@ moauthdCreateServer(
 
   time(&server->start_time);
 
-  pthread_mutex_init(&server->applications_lock, NULL);
-  pthread_rwlock_init(&server->resources_lock, NULL);
-  pthread_rwlock_init(&server->tokens_lock, NULL);
-
   if (!server->secret)
   {
    /*
@@ -792,6 +831,15 @@ copy_application(
   {
     na->client_id    = strdup(a->client_id);
     na->redirect_uri = strdup(a->redirect_uri);
+
+    if (a->client_name)
+      na->client_name = strdup(a->client_name);
+    if (a->client_uri)
+      na->client_uri = strdup(a->client_uri);
+    if (a->logo_uri)
+      na->logo_uri = strdup(a->logo_uri);
+    if (a->tos_uri)
+      na->tos_uri = strdup(a->tos_uri);
   }
 
   return (na);
@@ -808,6 +856,14 @@ free_application(
 {
   free(a->client_id);
   free(a->redirect_uri);
+  if (a->client_name)
+    free(a->client_name);
+  if (a->client_uri)
+    free(a->client_uri);
+  if (a->logo_uri)
+    free(a->logo_uri);
+  if (a->tos_uri)
+    free(a->tos_uri);
   free(a);
 }
 
