@@ -18,7 +18,9 @@
 
 static int	do_authorize(moauthd_client_t *client);
 static int	do_introspect(moauthd_client_t *client);
+static int	do_register(moauthd_client_t *client);
 static int	do_token(moauthd_client_t *client);
+static int	validate_uri(const char *uri, const char *urischeme);
 
 
 /*
@@ -450,6 +452,8 @@ moauthdRunClient(
 	    done = !do_authorize(client);
 	  else if (!strcmp(client->path_info, "/introspect"))
 	    done = !do_introspect(client);
+	  else if (!strcmp(client->path_info, "/register"))
+	    done = !do_register(client);
 	  else if (!strcmp(client->path_info, "/token"))
 	    done = !do_token(client);
 	  else
@@ -700,28 +704,31 @@ do_introspect(moauthd_client_t *client)	/* I - Client object */
   };
 
 
-  if (!client->remote_user[0])
-  {
-   /*
-    * Not yet authenticated...
-    */
-
-    status = HTTP_STATUS_UNAUTHORIZED;
-  }
-  else if (client->server->introspect_group != (gid_t)-1)
+  if (client->server->introspect_group != (gid_t)-1)
   {
    /*
     * See if the authenticated user is in the specified group...
     */
 
-    int i;				/* Looping var */
+    if (!client->remote_user[0])
+    {
+     /*
+      * Not yet authenticated...
+      */
 
-    for (i = 0; i < client->num_remote_groups; i ++)
-      if (client->remote_groups[i] == client->server->introspect_group)
-        break;
+      status = HTTP_STATUS_UNAUTHORIZED;
+    }
+    else
+    {
+      int i;				/* Looping var */
 
-    if (i >= client->num_remote_groups)
-      status = HTTP_STATUS_FORBIDDEN;
+      for (i = 0; i < client->num_remote_groups; i ++)
+	if (client->remote_groups[i] == client->server->introspect_group)
+	  break;
+
+      if (i >= client->num_remote_groups)
+	status = HTTP_STATUS_FORBIDDEN;
+    }
   }
 
   if (status != HTTP_STATUS_OK)
@@ -801,6 +808,260 @@ do_introspect(moauthd_client_t *client)	/* I - Client object */
   bad_request:
 
   cupsFreeOptions(num_vars, vars);
+
+  return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+}
+
+
+/*
+ * 'do_register()' - Process a request for the /register endpoint.
+ */
+
+static int				/* O - 1 on success, 0 on failure */
+do_register(moauthd_client_t *client)	/* I - Client object */
+{
+  http_status_t	status = HTTP_STATUS_CREATED;
+					/* Return status */
+  int		num_vars;		/* Number of form (request) variables */
+  cups_option_t	*vars;			/* Form (request) variables */
+  char		*data;			/* Form data */
+  const char	*redirect_uris,		/* redirect_uris variable (REQUIRED) */
+		*client_name,		/* client_name variable (RECOMMENDED) */
+		*client_uri,		/* client_uri variable (RECOMMENDED) */
+		*logo_uri,		/* logo_uri variable (OPTIONAL) */
+		*tos_uri;		/* tos_uri variable (OPTIONAL) */
+  int		num_json = 0;		/* Number of JSON (response) variables */
+  cups_option_t	*json = NULL;		/* JSON (response) variables */
+  size_t	datalen;		/* Length of JSON data */
+  unsigned char	client_id_hash[32];	/* SHA2-256 hash of client_name or redirect_uris */
+  char		client_id[65];		/* client_id value */
+  char		*uri,			/* Copy of redirect_uris */
+		*uristart,		/* Start of URI */
+		*uriend;		/* End of URI */
+  const char	*error = NULL;		/* Error code, if any */
+  char		error_message[1024];	/* Error message, if any */
+
+
+  if (client->server->register_group != (gid_t)-1)
+  {
+   /*
+    * See if the authenticated user is in the specified group...
+    */
+
+    if (!client->remote_user[0])
+    {
+     /*
+      * Not yet authenticated...
+      */
+
+      status = HTTP_STATUS_UNAUTHORIZED;
+    }
+    else
+    {
+      int i;				/* Looping var */
+
+      for (i = 0; i < client->num_remote_groups; i ++)
+	if (client->remote_groups[i] == client->server->register_group)
+	  break;
+
+      if (i >= client->num_remote_groups)
+	status = HTTP_STATUS_FORBIDDEN;
+    }
+  }
+
+  if (status != HTTP_STATUS_CREATED)
+    return (moauthdRespondClient(client, status, NULL, NULL, 0, 0));
+
+ /*
+  * Get request data...
+  */
+
+  if ((data = _moauthCopyMessageBody(client->http)) == NULL)
+    return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+
+  num_vars      = _moauthFormDecode(data, &vars);
+  redirect_uris = cupsGetOption("redirect_uris", num_vars, vars);
+  client_name   = cupsGetOption("client_name", num_vars, vars);
+  client_uri    = cupsGetOption("client_uri", num_vars, vars);
+  logo_uri      = cupsGetOption("logo_uri", num_vars, vars);
+  tos_uri       = cupsGetOption("tos_uri", num_vars, vars);
+
+  free(data);
+
+  if (!redirect_uris)
+  {
+   /*
+    * Missing required variables!
+    */
+
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing redirect_uris in register request.");
+
+    error = "invalid_redirect_uri";
+    snprintf(error_message, sizeof(error_message), "Missing redirect_uris value.");
+
+    goto bad_request;
+  }
+  else if (strncmp(redirect_uris, "[\"", 2))
+  {
+   /*
+    * Bad redirect_uris variable!
+    */
+
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad redirect_uris \"%s\".", redirect_uris);
+
+    error = "invalid_redirect_uri";
+    snprintf(error_message, sizeof(error_message), "Bad redirect_uris \"%s\".", redirect_uris);
+
+    goto bad_request;
+  }
+  else if (client_uri && !validate_uri(client_uri, "https"))
+  {
+    error = "invalid_client_metadata";
+    snprintf(error_message, sizeof(error_message), "Bad client_uri \"%s\".", client_uri);
+
+    goto bad_request;
+  }
+  else if (logo_uri && !validate_uri(logo_uri, "https"))
+  {
+    error = "invalid_client_metadata";
+    snprintf(error_message, sizeof(error_message), "Bad logo_uri \"%s\".", logo_uri);
+
+    goto bad_request;
+  }
+  else if (tos_uri && !validate_uri(tos_uri, "https"))
+  {
+    error = "invalid_client_metadata";
+    snprintf(error_message, sizeof(error_message), "Bad tos_uri \"%s\".", tos_uri);
+
+    goto bad_request;
+  }
+
+ /*
+  * Parse redirect_uris to add application entries...
+  */
+
+  if (client_name)
+    cupsHashData("sha2-256", client_name, strlen(client_name), client_id_hash, sizeof(client_id_hash));
+  else
+    cupsHashData("sha2-256", redirect_uris, strlen(redirect_uris), client_id_hash, sizeof(client_id_hash));
+
+  cupsHashString(client_id_hash, sizeof(client_id_hash), client_id, sizeof(client_id));
+
+  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Registering client \"%s\" with redirect URIs \"%s\".", client_id, redirect_uris);
+
+  uri = strdup(redirect_uris + 2);
+  for (uristart = uri; uristart; uristart = uriend)
+  {
+    if ((uriend = strstr(uristart, "\",\"")) != NULL)
+    {
+      *uriend++ = '\0';
+    }
+    else if ((uriend = strstr(uristart, "\"]")) != NULL)
+    {
+      *uriend = '\0';
+      uriend  = NULL;
+    }
+
+    if (!validate_uri(uristart, NULL))
+    {
+      error = "invalid_redirect_uri";
+      snprintf(error_message, sizeof(error_message), "Bad redirect_uri \"%s\".", uristart);
+
+      goto bad_request;
+    }
+    else if (moauthdFindApplication(client->server, client_id, uristart))
+    {
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Client %s %s is already registered.", client_id, uristart);
+    }
+    else if (moauthdAddApplication(client->server, client_id, uristart, client_name, client_uri, logo_uri, tos_uri))
+    {
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Client %s %s registered.", client_id, uristart);
+    }
+    else
+    {
+      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Unable to register client %s %s.", client_id, uristart);
+      /* TODO: Return an error? Nothing defined in RFC 7591 for internal errors... */
+    }
+  }
+  free(uri);
+
+ /*
+  * Respond with the metadata and generated client_id...
+  */
+
+  num_json = cupsAddOption("client_id", client_id, num_json, &json);
+
+  if (redirect_uris)
+    num_json = cupsAddOption("redirect_uris", client_name, num_json, &json);
+  if (client_name)
+    num_json = cupsAddOption("client_name", client_name, num_json, &json);
+  if (client_uri)
+    num_json = cupsAddOption("client_uri", client_name, num_json, &json);
+  if (logo_uri)
+    num_json = cupsAddOption("logo_uri", client_name, num_json, &json);
+  if (tos_uri)
+    num_json = cupsAddOption("tos_uri", client_name, num_json, &json);
+
+  num_json = cupsAddOption("token_endpoint_auth_method", "none", num_json, &json);
+  num_json = cupsAddOption("grant_types", "[\"authorization_code\",\"password\",\"refresh_token\"]", num_json, &json);
+  num_json = cupsAddOption("token_endpoint_auth_methods_supported", "[\"none\"]", num_json, &json);
+
+  data = _moauthJSONEncode(num_json, json);
+  cupsFreeOptions(num_json, json);
+
+  if (!data)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to create JSON response.");
+
+    goto bad_request;
+  }
+
+  cupsFreeOptions(num_vars, vars);
+
+  datalen = strlen(data);
+
+  if (!moauthdRespondClient(client, HTTP_STATUS_CREATED, "application/json", NULL, 0, datalen))
+  {
+    free(data);
+    return (0);
+  }
+
+  if (httpWrite2(client->http, data, datalen) < datalen)
+  {
+    free(data);
+    return (0);
+  }
+
+  free(data);
+
+  return (1);
+
+ /*
+  * If we get here there was a bad request...
+  */
+
+  bad_request:
+
+  cupsFreeOptions(num_vars, vars);
+
+  if (error)
+  {
+    num_json = cupsAddOption("error", error, num_json, &json);
+    num_json = cupsAddOption("error_description", error_message, num_json, &json);
+
+    data = _moauthJSONEncode(num_json, json);
+    cupsFreeOptions(num_json, json);
+
+    if (data)
+    {
+      int status;			/* Return status */
+
+      datalen = strlen(data);
+      status  = moauthdRespondClient(client, HTTP_STATUS_CREATED, "application/json", NULL, 0, datalen);
+      free(data);
+      return (status);
+    }
+  }
 
   return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 }
@@ -1005,3 +1266,31 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 }
 
+
+/*
+ * 'validate_uri()' - Validate the URI.
+ *
+ * The "uri" argument specifies the URI and must conform to STD 66.
+ *
+ * The "urischeme" argument specifies the required URI scheme.  If NULL, any
+ * URI scheme *except* "http" is allowed.
+ */
+
+static int				/* O - 1 if OK, 0 if not */
+validate_uri(const char *uri,		/* I - URI */
+             const char *urischeme)	/* I - Required URI scheme or `NULL` */
+{
+  char	scheme[32],			/* Scheme name */
+        userpass[256],			/* Username:password */
+        host[256],			/* Hostname */
+        resource[256];			/* Resource path */
+  int	port;				/* Port number */
+
+
+  if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK)
+    return (0);
+  else if (urischeme)
+    return (!strcmp(scheme, urischeme));
+  else
+    return (strcmp(scheme, "http") != 0);
+}

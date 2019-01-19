@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <syslog.h>
+#include <grp.h>
 #include "index-md.h"
 #include "moauth-png.h"
 #include "style-css.h"
@@ -91,6 +92,7 @@ moauthdCreateServer(
   int		num_json;		/* Number of OpenID JSON variables */
   cups_option_t	*json;			/* OpenID JSON variables */
   moauthd_resource_t *r;		/* Resource */
+  struct group	*group;			/* Group information */
 
 
  /*
@@ -113,10 +115,12 @@ moauthdCreateServer(
   pthread_rwlock_init(&server->resources_lock, NULL);
   pthread_rwlock_init(&server->tokens_lock, NULL);
 
-  server->log_file       = 2;		/* stderr */
-  server->log_level      = MOAUTHD_LOGLEVEL_ERROR;
-  server->max_grant_life = 300;		/* 5 minutes */
-  server->max_token_life = 604800;	/* 1 week */
+  server->introspect_group = -1;	/* none */
+  server->log_file         = 2;		/* stderr */
+  server->log_level        = MOAUTHD_LOGLEVEL_ERROR;
+  server->max_grant_life   = 300;	/* 5 minutes */
+  server->max_token_life   = 604800;	/* 1 week */
+  server->register_group   = -1;	/* none */
 
   httpGetHostname(NULL, server_name, sizeof(server_name));
   ptr = server_name + strlen(server_name) - 1;
@@ -208,6 +212,76 @@ moauthdCreateServer(
 	else
 	{
 	  fprintf(stderr, "moauthd: Unknown LogLevel \"%s\" on line %d of \"%s\" ignored.\n", value, linenum, configfile);
+	}
+      }
+      else if (!strcasecmp(line, "IntrospectGroup"))
+      {
+       /*
+        * IntrospectGroup nnn
+        * IntrospectGroup name
+        *
+        * Required group membership (and thus required authentication for)
+        * token introspection.
+        */
+
+        if (!value)
+        {
+	  fprintf(stderr, "moauthd: Missing IntrospectGroup on line %d of \"%s\".\n", linenum, configfile);
+          goto create_failed;
+        }
+        else if (isdigit(*value))
+        {
+          server->introspect_group = (gid_t)strtol(value, &ptr, 10);
+
+          if (ptr && *ptr)
+          {
+	    fprintf(stderr, "moauthd: Bad IntrospectGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	    goto create_failed;
+          }
+	}
+	else if ((group = getgrnam(value)) != NULL)
+	{
+	  server->introspect_group = group->gr_gid;
+	}
+	else
+	{
+	  fprintf(stderr, "moauthd: Unknown IntrospectGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	  goto create_failed;
+	}
+      }
+      else if (!strcasecmp(line, "RegisterGroup"))
+      {
+       /*
+        * RegisterGroup nnn
+        * RegisterGroup name
+        *
+        * Required group membership (and thus required authentication for)
+        * client registration.
+        */
+
+        if (!value)
+        {
+	  fprintf(stderr, "moauthd: Missing RegisterGroup on line %d of \"%s\".\n", linenum, configfile);
+          goto create_failed;
+        }
+        else if (isdigit(*value))
+        {
+          server->register_group = (gid_t)strtol(value, &ptr, 10);
+
+          if (ptr && *ptr)
+          {
+	    fprintf(stderr, "moauthd: Bad RegisterGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	    goto create_failed;
+          }
+	}
+	else if ((group = getgrnam(value)) != NULL)
+	{
+	  server->register_group = group->gr_gid;
+	}
+	else
+	{
+	  fprintf(stderr, "moauthd: Unknown RegisterGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	  goto create_failed;
 	}
       }
       else if (!strcasecmp(line, "MaxGrantLife"))
@@ -462,6 +536,14 @@ moauthdCreateServer(
   snprintf(temp, sizeof(temp), "https://%s:%d/token", server_name, server_port);
   num_json = cupsAddOption("token_endpoint", temp, num_json, &json);
 
+ /*
+  * token_endpoint_auth_methods_supported
+  *
+  * List of auth methods for the token endpoint [RFC8414].  The default is
+  * "client_secret_basic" but we want "none".
+  */
+
+  num_json = cupsAddOption("token_endpoint_auth_methods_supported", "[\"none\"]", num_json, &json);
 
  /*
   * introspection_endpoint
@@ -547,20 +629,21 @@ moauthdCreateServer(
   */
 #endif /* 0 */
 
-#if 0 /* Issue #8: Support OpenID Dynamic Client Registration API */
  /*
   * registration_endpoint
   *
   * RECOMMENDED. URL of the OP's Dynamic Client Registration Endpoint
-  * [OpenID.Registration].
+  * [RFC7591].
   */
-#endif /* 0 */
+
+  snprintf(temp, sizeof(temp), "https://%s:%d/register", server_name, server_port);
+  num_json = cupsAddOption("registration_endpoint", temp, num_json, &json);
 
  /*
   * Encode the metadata for later delivery to clients...
   */
 
-  server->openid_metadata = _moauthJSONEncode(num_json, json);
+  server->metadata = _moauthJSONEncode(num_json, json);
   cupsFreeOptions(num_json, json);
 
  /*
@@ -587,16 +670,16 @@ moauthdCreateServer(
   */
 
   r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/.well-known/oauth-authorization-server", NULL, "text/json", "public");
-  r->data   = server->openid_metadata;
-  r->length = strlen(server->openid_metadata);
+  r->data   = server->metadata;
+  r->length = strlen(server->metadata);
 
  /*
   * Add OpenID configuration file.
   */
 
   r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/.well-known/openid-configuration", NULL, "text/json", "public");
-  r->data   = server->openid_metadata;
-  r->length = strlen(server->openid_metadata);
+  r->data   = server->metadata;
+  r->length = strlen(server->metadata);
 
  /*
   * Add other standard resources...
@@ -684,8 +767,8 @@ moauthdDeleteServer(
   if (server->test_password)
     free(server->test_password);
 
-  if (server->openid_metadata)
-    free(server->openid_metadata);
+  if (server->metadata)
+    free(server->metadata);
 
   free(server);
 }

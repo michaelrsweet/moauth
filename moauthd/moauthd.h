@@ -120,7 +120,8 @@ typedef struct moauthd_server_s		/**** Server ****/
   struct pollfd	listeners[MOAUTHD_MAX_LISTENERS];
 					/* Listener sockets */
   unsigned	options;		/* Server option flags */
-  gid_t		introspect_group;	/* Group allowed to introspect tokens */
+  gid_t		introspect_group,	/* Group allowed to introspect tokens */
+		register_group;		/* Group allowed to register clients */
   int		max_grant_life,		/* Maximum life of a grant in seconds */
 		max_token_life;		/* Maximum life of a token in seconds */
   int		num_tokens;		/* Number of tokens issued */
@@ -133,7 +134,7 @@ typedef struct moauthd_server_s		/**** Server ****/
   pthread_rwlock_t tokens_lock;		/* R/W lock for tokens array */
   time_t	start_time;		/* Startup time */
   char		*test_password;		/* Testing password */
-  char		*openid_metadata;	/* OpenID JSON metadata */
+  char		*metadata;		/* JSON metadata */
 } moauthd_server_t;
 
 

@@ -29,6 +29,7 @@ The specific standards mOAuth currently implements are:
 
 - The OAuth2 Authentication Framework [RFC6749](https://tools.ietf.org/html/rfc6749)
 - The OAuth2 Bearer Token [RFC6750](https://tools.ietf.org/html/rfc6750)
+- OAuth 2.0 Dynamic Client Registration Protocol [RFC7591](https://tools.ietf.org/html/rfc7591)
 - Proof Key for Code Exchange by OAuth Public Clients [RFC7636](https://tools.ietf.org/html/rfc7636)
 - OAuth 2.0 Token Introspection [RFC7662](https://tools.ietf.org/html/rfc7662)
 - OAuth 2.0 for Native Apps [RFC8252](https://tools.ietf.org/html/rfc8252)
@@ -75,6 +76,7 @@ Changes in v1.1:
 - Updated `moauthd` to look for "/etc/moauthd.conf" and
   "/usr/local/etc/moauthd.conf" as the default configuration file, and install
   a "moauthd.conf.default" file as a template.
+- Now support dynamic client registration (Issue #8)
 - Now support PAM-based authentication backends (Issue #9)
 - Now install libmoauth, the `<moauth.h>` header, and a man page for the
   library.
