@@ -47,6 +47,8 @@ install:	all
 	$(INSTALL) -c -m 644 moauthd.conf.5 $(BUILDROOT)$(mandir)/man5
 	$(INSTALL) -d -m 755 $(BUILDROOT)$(mandir)/man8
 	$(INSTALL) -c -m 644 moauthd.8 $(BUILDROOT)$(mandir)/man8
+	$(INSTALL) -d -m 755 $(BUILDROOT)$(sysconfdir)
+	$(INSTALL) -c -m 644 moauthd.conf.default $(BUILDROOT)$(sysconfdir)
 
 
 # Test everything...

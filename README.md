@@ -73,8 +73,11 @@ Change History
 Changes in v1.1:
 
 - Updated `moauthd` to look for "/etc/moauthd.conf" and
-  "/usr/local/etc/moauthd.conf" as the default configuration file.
-- Now install libmoauth and the `<moauth.h>` header.
+  "/usr/local/etc/moauthd.conf" as the default configuration file, and install
+  a "moauthd.conf.default" file as a template.
+- Now support PAM-based authentication backends (Issue #9)
+- Now install libmoauth, the `<moauth.h>` header, and a man page for the
+  library.
 
 
 Legal Stuff

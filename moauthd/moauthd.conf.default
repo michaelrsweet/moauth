@@ -1,0 +1,133 @@
+#
+# Default configuration file for moauthd, a basic OAuth 2.0 authorization and
+# resource server.
+#
+# Copy this file to moauthd.conf and make changes as needed, then restart the
+# moauthd process.
+#
+
+#
+# ServerName hostname[:port]
+#
+# Specify the hostname and port number of the server.  The default is to use
+# the systems default hostname on port 9nnn, where "nnn" corresponds to the
+# current UID modulo 1000.
+#
+
+#ServerName oauth.example.net:1234
+
+
+#
+# AuthService name
+#
+# Specify the PAM authentication service to use for authorization.  The
+# default is "login".
+#
+
+#AuthService myservice
+
+
+#
+# TestPassword string
+#
+# Specify that a single password should be used for authenticating all
+# identities.  This overrides the AuthService setting and is obviously only
+# used for test environments.
+#
+
+#TestPassword Password-1234
+
+
+#
+# LogFile stderr
+# LogFile syslog
+# LogFile none
+#
+# Specify where to send log messages.  The default is "stderr" which sends
+# all log messages to the standard error.  The "syslog" value sends messages
+# to the system log, while "none" disables all logging.
+#
+
+#LogFile stderr
+
+#
+# LogLevel error
+# LogLevel info
+# LogLevel debug
+#
+# Specify the verbosity of logging.  The default is "error" which only
+# allows error messages to be logged.  The "info" value allows non-critical
+# informational messages to be logged, while "debug" provides additional
+# messages useful for debugging problems.
+#
+# This value can be overridden using the "-v" option when moauthd is run.
+#
+
+#LogLevel error
+
+
+#
+# MaxGrantLife duration
+#
+# Specifies the maximum life of OAuth grants in seconds ("42"), minutes
+# ("42m"), hours ("42h"), days ("42d"), or weeks ("42w").  The default is
+# five minutes.
+#
+
+#MaxGrantLife 5m
+
+
+#
+# MaxTokenLife duration
+#
+# Specifies the maximum life of issued OAuth access tokens in seconds
+# ("42"), minutes ("42m"), hours ("42h"), days ("42d"), or weeks ("42w").
+# The default is one week.
+#
+
+#MaxTokenLife 1w
+
+
+#
+# Option BasicAuth
+#
+# Allow Basic authentication to access resources on the server.  The default
+# is to only allow OAuth Bearer tokens to be used.
+#
+
+#Option BasicAuth
+
+
+#
+# Application client-id redirect-uri [name]
+#
+# Specifies a client application that is allowed to use this server.
+# Typically such clients will dynamically register with the server, however
+# this can be used to pre-register a well-known client for use with the
+# server.  There are no default client applications.
+#
+
+#Application example-client-id https://www.example.net:10000 Example client.
+
+
+#
+# Resource scope /remote/path /local/path
+#
+# Specifies a resource to be served.  The scope is "public" for resources
+# that require no authentication, "private" for resources that can only be
+# accessed by the resource owner or group (as defined by the local path
+# permissions), or "shared" for resources that can be accessed by any valid
+# user.
+#
+# The remote path is the URL path that matches the resource, while the
+# local path is the local path corresponding to it.  Local paths can be
+# directories (so all files under that path are accessible for the given
+# scope) or individual files.  Directories use the "index.html" or
+# "index.md" for viewing (no automatic list of files), and all markdown
+# files are automatically converted to HTML.  There are no default
+# resources.
+#
+
+#Resource public / /var/moauthd/public
+#Resource private /private /var/moauthd/private
+#Resource shared /shared /var/moauthd/shared
