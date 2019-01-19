@@ -89,6 +89,30 @@
 
 
 #
+# IntrospectGroup nnn
+# IntrospectGroup name
+#
+# Specifies the name or number of the group used for authenticating access
+# to the token introspection endpoint.  The default is no group so anyone
+# can introspect a bearer token.
+#
+
+#IntrospectGroup oauth-introspect-users
+
+
+#
+# RegisterGroup nnn
+# RegisterGroup name
+#
+# Specifies the name or number of the group used for authenticating access
+# to the dynamic client registration endpoint.  The default is no group so
+# anyone can register a client.
+#
+
+#RegisterGroup oauth-register-users
+
+
+#
 # Option BasicAuth
 #
 # Allow Basic authentication to access resources on the server.  The default

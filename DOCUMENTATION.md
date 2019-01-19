@@ -102,6 +102,8 @@ The following directives are currently recognized:
   authorizing.
 - `AuthService`: Specifies a PAM authorization service to use.  The default is
   "login".
+- `IntrospectGroup`: Specifies the group used for authenticating access to the
+  token introspection endpoint.  The default is no group/authentication.
 - `LogFile`: Specifies the file for log messages.  The filename can be "stderr"
   to send messages to the standard error file, "syslog" to send messages to the
   syslog daemon, or "none" to disable logging.
@@ -116,6 +118,9 @@ The following directives are currently recognized:
 - `Option`: Specifies a server option to enable.  Currently only "BasicAuth" is
   supported, which allows access to resources using HTTP Basic authentication
   in addition to HTTP Bearer tokens.
+- `RegisterGroup`: Specifies the group used for authenticating access to the
+  dynamic client registration endpoint.  The default is no group/
+  authentication.
 - `Resource`: Specifies a remotely accessible file or directory resource.  [See
   below](#resources) for examples and details.
 - `ServerName`: Specifies the host name and (optionally) port number to bind to,

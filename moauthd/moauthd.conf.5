@@ -6,7 +6,7 @@
 .\" Licensed under Apache License v2.0.  See the file "LICENSE" for more
 .\" information.
 .\"
-.TH moauthd.conf 5 "mOAuth" "2019-01-17" "Michael R Sweet"
+.TH moauthd.conf 5 "mOAuth" "2019-01-19" "Michael R Sweet"
 .SH NAME
 moauthd.conf \- moauthd configuration file format
 .SH DESCRIPTION
@@ -27,6 +27,10 @@ Specifies a client ID and redirect URI pair to allow when authorizing.
 Specifies a PAM authentication service to use.
 The default is "login".
 .TP 5
+\fBIntrospectGroup \fIname-or-number\fR
+Specifies the group to use when authenticating access to the token introspection endpoint.
+The default is no group so anyone can introspect a bearer token.
+.TP 5
 \fBLogFile \fIfilename\fR
 Specifies the file for log messages.
 The filename can be "stderr" to send messages to the standard error file, "syslog" to send messages to the syslog daemon, or "none" to disable logging.
@@ -46,6 +50,10 @@ The default is one week.
 \fBOption \fIoption\fR
 Specifies a server option to enable.
 Currently only "BasicAuth" is supported, which allows access to resources using HTTP Basic authentication in addition to HTTP Bearer tokens.
+.TP 5
+\fBRegisterGroup \fIname-or-number\fR
+Specifies the group to use when authenticating access to the dynamic client registration endpoint.
+The default is no group so anyone can register a client.
 .TP 5
 \fBResource \fIscope /remote/path /local/path\fR
 Specifies a remotely accessible file or directory resource.
