@@ -79,6 +79,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   int			timeout;	/* Timeout counter */
   char			host[256],	/* Hostname */
 			url[1024],	/* Authentication URL */
+			client_id[256],	/* Client ID */
 			token[256],	/* Access token */
 			refresh[256],	/* Refresh token */
 			filename[256];	/* Temporary filename */
@@ -217,6 +218,22 @@ main(int  argc,				/* I - Number of command-line arguments */
   else
   {
     printf("FAIL (%s)\n", filename);
+    status = 1;
+    goto finish_up;
+  }
+
+ /*
+  * Register a new client...
+  */
+
+  fputs("moauthRegisterClient: ", stdout);
+  if (moauthRegisterClient(server, "https://localhost:10000/newclient", "Dynamic Test Client", NULL, NULL, NULL, client_id, sizeof(client_id)))
+  {
+    printf("PASS (client_id=\"%s\")\n", client_id);
+  }
+  else
+  {
+    puts("FAIL");
     status = 1;
     goto finish_up;
   }

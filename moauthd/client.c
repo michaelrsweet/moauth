@@ -897,7 +897,7 @@ do_register(moauthd_client_t *client)	/* I - Client object */
   if ((data = _moauthCopyMessageBody(client->http)) == NULL)
     return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
-  num_vars      = _moauthFormDecode(data, &vars);
+  num_vars      = _moauthJSONDecode(data, &vars);
   redirect_uris = cupsGetOption("redirect_uris", num_vars, vars);
   client_name   = cupsGetOption("client_name", num_vars, vars);
   client_uri    = cupsGetOption("client_uri", num_vars, vars);
@@ -964,6 +964,7 @@ do_register(moauthd_client_t *client)	/* I - Client object */
     cupsHashData("sha2-256", redirect_uris, strlen(redirect_uris), client_id_hash, sizeof(client_id_hash));
 
   cupsHashString(client_id_hash, sizeof(client_id_hash), client_id, sizeof(client_id));
+  client_id[16] = '\0';
 
   moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Registering client \"%s\" with redirect URIs \"%s\".", client_id, redirect_uris);
 
