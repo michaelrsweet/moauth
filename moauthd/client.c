@@ -565,10 +565,28 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
 	}
 
         moauthdHTMLHeader(client, "Authorization");
-        moauthdHTMLPrintf(client,
-            "<div class=\"form\">\n"
-            "  <form action=\"/authorize\" method=\"POST\">\n"
-            "    <h1>Authorization</h1>\n"
+        if (app->client_name)
+	  moauthdHTMLPrintf(client,
+	      "<div class=\"form\">\n"
+	      "  <form action=\"/authorize\" method=\"POST\">\n"
+	      "    <h1>%s Authorization</h1>\n", app->client_name);
+        else
+	  moauthdHTMLPrintf(client,
+	      "<div class=\"form\">\n"
+	      "  <form action=\"/authorize\" method=\"POST\">\n"
+	      "    <h1>Authorization</h1>\n");
+
+	if (app->client_uri || app->tos_uri)
+	{
+	  if (app->client_uri && app->tos_uri)
+	    moauthdHTMLPrintf(client, "<p><a href=\"%s\">More Info</a> &middot; <a href=\"%s\">Terms of Service</a></p>\n", app->client_uri, app->tos_uri);
+	  else if (app->client_uri)
+	    moauthdHTMLPrintf(client, "<p><a href=\"%s\">More Info</a></p>\n", app->client_uri);
+	  else
+	    moauthdHTMLPrintf(client, "<p><a href=\"%s\">Terms of Service</a></p>\n", app->tos_uri);
+	}
+
+	moauthdHTMLPrintf(client,
             "    <div class=\"form-group\">\n"
             "      <label for=\"username\">Username:</label>\n"
             "      <input type=\"text\" name=\"username\" size=\"16\">\n"

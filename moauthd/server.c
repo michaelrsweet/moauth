@@ -155,11 +155,21 @@ moauthdCreateServer(
           goto create_failed;
         }
 
-        client_id    = strtok(value, " \t");
-        redirect_uri = strtok(NULL, " \t");
-        client_name  = strtok(NULL, " \t");
+        client_id = ptr = value;
+        while (*ptr && !isspace(*ptr))
+          ptr ++;
+        while (*ptr && isspace(*ptr))
+          *ptr++ = '\0';
 
-        if (!client_id || !*client_id || !redirect_uri || !*redirect_uri)
+	redirect_uri = ptr;
+        while (*ptr && !isspace(*ptr))
+          ptr ++;
+        while (*ptr && isspace(*ptr))
+          *ptr++ = '\0';
+
+        client_name = ptr;
+
+        if (!*client_id || !*redirect_uri)
         {
           fprintf(stderr, "moauthd: Missing client ID and redirect URI on line %d of \"%s\".\n", linenum, configfile);
           goto create_failed;
