@@ -38,6 +38,7 @@
 		270E13C41FC31DB70053DAE4 /* client.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13BD1FC31DB70053DAE4 /* client.c */; };
 		270E13C51FC31DB70053DAE4 /* log.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13BE1FC31DB70053DAE4 /* log.c */; };
 		270E13E41FC31E8F0053DAE4 /* testmoauth.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13E21FC31E8A0053DAE4 /* testmoauth.c */; };
+		273FE65721F4030900F34014 /* register.c in Sources */ = {isa = PBXBuildFile; fileRef = 273FE65621F4030700F34014 /* register.c */; };
 		278AC45A1FC3216100588F26 /* libmoauth.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 270E13AF1FC31D6A0053DAE4 /* libmoauth.a */; };
 		278AC45C1FC3217100588F26 /* libcups.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 278AC45B1FC3216200588F26 /* libcups.tbd */; };
 		278AC45D1FC321BB00588F26 /* libmoauth.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 270E13AF1FC31D6A0053DAE4 /* libmoauth.a */; };
@@ -165,6 +166,7 @@
 		270E13BE1FC31DB70053DAE4 /* log.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = log.c; sourceTree = "<group>"; };
 		270E13E01FC31E520053DAE4 /* testmoauth */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testmoauth; sourceTree = BUILT_PRODUCTS_DIR; };
 		270E13E21FC31E8A0053DAE4 /* testmoauth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testmoauth.c; path = ../moauth/testmoauth.c; sourceTree = "<group>"; };
+		273FE65621F4030700F34014 /* register.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = register.c; sourceTree = "<group>"; };
 		278AC45B1FC3216200588F26 /* libcups.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcups.tbd; path = usr/lib/libcups.tbd; sourceTree = SDKROOT; };
 		279187221FE5EFA800FBA1E3 /* post.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = post.c; sourceTree = "<group>"; };
 		279187301FE5FAB000FBA1E3 /* testmoauthd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testmoauthd; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -278,6 +280,7 @@
 				270D41EE1FF7257800EFA9B4 /* json.c */,
 				279187221FE5EFA800FBA1E3 /* post.c */,
 				27BF7AE021EE3E0A00A7D756 /* random.c */,
+				273FE65621F4030700F34014 /* register.c */,
 				270D41EB1FF698AF00EFA9B4 /* token.c */,
 			);
 			name = libmoauth;
@@ -472,6 +475,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				273FE65721F4030900F34014 /* register.c in Sources */,
 				270D41EC1FF698AF00EFA9B4 /* connect.c in Sources */,
 				270D41E91FF6909A00EFA9B4 /* authorize.c in Sources */,
 				270E13B31FC31D750053DAE4 /* form.c in Sources */,

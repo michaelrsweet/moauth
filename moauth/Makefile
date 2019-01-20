@@ -11,7 +11,8 @@ include ../Makedefs
 
 
 # Library targets...
-LIBOBJS	=	authorize.o connect.o form.o json.o post.o random.o token.o
+LIBOBJS	=	authorize.o connect.o form.o json.o post.o random.o \
+		register.o token.o
 
 OBJS	=	$(LIBOBJS) testmoauth.o
 

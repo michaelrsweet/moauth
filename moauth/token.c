@@ -87,7 +87,7 @@ moauthGetToken(
 
   if ((http = _moauthConnect(server->token_endpoint, resource, sizeof(resource))) == NULL)
   {
-    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed - %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed: %s", cupsLastErrorString());
     goto done;
   }
 
@@ -99,20 +99,20 @@ moauthGetToken(
   {
     if (httpReconnect2(http, 30000, NULL))
     {
-      snprintf(server->error, sizeof(server->error), "Reconnect failed - %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsLastErrorString());
       goto done;
     }
 
     if (httpPost(http, resource))
     {
-      snprintf(server->error, sizeof(server->error), "POST failed - %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
       goto done;
     }
   }
 
   if (httpWrite2(http, form_data, form_length) < form_length)
   {
-    snprintf(server->error, sizeof(server->error), "Write failed - %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
     goto done;
   }
 
@@ -140,7 +140,7 @@ moauthGetToken(
   }
   else
   {
-    snprintf(server->error, sizeof(server->error), "Unable to get access token - POST status %d", status);
+    snprintf(server->error, sizeof(server->error), "Unable to get access token: POST status %d", status);
   }
 
  /*

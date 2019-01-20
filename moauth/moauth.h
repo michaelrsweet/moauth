@@ -1,9 +1,10 @@
 /*
  * Header file for moauth library
  *
- * Copyright © 2017-2018 by Michael R Sweet
+ * Copyright © 2017-2019 by Michael R Sweet
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 #ifndef _MOAUTH_H_
@@ -33,5 +34,6 @@ extern char	*moauthPasswordToken(moauth_t *server, const char *username, const c
 
 extern char	*moauthRefreshToken(moauth_t *server, const char *refresh, char *token, size_t tokensize, char *new_refresh, size_t new_refreshsize, time_t *expires);
 
+extern char	*moauthRegisterClient(moauth_t *server, const char *redirect_uri, const char *client_name, const char *client_uri, const char *logo_uri, const char *tos_uri, char *client_id, size_t client_id_size);
 
 #endif /* !_MOAUTH_H_ */

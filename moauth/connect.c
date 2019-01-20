@@ -189,7 +189,7 @@ moauthConnect(
     if (content_type && body && (!*content_type || !strcmp(content_type, "text/json")))
     {
      /*
-      * OpenID JSON metadata...
+      * OpenID/RFC 8414 JSON metadata...
       */
 
       const char *uri;			/* Authorization/token URI */
@@ -209,6 +209,36 @@ moauthConnect(
 	}
 
         server->authorization_endpoint = uri;
+      }
+
+      if ((uri = cupsGetOption("introspection_endpoint", server->num_metadata, server->metadata)) != NULL)
+      {
+	if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK || strcmp(scheme, "https"))
+        {
+         /*
+          * Bad introspection URI...
+	  */
+
+          moauthClose(server);
+	  return (NULL);
+	}
+
+        server->introspection_endpoint = uri;
+      }
+
+      if ((uri = cupsGetOption("registration_endpoint", server->num_metadata, server->metadata)) != NULL)
+      {
+	if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK || strcmp(scheme, "https"))
+        {
+         /*
+          * Bad registration URI...
+	  */
+
+          moauthClose(server);
+	  return (NULL);
+	}
+
+        server->registration_endpoint = uri;
       }
 
       if ((uri = cupsGetOption("token_endpoint", server->num_metadata, server->metadata)) != NULL)

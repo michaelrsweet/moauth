@@ -26,6 +26,8 @@ struct _moauth_s			/* OAuth server connection data */
 {
   char		error[1024];		/* Last error message, if any */
   const char	*authorization_endpoint,/* Authorization endpoint */
+		*introspection_endpoint,/* Introspection endpoint */
+		*registration_endpoint,	/* Registration endpoint */
 		*token_endpoint;	/* Token endpoint */
   int		num_metadata;		/* Number of metadata values */
   cups_option_t	*metadata;		/* Metadata values */
