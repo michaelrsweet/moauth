@@ -30,6 +30,8 @@ extern const char *moauthErrorString(moauth_t *server);
 
 extern char	*moauthGetToken(moauth_t *server, const char *redirect_uri, const char *client_id, const char *grant, const char *code_verifier, char *token, size_t tokensize, char *refresh, size_t refreshsize, time_t *expires);
 
+extern int	moauthIntrospectToken(moauth_t *server, const char *token, char *username, size_t username_size, char *scope, size_t scope_size, time_t *expires);
+
 extern char	*moauthPasswordToken(moauth_t *server, const char *username, const char *password, const char *scope, char *token, size_t tokensize, char *refresh, size_t refreshsize, time_t *expires);
 
 extern char	*moauthRefreshToken(moauth_t *server, const char *refresh, char *token, size_t tokensize, char *new_refresh, size_t new_refreshsize, time_t *expires);

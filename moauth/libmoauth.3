@@ -1,4 +1,4 @@
-.TH libmoauth 3 "mOAuth API Reference" "2019-01-17" "mOAuth API Reference"
+.TH libmoauth 3 "mOAuth API Reference" "2019-01-19" "mOAuth API Reference"
 .SH NAME
 libmoauth \- mOAuth API Reference
 .SH Introduction
@@ -169,6 +169,20 @@ char * moauthGetToken (
     time_t *expires
 );
 .fi
+.SS moauthIntrospectToken
+Get information about an access token.
+.PP
+.nf
+int  moauthIntrospectToken (
+    moauth_t *server,
+    const char *token,
+    char *username,
+    size_t username_size,
+    char *scope,
+    size_t scope_size,
+    time_t *expires
+);
+.fi
 .SS moauthPasswordToken
 Get an access token using a username and password
 (if supported by the OAuth server)
@@ -198,6 +212,21 @@ char * moauthRefreshToken (
     char *new_refresh,
     size_t new_refreshsize,
     time_t *expires
+);
+.fi
+.SS moauthRegisterClient
+Register a client application.
+.PP
+.nf
+char * moauthRegisterClient (
+    moauth_t *server,
+    const char *redirect_uri,
+    const char *client_name,
+    const char *client_uri,
+    const char *logo_uri,
+    const char *tos_uri,
+    char *client_id,
+    size_t client_id_size
 );
 .fi
 .SH TYPES

@@ -53,6 +53,12 @@ moauthRegisterClient(
     return (NULL);
   }
 
+  if (!server->registration_endpoint)
+  {
+    snprintf(server->error, sizeof(server->error), "Introspection not supported.");
+    return (0);
+  }
+
  /*
   * Prepare JSON data to register the client application...
   */

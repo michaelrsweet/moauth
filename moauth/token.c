@@ -1,9 +1,10 @@
 /*
  * Token grant/introspection support for moauth library
  *
- * Copyright © 2017-2018 by Michael R Sweet
+ * Copyright © 2017-2019 by Michael R Sweet
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 #include <config.h>
@@ -59,6 +60,12 @@ moauthGetToken(
       snprintf(server->error, sizeof(server->error), "Bad arguments to function.");
 
     return (NULL);
+  }
+
+  if (!server->token_endpoint)
+  {
+    snprintf(server->error, sizeof(server->error), "Authorization not supported.");
+    return (0);
   }
 
  /*
@@ -164,6 +171,160 @@ moauthGetToken(
 
 
 /*
+ * 'moauthIntrospectToken()' - Get information about an access token.
+ */
+
+int					/* O - 1 if the token is active, 0 otherwise */
+moauthIntrospectToken(
+    moauth_t   *server,			/* I - Connection to OAuth server */
+    const char *token,			/* I - Access token */
+    char       *username,		/* I - Username buffer */
+    size_t     username_size,		/* I - Size of username string */
+    char       *scope,			/* I - Scope buffer */
+    size_t     scope_size,		/* I - Size of scope string */
+    time_t     *expires)		/* O - Expiration date */
+{
+  http_t	*http = NULL;		/* HTTP connection */
+  char		resource[256];		/* Token endpoint resource */
+  http_status_t	status;			/* Response status */
+  int		num_form = 0;		/* Number of form variables */
+  cups_option_t	*form = NULL;		/* Form variables */
+  char		*form_data = NULL;	/* POST form data */
+  size_t	form_length;		/* Length of data */
+  char		*json_data = NULL;	/* JSON response data */
+  int		num_json = 0;		/* Number of JSON variables */
+  cups_option_t	*json = NULL;		/* JSON variables */
+  const char	*value;			/* JSON value */
+  int		active = 0;		/* Is the token active? */
+
+
+ /*
+  * Range check input...
+  */
+
+  if (username)
+    *username = '\0';
+
+  if (scope)
+    *scope = '\0';
+
+  if (expires)
+    *expires = 0;
+
+  if (!server || !token)
+  {
+    if (server)
+      snprintf(server->error, sizeof(server->error), "Bad arguments to function.");
+
+    return (0);
+  }
+
+  if (!server->introspection_endpoint)
+  {
+    snprintf(server->error, sizeof(server->error), "Introspection not supported.");
+    return (0);
+  }
+
+ /*
+  * Prepare form data to get an access token...
+  */
+
+  num_form = cupsAddOption("token", token, num_form, &form);
+
+  if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to encode form data.");
+    goto done;
+  }
+
+  form_length = strlen(form_data);
+
+ /*
+  * Send a POST request with the form data...
+  */
+
+  if ((http = _moauthConnect(server->introspection_endpoint, resource, sizeof(resource))) == NULL)
+  {
+    snprintf(server->error, sizeof(server->error), "Connection to introspection endpoint failed: %s", cupsLastErrorString());
+    goto done;
+  }
+
+  httpClearFields(http);
+  httpSetField(http, HTTP_FIELD_CONTENT_TYPE, "application/x-www-form-urlencoded");
+  httpSetLength(http, form_length);
+
+  if (httpPost(http, resource))
+  {
+    if (httpReconnect2(http, 30000, NULL))
+    {
+      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsLastErrorString());
+      goto done;
+    }
+
+    if (httpPost(http, resource))
+    {
+      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
+      goto done;
+    }
+  }
+
+  if (httpWrite2(http, form_data, form_length) < form_length)
+  {
+    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
+    goto done;
+  }
+
+  while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+
+  if (status == HTTP_STATUS_OK)
+  {
+    json_data = _moauthCopyMessageBody(http);
+    num_json  = _moauthJSONDecode(json_data, &json);
+
+    if ((value = cupsGetOption("active", num_json, json)) != NULL)
+      active = !strcmp(value, "true");
+
+    if (username && (value = cupsGetOption("username", num_json, json)) != NULL)
+    {
+      strncpy(username, value, username_size - 1);
+      username[username_size - 1] = '\0';
+    }
+
+    if (scope && (value = cupsGetOption("scope", num_json, json)) != NULL)
+    {
+      strncpy(scope, value, scope_size - 1);
+      scope[scope_size - 1] = '\0';
+    }
+
+    if (expires && (value = cupsGetOption("exp", num_json, json)) != NULL)
+      *expires = atoi(value);
+  }
+  else
+  {
+    snprintf(server->error, sizeof(server->error), "Unable to introspect access token: POST status %d", status);
+  }
+
+ /*
+  * Return whatever we got...
+  */
+
+  done:
+
+  httpClose(http);
+
+  cupsFreeOptions(num_form, form);
+  if (form_data)
+    free(form_data);
+
+  cupsFreeOptions(num_json, json);
+  if (json_data)
+    free(json_data);
+
+  return (active);
+}
+
+
+/*
  * 'moauthPasswordToken()' - Get an access token using a username and password
  *                           (if supported by the OAuth server)
  */
@@ -214,6 +375,12 @@ moauthPasswordToken(
     return (NULL);
   }
 
+  if (!server->token_endpoint)
+  {
+    snprintf(server->error, sizeof(server->error), "Authorization not supported.");
+    return (0);
+  }
+
  /*
   * Prepare form data to get an access token...
   */
@@ -238,7 +405,7 @@ moauthPasswordToken(
 
   if ((http = _moauthConnect(server->token_endpoint, resource, sizeof(resource))) == NULL)
   {
-    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed - %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed: %s", cupsLastErrorString());
     goto done;
   }
 
@@ -250,20 +417,20 @@ moauthPasswordToken(
   {
     if (httpReconnect2(http, 30000, NULL))
     {
-      snprintf(server->error, sizeof(server->error), "Reconnect failed - %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsLastErrorString());
       goto done;
     }
 
     if (httpPost(http, resource))
     {
-      snprintf(server->error, sizeof(server->error), "POST failed - %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
       goto done;
     }
   }
 
   if (httpWrite2(http, form_data, form_length) < form_length)
   {
-    snprintf(server->error, sizeof(server->error), "Write failed - %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
     goto done;
   }
 
@@ -362,6 +529,12 @@ moauthRefreshToken(
     return (NULL);
   }
 
+  if (!server->token_endpoint)
+  {
+    snprintf(server->error, sizeof(server->error), "Authorization not supported.");
+    return (0);
+  }
+
  /*
   * Prepare form data to get an access token...
   */
@@ -383,7 +556,7 @@ moauthRefreshToken(
 
   if ((http = _moauthConnect(server->token_endpoint, resource, sizeof(resource))) == NULL)
   {
-    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed - %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed: %s", cupsLastErrorString());
     goto done;
   }
 
@@ -395,20 +568,20 @@ moauthRefreshToken(
   {
     if (httpReconnect2(http, 30000, NULL))
     {
-      snprintf(server->error, sizeof(server->error), "Reconnect to token endpoint failed - %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect to token endpoint failed: %s", cupsLastErrorString());
       goto done;
     }
 
     if (httpPost(http, resource))
     {
-      snprintf(server->error, sizeof(server->error), "POST failed - %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
       goto done;
     }
   }
 
   if (httpWrite2(http, form_data, form_length) < form_length)
   {
-    snprintf(server->error, sizeof(server->error), "Write failed - %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
     goto done;
   }
 
@@ -436,7 +609,7 @@ moauthRefreshToken(
   }
   else
   {
-    snprintf(server->error, sizeof(server->error), "Unable to get access token - POST status %d", status);
+    snprintf(server->error, sizeof(server->error), "Unable to get access token: POST status %d", status);
   }
 
  /*

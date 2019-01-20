@@ -184,8 +184,10 @@ h3.title {
           <li><a href="#moauthConnect">moauthConnect</a></li>
           <li><a href="#moauthErrorString">moauthErrorString</a></li>
           <li><a href="#moauthGetToken">moauthGetToken</a></li>
+          <li><a href="#moauthIntrospectToken">moauthIntrospectToken</a></li>
           <li><a href="#moauthPasswordToken">moauthPasswordToken</a></li>
           <li><a href="#moauthRefreshToken">moauthRefreshToken</a></li>
+          <li><a href="#moauthRegisterClient">moauthRegisterClient</a></li>
         </ul></li>
         <li><a href="#TYPES">Data Types</a><ul class="subcontents">
           <li><a href="#moauth_t">moauth_t</a></li>
@@ -350,6 +352,29 @@ char *moauthGetToken(<a href="#moauth_t">moauth_t</a> *server, const char *redir
 </tbody></table>
 <h4 class="returnvalue">Return Value</h4>
         <p class="description">Access token or <code>NULL</code> on error</p>
+<h3 class="function"><a id="moauthIntrospectToken">moauthIntrospectToken</a></h3>
+        <p class="description">Get information about an access token.</p>
+<p class="code">
+int moauthIntrospectToken(<a href="#moauth_t">moauth_t</a> *server, const char *token, char *username, size_t username_size, char *scope, size_t scope_size, time_t *expires);</p>
+<h4 class="parameters">Parameters</h4>
+<table class="list"><tbody>
+<tr><th>server</th>
+        <td class="description">Connection to OAuth server</td></tr>
+<tr><th>token</th>
+        <td class="description">Access token</td></tr>
+<tr><th>username</th>
+        <td class="description">Username buffer</td></tr>
+<tr><th>username_size</th>
+        <td class="description">Size of username string</td></tr>
+<tr><th>scope</th>
+        <td class="description">Scope buffer</td></tr>
+<tr><th>scope_size</th>
+        <td class="description">Size of scope string</td></tr>
+<tr><th>expires</th>
+        <td class="description">Expiration date</td></tr>
+</tbody></table>
+<h4 class="returnvalue">Return Value</h4>
+        <p class="description">1 if the token is active, 0 otherwise</p>
 <h3 class="function"><a id="moauthPasswordToken">moauthPasswordToken</a></h3>
         <p class="description">Get an access token using a username and password
 (if supported by the OAuth server)</p>
@@ -401,6 +426,31 @@ char *moauthRefreshToken(<a href="#moauth_t">moauth_t</a> *server, const char *r
 </tbody></table>
 <h4 class="returnvalue">Return Value</h4>
         <p class="description">Access token or <code>NULL</code> on error</p>
+<h3 class="function"><a id="moauthRegisterClient">moauthRegisterClient</a></h3>
+        <p class="description">Register a client application.</p>
+<p class="code">
+char *moauthRegisterClient(<a href="#moauth_t">moauth_t</a> *server, const char *redirect_uri, const char *client_name, const char *client_uri, const char *logo_uri, const char *tos_uri, char *client_id, size_t client_id_size);</p>
+<h4 class="parameters">Parameters</h4>
+<table class="list"><tbody>
+<tr><th>server</th>
+        <td class="description">OAuth server</td></tr>
+<tr><th>redirect_uri</th>
+        <td class="description">Redirection URL</td></tr>
+<tr><th>client_name</th>
+        <td class="description">Client name or <code>NULL</code></td></tr>
+<tr><th>client_uri</th>
+        <td class="description">Client information URL or <code>NULL</code></td></tr>
+<tr><th>logo_uri</th>
+        <td class="description">Logo URL or <code>NULL</code></td></tr>
+<tr><th>tos_uri</th>
+        <td class="description">Terms-of-service URL or <code>NULL</code></td></tr>
+<tr><th>client_id</th>
+        <td class="description">client_id buffer</td></tr>
+<tr><th>client_id_size</th>
+        <td class="description">Size of client_id buffer</td></tr>
+</tbody></table>
+<h4 class="returnvalue">Return Value</h4>
+        <p class="description">client_id string</p>
       <h2 class="title"><a id="TYPES">Data Types</a></h2>
       <h3 class="typedef"><a id="moauth_t">moauth_t</a></h3>
         <p class="description">OAuth server connection</p>
