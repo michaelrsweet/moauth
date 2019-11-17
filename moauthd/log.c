@@ -93,17 +93,17 @@ file_log(int        fd,			/* I - File to write to */
          va_list    ap)			/* I - Argument pointer */
 {
   time_t	curtime;		/* Current date/time in seconds */
-  struct tm	*curdate;		/* Current date/time info */
+  struct tm	curdate;		/* Current date/time info */
   char		buffer[8192],		/* Message buffer */
 		*bufptr;		/* Pointer into buffer */
   size_t        total;                  /* Length of log line */
   ssize_t       bytes;                  /* Bytes written */
 
 
-  curtime = time(NULL);
-  curdate = gmtime(&curtime);
+  time(&curtime);
+  gmtime_r(&curtime, &curdate);
 
-  snprintf(buffer, sizeof(buffer), "[%04d-%02d-%02d %02d:%02d:%02d+0000]  ", curdate->tm_year + 1900, curdate->tm_mon + 1, curdate->tm_mday, curdate->tm_hour, curdate->tm_min, curdate->tm_sec);
+  snprintf(buffer, sizeof(buffer), "[%04d-%02d-%02d %02d:%02d:%02d+0000]  ", curdate.tm_year + 1900, curdate.tm_mon + 1, curdate.tm_mday, curdate.tm_hour, curdate.tm_min, curdate.tm_sec);
   bufptr = buffer + strlen(buffer);
 
   vsnprintf(bufptr, sizeof(buffer) - (bufptr - buffer) - 1, message, ap);
