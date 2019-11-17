@@ -89,7 +89,7 @@ moauthdAuthenticateUser(
     }
 
 #  ifdef PAM_RHOST
-    else if ((pamerr = pam_set_item(pamh, PAM_RHOST, client->hostname)) != PAM_SUCCESS)
+    else if ((pamerr = pam_set_item(pamh, PAM_RHOST, client->remote_host)) != PAM_SUCCESS)
     {
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "pam_set_item(PAM_RHOST) returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
     }
