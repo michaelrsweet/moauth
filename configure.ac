@@ -7,8 +7,19 @@ dnl Licensed under Apache License v2.0.  See the file "LICENSE" for more
 dnl information.
 dnl
 
-AC_INIT([moauth], [1.1], [https://github.com/michaelrsweet/moauth/issues], [moauth], [https://michaelrsweet.github.io/moauth])
+dnl We need at least autoconf 2.70 for --runstatedir...
+AC_PREREQ([2.70])
+
+
+dnl Package name and version...
+AC_INIT([moauth], [1.1], [https://github.com/michaelrsweet/moauth/issues], [moauth], [https://www.msweet.org/moauth])
 AC_CONFIG_HEADERS(config.h)
+
+dnl This line is provided to ensure that you don't run the autoheader program
+dnl against this project.  Doing so is completely unsupported and WILL cause
+dnl problems!
+AH_TOP([#error "Somebody ran autoheader on this project which is unsupported and WILL cause problems."])
+
 
 dnl Define the version number...
 MOAUTH_VERSION="AC_PACKAGE_VERSION"
@@ -44,13 +55,77 @@ CFLAGS="${CFLAGS:=}"
 CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 LIBS="${LIBS:=}"
+WARNINGS="${WARNINGS:=}"
+AC_SUBST([WARNINGS])
 
-dnl Debugging...
-AC_ARG_ENABLE(debug, [  --enable-debug          turn on debugging, default=no],
-    [if eval "test x$enable_debug = xyes"; then
-	CFLAGS="-g $(CFLAGS)"
-	LDFLAGS="-g $(LDFLAGS)"
-    fi])
+
+dnl Options...
+AC_ARG_WITH([optim], AS_HELP_STRING([--with-optim], [set additional optimization flags, default=none]), [
+    OPTIM="$withval"
+], [
+    OPTIM=""
+])
+AC_SUBST([OPTIM])
+
+AC_ARG_ENABLE([debug], AS_HELP_STRING([--enable-debug], [turn on debugging, default=no]))
+AC_ARG_ENABLE([maintainer], AS_HELP_STRING([--enable-maintainer], [turn on maintainer mode, default=no]))
+AC_ARG_ENABLE([sanitizer], AS_HELP_STRING([--enable-sanitizer], [build with AddressSanitizer, default=no]))
+
+AS_IF([test -n "$GCC"], [
+    CFLAGS="-D_GNU_SOURCE $CFLAGS"
+
+    AS_IF([test "x$OPTIM" = x], [
+	AS_IF([test x$enable_debug = xyes], [
+	    OPTIM="-g"
+	], [
+	    OPTIM="-g -Os"
+	])
+    ], [test x$enable_debug = xyes], [
+	OPTIM="$OPTIM -g"
+    ])
+
+    AS_IF([test x$enable_sanitizer = xyes], [
+	# Use -fsanitize=address with debugging...
+	OPTIM="$OPTIM -fsanitize=address"
+    ], [
+	# Otherwise use the Fortify enhancements to catch any unbounded
+	# string operations...
+	CPPFLAGS="$CPPFLAGS -D_FORTIFY_SOURCE=2"
+    ])
+
+    dnl Show all standard warnings + unused variables when compiling...
+    WARNINGS="$WARNINGS -Wall -Wunused"
+
+    dnl Drop some not-useful/unreliable warnings...
+    for warning in char-subscripts format-truncation format-y2k switch unused-result; do
+	AC_MSG_CHECKING([whether compiler supports -Wno-$warning])
+
+	OLDCFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS -Wno-$warning -Werror"
+
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM()], [
+	    AC_MSG_RESULT(yes)
+	    WARNINGS="$WARNINGS -Wno-$warning"
+        ], [
+	    AC_MSG_RESULT(no)
+	])
+
+	CFLAGS="$OLDCFLAGS"
+    done
+
+    dnl Maintainer mode enables -Werror...
+    AS_IF([test x$enable_maintainer = xyes], [
+	WARNINGS="$WARNINGS -Werror"
+    ])
+], [
+    AS_IF([test "x$OPTIM" = x], [
+	AS_IF([test x$enable_debug = xyes], [
+	    OPTIM="-g"
+	], [
+	    OPTIM="-O"
+	])
+    ])
+])
 
 dnl CUPS library...
 AC_ARG_ENABLE(static_cups, [  --enable-static-cups    use static CUPS libraries, default=no])
@@ -124,4 +199,5 @@ AC_CHECK_HEADER(sys/random.h, AC_DEFINE(HAVE_SYS_RANDOM_H))
 AC_CHECK_FUNC(arc4random, AC_DEFINE(HAVE_ARC4RANDOM))
 
 dnl Generate the Makedefs file...
-AC_OUTPUT(Makedefs)
+AC_CONFIG_FILES([Makedefs])
+AC_OUTPUT

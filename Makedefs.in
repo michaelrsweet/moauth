@@ -1,7 +1,7 @@
 #
 # Common moauth makefile definitions
 #
-# Copyright © 2017-2019 by Michael R Sweet
+# Copyright © 2017-2021 by Michael R Sweet
 #
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more
 # information.
@@ -14,12 +14,14 @@
 AR		=	@AR@
 ARFLAGS		=	@ARFLAGS@
 CC		=	@CC@
-CFLAGS		=	-I.. @CFLAGS@
+CFLAGS		=	$(CPPFLAGS) @CFLAGS@ $(OPTIM) @WARNINGS@
+CPPFLAGS	=	-I.. @CPPFLAGS@
 CODESIGN_IDENTITY =	Developer ID
 INSTALL		=	@INSTALL@
-LDFLAGS		=	-L../moauth @LDFLAGS@
+LDFLAGS		=	-L../moauth @LDFLAGS@ $(OPTIM)
 LIBS		=	@LIBS@
 MKDIR           =       @MKDIR@ -p
+OPTIM		=	@OPTIM@
 PAMLIBS		=	@PAMLIBS@
 RANLIB		=	@RANLIB@
 RM		=	@RM@ -f

@@ -1,6 +1,13 @@
 mOAuth - A Basic OAuth 2.0 Client/Server Implementation
 =======================================================
 
+![Version](https://img.shields.io/github/v/release/michaelrsweet/moauth?include_prereleases)
+![Apache 2.0](https://img.shields.io/github/license/michaelrsweet/moauth)
+![Build](https://github.com/michaelrsweet/moauth/workflows/Build/badge.svg)
+[![Coverity Scan Status](https://img.shields.io/coverity/scan/22388.svg)](https://scan.coverity.com/projects/michaelrsweet-moauth)
+[![LGTM Grade](https://img.shields.io/lgtm/grade/cpp/github/michaelrsweet/moauth)](https://lgtm.com/projects/g/michaelrsweet/moauth/context:cpp)
+[![LGTM Alerts](https://img.shields.io/lgtm/alerts/github/michaelrsweet/moauth)](https://lgtm.com/projects/g/michaelrsweet/moauth/)
+
 mOAuth is a basic OAuth 2.0 client/server implementation designed for testing
 and development of OAuth-based services.  The client library supports
 authorization of native macOS, iOS, and Linux applications with PKCE.  The
