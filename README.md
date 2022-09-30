@@ -92,7 +92,7 @@ Changes in v1.1:
 Legal Stuff
 -----------
 
-Copyright © 2017-2019 by Michael R Sweet.
+Copyright © 2017-2022 by Michael R Sweet.
 
 mOAuth is licensed under the Apache License Version 2.0 with an exception to
 allow linking against GPL2/LGPL2 software (like older versions of CUPS).  See
