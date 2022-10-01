@@ -1,11 +1,11 @@
-/*
- * Authorization support for moauth library
- *
- * Copyright © 2017-2019 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Authorization support for moauth library
+//
+// Copyright © 2017-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
 #include <config.h>
 #include "moauth-private.h"
@@ -16,57 +16,51 @@
 #else
 #  include <spawn.h>
 #  include <sys/wait.h>
-extern char **environ;			/* @private@ */
-#endif /* __APPLE__ */
+extern char **environ;			// @private@
+#endif // __APPLE__
 
 
-/*
- * 'moauthAuthorize()' - Open the authorization web page for an OAuth server.
- *
- * This function returns as soon as the web page has been opened.
- *
- * The "code_verifier" string is transformed using the S256 method.
- */
+//
+// 'moauthAuthorize()' - Open the authorization web page for an OAuth server.
+//
+// This function returns as soon as the web page has been opened.
+//
+// The "code_verifier" string is transformed using the S256 method.
+//
 
-int					/* O - 1 on success, 0 on error */
+bool					// O - `true` on success, `false` on error
 moauthAuthorize(
-    moauth_t   *server,			/* I - OAuth server connection */
-    const char *redirect_uri,		/* I - Redirection URI */
-    const char *client_id,		/* I - Client identifier */
-    const char *state,			/* I - Client state string or @code NULL@ */
-    const char *code_verifier,		/* I - Code verifier string or @code NULL@ if none */
-    const char *scope)			/* I - Scope to request or `NULL` */
+    moauth_t   *server,			// I - OAuth server connection
+    const char *redirect_uri,		// I - Redirection URI
+    const char *client_id,		// I - Client identifier
+    const char *state,			// I - Client state string or `NULL`
+    const char *code_verifier,		// I - Code verifier string or `NULL` if none
+    const char *scope)			// I - Scope to request or `NULL`
 {
-  char		scheme[32],		/* URI scheme */
-		userpass[256],		/* Username:password (unused) */
-		host[256],		/* Host */
-		resource[256];		/* Resource path */
-  int		port;			/* Port number */
-  char		url[2048];		/* URL for authorization page */
-  int		status = 1;		/* Return status */
-  unsigned char	sha256[32];		/* SHA-256 hash of code verifier */
-  char		code_challenge[64];	/* Hashed code verifier string */
-  int		num_vars = 0;		/* Number of form variables */
-  cups_option_t	*vars = NULL;		/* Form variables */
-  char		*formdata;		/* Encoded form data */
+  char		scheme[32],		// URI scheme
+		userpass[256],		// Username:password (unused)
+		host[256],		// Host
+		resource[256];		// Resource path
+  int		port;			// Port number
+  char		url[2048];		// URL for authorization page
+  bool		status = true;		// Return status
+  unsigned char	sha256[32];		// SHA-256 hash of code verifier
+  char		code_challenge[64];	// Hashed code verifier string
+  size_t	num_vars = 0;		// Number of form variables
+  cups_option_t	*vars = NULL;		// Form variables
+  char		*formdata;		// Encoded form data
 
 
- /*
-  * Range check input...
-  */
-
+  // Range check input...
   if (!server || !redirect_uri || !client_id)
   {
     if (server)
       snprintf(server->error, sizeof(server->error), "Bad arguments to function.");
 
-    return (0);
+    return (false);
   }
 
- /*
-  * Make the authorization URL using the information supplied...
-  */
-
+  // Make the authorization URL using the information supplied...
   httpSeparateURI(HTTP_URI_CODING_ALL, server->authorization_endpoint, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource));
 
   num_vars = cupsAddOption("response_type", "code", num_vars, &vars);
@@ -82,7 +76,7 @@ moauthAuthorize(
   if (code_verifier)
   {
     cupsHashData("sha2-256", code_verifier, strlen(code_verifier), sha256, sizeof(sha256));
-    httpEncode64_2(code_challenge, (int)sizeof(code_challenge), (char *)sha256, (int)sizeof(sha256));
+    httpEncode64(code_challenge, (int)sizeof(code_challenge), (char *)sha256, (int)sizeof(sha256), true);
     num_vars = cupsAddOption("code_challenge", code_challenge, num_vars, &vars);
   }
 
@@ -90,16 +84,13 @@ moauthAuthorize(
 
   if (snprintf(url, sizeof(url), "https://%s:%d%s%s%s", host, port, resource, strchr(resource, '?') != NULL ? "&" : "?", formdata) >= sizeof(url))
   {
-   /*
-    * URL is too long...
-    */
-
+    // URL is too long...
     snprintf(server->error, sizeof(server->error), "Unable to create authorization URL.");
 
     free(formdata);
     cupsFreeOptions(num_vars, vars);
 
-    return (0);
+    return (false);
   }
 
   free(formdata);
@@ -113,7 +104,7 @@ moauthAuthorize(
     if (LSOpenCFURLRef(cfurl, NULL) != noErr)
     {
       snprintf(server->error, sizeof(server->error), "Unable to open authorization URL.");
-      status = 0;			/* Couldn't open URL */
+      status = 0;			// Couldn't open URL
     }
 
     CFRelease(cfurl);
@@ -121,13 +112,13 @@ moauthAuthorize(
   else
   {
     snprintf(server->error, sizeof(server->error), "Unable to create authorization URL.");
-    status = 0;				/* Couldn't create CFURL object */
+    status = false;			// Couldn't create CFURL object
   }
 
 #else
-  pid_t		pid = 0;		/* Process ID */
-  int		estatus;		/* Exit status */
-  const char	*xdg_open_argv[3];	/* xdg-open arguments */
+  pid_t		pid = 0;		// Process ID
+  int		estatus;		// Exit status
+  const char	*xdg_open_argv[3];	// xdg-open arguments
 
 
   xdg_open_argv[0] = "xdg-open";
@@ -135,15 +126,15 @@ moauthAuthorize(
   xdg_open_argv[2] = NULL;
 
   if (posix_spawnp(&pid, "xdg-open", NULL, NULL, (char * const *)xdg_open_argv, environ))
-    status = 0;				/* Couldn't run xdg-open */
+    status = false;			// Couldn't run xdg-open
   else if (waitpid(pid, &estatus, 0))
-    status = 0;				/* Couldn't get exit status */
+    status = false;			// Couldn't get exit status
   else if (estatus)
-    status = 0;				/* Non-zero exit status */
+    status = false;			// Non-zero exit status
 
   if (!status)
     snprintf(server->error, sizeof(server->error), "Unable to open authorization URL.");
-#endif /* __APPLE__ */
+#endif // __APPLE__
 
   return (status);
 }

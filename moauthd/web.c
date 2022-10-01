@@ -1,46 +1,47 @@
-/*
- * Web support for moauth daemon
- *
- * Copyright © 2017 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
- */
+//
+// Web support for moauth daemon
+//
+// Copyright © 2017-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
 #include "moauthd.h"
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static void	html_escape(moauthd_client_t *client, const char *s, size_t slen);
 
 
-/*
- * 'moauthdHTMLFooter()' - Show the web interface footer.
- *
- * This function also writes the trailing 0-length chunk.
- */
+//
+// 'moauthdHTMLFooter()' - Show the web interface footer.
+//
+// This function also writes the trailing 0-length chunk.
+//
 
 void
-moauthdHTMLFooter(moauthd_client_t *client)	/* I - Client */
+moauthdHTMLFooter(moauthd_client_t *client)	// I - Client
 {
   moauthdHTMLPrintf(client,
       "    </div>\n"
       "  </body>\n"
       "</html>\n");
-  httpWrite2(client->http, "", 0);
+  httpWrite(client->http, "", 0);
 }
 
 
-/*
- * 'moauthdHTMLHeader()' - Show the web interface header and title.
- */
+//
+// 'moauthdHTMLHeader()' - Show the web interface header and title.
+//
 
 void
 moauthdHTMLHeader(
-    moauthd_client_t *client,		/* I - Client */
-    const char       *title)		/* I - Title */
+    moauthd_client_t *client,		// I - Client
+    const char       *title)		// I - Title
 {
   moauthdHTMLPrintf(client,
       "<!DOCTYPE html>\n"
@@ -56,32 +57,29 @@ moauthdHTMLHeader(
 }
 
 
-/*
- * 'moauthdHTMLPrintf()' - Send formatted text to the client, quoting as needed.
- */
+//
+// 'moauthdHTMLPrintf()' - Send formatted text to the client, quoting as needed.
+//
 
 void
 moauthdHTMLPrintf(
-    moauthd_client_t *client,		/* I - Client */
-    const char       *format,		/* I - Printf-style format string */
-    ...)				/* I - Additional arguments as needed */
+    moauthd_client_t *client,		// I - Client
+    const char       *format,		// I - Printf-style format string
+    ...)				// I - Additional arguments as needed
 {
-  va_list	ap;			/* Pointer to arguments */
-  const char	*start;			/* Start of string */
-  char		size,			/* Size character (h, l, L) */
-		type;			/* Format type character */
-  int		width,			/* Width of field */
-		prec;			/* Number of characters of precision */
-  char		tformat[100],		/* Temporary format string for sprintf() */
-		*tptr,			/* Pointer into temporary format */
-		temp[1024];		/* Buffer for formatted numbers */
-  char		*s;			/* Pointer to string */
+  va_list	ap;			// Pointer to arguments
+  const char	*start;			// Start of string
+  char		size,			// Size character (h, l, L)
+		type;			// Format type character
+  int		width,			// Width of field
+		prec;			// Number of characters of precision
+  char		tformat[100],		// Temporary format string for sprintf()
+		*tptr,			// Pointer into temporary format
+		temp[1024];		// Buffer for formatted numbers
+  char		*s;			// Pointer to string
 
 
- /*
-  * Loop through the format string, formatting as needed...
-  */
-
+  // Loop through the format string, formatting as needed...
   va_start(ap, format);
   start = format;
 
@@ -90,14 +88,14 @@ moauthdHTMLPrintf(
     if (*format == '%')
     {
       if (format > start)
-        httpWrite2(client->http, start, (size_t)(format - start));
+        httpWrite(client->http, start, (size_t)(format - start));
 
       tptr    = tformat;
       *tptr++ = *format++;
 
       if (*format == '%')
       {
-        httpWrite2(client->http, "%", 1);
+        httpWrite(client->http, "%", 1);
         format ++;
 	start = format;
 	continue;
@@ -107,10 +105,7 @@ moauthdHTMLPrintf(
 
       if (*format == '*')
       {
-       /*
-        * Get width from argument...
-	*/
-
+        // Get width from argument...
 	format ++;
 	width = va_arg(ap, int);
 
@@ -139,10 +134,7 @@ moauthdHTMLPrintf(
 
         if (*format == '*')
 	{
-         /*
-	  * Get precision from argument...
-	  */
-
+          // Get precision from argument...
 	  format ++;
 	  prec = va_arg(ap, int);
 
@@ -201,7 +193,7 @@ moauthdHTMLPrintf(
 
       switch (type)
       {
-	case 'E' : /* Floating point formats */
+	case 'E' : // Floating point formats
 	case 'G' :
 	case 'e' :
 	case 'f' :
@@ -211,10 +203,10 @@ moauthdHTMLPrintf(
 
 	    sprintf(temp, tformat, va_arg(ap, double));
 
-            httpWrite2(client->http, temp, strlen(temp));
+            httpWrite(client->http, temp, strlen(temp));
 	    break;
 
-        case 'B' : /* Integer formats */
+        case 'B' : // Integer formats
 	case 'X' :
 	case 'b' :
         case 'd' :
@@ -230,10 +222,10 @@ moauthdHTMLPrintf(
 	    else
 	      sprintf(temp, tformat, va_arg(ap, int));
 
-            httpWrite2(client->http, temp, strlen(temp));
+            httpWrite(client->http, temp, strlen(temp));
 	    break;
 
-	case 's' : /* String */
+	case 's' : // String
 	    if ((s = va_arg(ap, char *)) == NULL)
 	      s = "(null)";
 
@@ -246,57 +238,50 @@ moauthdHTMLPrintf(
   }
 
   if (format > start)
-    httpWrite2(client->http, start, (size_t)(format - start));
+    httpWrite(client->http, start, (size_t)(format - start));
 
   va_end(ap);
 }
 
 
-/*
- * 'moauthdRespondClient()' - Send a HTTP response.
- */
+//
+// 'moauthdRespondClient()' - Send a HTTP response.
+//
 
-int					/* O - 1 on success, 0 on failure */
+bool					// O - `true` on success, `false` on failure
 moauthdRespondClient(
-    moauthd_client_t *client,		/* I - Client */
-    http_status_t    code,		/* I - HTTP status of response */
-    const char       *type,		/* I - MIME media type */
-    const char       *uri,		/* I - URI of response */
-    time_t           mtime,		/* I - Last modified date and time */
-    size_t           length)		/* I - Length of response or 0 for chunked */
+    moauthd_client_t *client,		// I - Client
+    http_status_t    code,		// I - HTTP status of response
+    const char       *type,		// I - MIME media type
+    const char       *uri,		// I - URI of response
+    time_t           mtime,		// I - Last modified date and time
+    size_t           length)		// I - Length of response or 0 for chunked
 {
-  char	message[1024];			/* Text message */
+  char	message[1024];			// Text message
 
 
-  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "HTTP/1.1 %d %s", code, httpStatus(code));
+  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "HTTP/1.1 %d %s", code, httpStatusString(code));
 
   if (code == HTTP_STATUS_CONTINUE)
   {
-   /*
-    * 100-continue doesn't send any headers...
-    */
-
-    return (httpWriteResponse(client->http, HTTP_STATUS_CONTINUE) == 0);
+    // 100-continue doesn't send any headers...
+    return (httpWriteResponse(client->http, HTTP_STATUS_CONTINUE));
   }
 
- /*
-  * Format an error message...
-  */
-
+  // Format an error message...
   if (!type && !length && code != HTTP_STATUS_OK && code != HTTP_STATUS_SWITCHING_PROTOCOLS)
   {
-    snprintf(message, sizeof(message), "%d - %s\n", code, httpStatus(code));
+    snprintf(message, sizeof(message), "%d - %s\n", code, httpStatusString(code));
 
     type   = "text/plain";
     length = strlen(message);
   }
   else
+  {
     message[0] = '\0';
+  }
 
- /*
-  * Send the HTTP response header...
-  */
-
+  // Send the HTTP response header...
   httpClearFields(client->http);
 
   if (code == HTTP_STATUS_METHOD_NOT_ALLOWED || client->request_method == HTTP_STATE_OPTIONS)
@@ -311,9 +296,13 @@ moauthdRespondClient(
   }
 
   if (mtime)
-    httpSetField(client->http, HTTP_FIELD_LAST_MODIFIED, httpGetDateString(mtime));
+  {
+    char temp[256];			// Temporary string
 
-  if (code == HTTP_STATUS_MOVED_PERMANENTLY || code == HTTP_STATUS_MOVED_TEMPORARILY)
+    httpSetField(client->http, HTTP_FIELD_LAST_MODIFIED, httpGetDateString(mtime, temp, sizeof(temp)));
+  }
+
+  if (code == HTTP_STATUS_MOVED_PERMANENTLY || code == HTTP_STATUS_FOUND)
   {
     httpSetField(client->http, HTTP_FIELD_LOCATION, uri);
     moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Location: %s", uri);
@@ -333,40 +322,34 @@ moauthdRespondClient(
 
   httpSetLength(client->http, length);
 
-  if (httpWriteResponse(client->http, code) < 0)
-    return (0);
+  if (!httpWriteResponse(client->http, code))
+    return (false);
 
- /*
-  * Send the response data...
-  */
-
+  // Send the response data...
   if (message[0])
   {
-   /*
-    * Send a plain text message.
-    */
-
-    if (httpWrite2(client->http, message, length) < 0)
-      return (0);
+    // Send a plain text message.
+    if (httpWrite(client->http, message, length) < 0)
+      return (false);
   }
 
   httpFlushWrite(client->http);
 
-  return (1);
+  return (true);
 }
 
 
-/*
- * 'html_escape()' - Write a HTML-safe string.
- */
+//
+// 'html_escape()' - Write a HTML-safe string.
+//
 
 static void
-html_escape(moauthd_client_t *client,	/* I - Client */
-	    const char       *s,	/* I - String to write */
-	    size_t           slen)	/* I - Number of characters to write */
+html_escape(moauthd_client_t *client,	// I - Client
+	    const char       *s,	// I - String to write
+	    size_t           slen)	// I - Number of characters to write
 {
-  const char	*start,			/* Start of segment */
-		*end;			/* End of string */
+  const char	*start,			// Start of segment
+		*end;			// End of string
 
 
   start = s;
@@ -377,12 +360,12 @@ html_escape(moauthd_client_t *client,	/* I - Client */
     if (*s == '&' || *s == '<')
     {
       if (s > start)
-        httpWrite2(client->http, start, (size_t)(s - start));
+        httpWrite(client->http, start, (size_t)(s - start));
 
       if (*s == '&')
-        httpWrite2(client->http, "&amp;", 5);
+        httpWrite(client->http, "&amp;", 5);
       else
-        httpWrite2(client->http, "&lt;", 4);
+        httpWrite(client->http, "&lt;", 4);
 
       start = s + 1;
     }
@@ -391,5 +374,5 @@ html_escape(moauthd_client_t *client,	/* I - Client */
   }
 
   if (s > start)
-    httpWrite2(client->http, start, (size_t)(s - start));
+    httpWrite(client->http, start, (size_t)(s - start));
 }

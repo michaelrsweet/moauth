@@ -1,38 +1,38 @@
-/*
- * Client support for moauth daemon
- *
- * Copyright © 2017-2019 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Client support for moauth daemon
+//
+// Copyright © 2017-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
 #include "moauthd.h"
 #include <pwd.h>
 #include <grp.h>
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
-static int	do_authorize(moauthd_client_t *client);
-static int	do_introspect(moauthd_client_t *client);
-static int	do_register(moauthd_client_t *client);
-static int	do_token(moauthd_client_t *client);
-static int	validate_uri(const char *uri, const char *urischeme);
+static bool	do_authorize(moauthd_client_t *client);
+static bool	do_introspect(moauthd_client_t *client);
+static bool	do_register(moauthd_client_t *client);
+static bool	do_token(moauthd_client_t *client);
+static bool	validate_uri(const char *uri, const char *urischeme);
 
 
-/*
- * 'moauthdCreateClient()' - Accept a connection and create a client object.
- */
+//
+// 'moauthdCreateClient()' - Accept a connection and create a client object.
+//
 
-moauthd_client_t *			/* O - New client object */
+moauthd_client_t *			// O - New client object
 moauthdCreateClient(
-    moauthd_server_t *server,		/* I - Server object */
-    int              fd)		/* I - Listening socket */
+    moauthd_server_t *server,		// I - Server object
+    int              fd)		// I - Listening socket
 {
-  moauthd_client_t *client;		/* Client object */
+  moauthd_client_t *client;		// Client object
 
 
   if ((client = calloc(1, sizeof(moauthd_client_t))) == NULL)
@@ -45,7 +45,7 @@ moauthdCreateClient(
   client->number = ++ server->num_clients;
   client->server = server;
 
-  if ((client->http = httpAcceptConnection(fd, 0)) == NULL)
+  if ((client->http = httpAcceptConnection(fd, false)) == NULL)
   {
     moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to accept client connection: %s", cupsLastErrorString());
     free(client);
@@ -57,7 +57,7 @@ moauthdCreateClient(
 
   moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Accepted connection from \"%s\".", client->remote_host);
 
-  if (httpEncryption(client->http, HTTP_ENCRYPTION_ALWAYS))
+  if (httpSetEncryption(client->http, HTTP_ENCRYPTION_ALWAYS))
   {
     moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to establish TLS session: %s", cupsLastErrorString());
     httpClose(client->http);
@@ -66,7 +66,7 @@ moauthdCreateClient(
     return (NULL);
   }
 
-  httpBlocking(client->http, 1);
+  httpSetBlocking(client->http, true);
 
   moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "TLS session established.");
 
@@ -74,13 +74,13 @@ moauthdCreateClient(
 }
 
 
-/*
- * 'moauthdDeleteClient()' - Close a connection and delete a client object.
- */
+//
+// 'moauthdDeleteClient()' - Close a connection and delete a client object.
+//
 
 void
 moauthdDeleteClient(
-    moauthd_client_t *client)		/* I - Client object */
+    moauthd_client_t *client)		// I - Client object
 {
   httpClose(client->http);
 
@@ -90,42 +90,23 @@ moauthdDeleteClient(
 }
 
 
-/*
- * 'moauthdRunClient()' - Process requests from a client object.
- */
+//
+// 'moauthdRunClient()' - Process requests from a client object.
+//
 
-void *					/* O - Thread return status (ignored) */
+void *					// O - Thread return status (ignored)
 moauthdRunClient(
-    moauthd_client_t *client)		/* I - Client object */
+    moauthd_client_t *client)		// I - Client object
 {
-  int			done = 0;	/* Are we done yet? */
-  http_state_t		state;		/* HTTP state */
-  http_status_t		status;		/* HTTP status */
-  const char		*authorization;	/* Authorization: header value */
-  char			host_value[300],/* Host: header value */
-			*host_ptr;	/* Pointer into Host: header */
-  int			host_port;	/* Port number */
-  char			uri_prefix[300];/* URI prefix for server */
-  size_t		uri_prefix_len;	/* Length of URI prefix */
-  static const char * const states[] =
-  {					/* Strings for logging HTTP method */
-    "WAITING",
-    "OPTIONS",
-    "GET",
-    "GET_SEND",
-    "HEAD",
-    "POST",
-    "POST_RECV",
-    "POST_SEND",
-    "PUT",
-    "PUT_RECV",
-    "DELETE",
-    "TRACE",
-    "CONNECT",
-    "STATUS",
-    "UNKNOWN_METHOD",
-    "UNKNOWN_VERSION"
-  };
+  bool			done = false;	// Are we done yet?
+  http_state_t		state;		// HTTP state
+  http_status_t		status;		// HTTP status
+  const char		*authorization;	// Authorization: header value
+  char			host_value[300],// Host: header value
+			*host_ptr;	// Pointer into Host: header
+  int			host_port;	// Port number
+  char			uri_prefix[300];// URI prefix for server
+  size_t		uri_prefix_len;	// Length of URI prefix
 
 
   snprintf(host_value, sizeof(host_value), "%s:%d", client->server->name, client->server->port);
@@ -134,10 +115,7 @@ moauthdRunClient(
 
   while (!done)
   {
-   /*
-    * Get a request line...
-    */
-
+    // Get a request line...
     while ((state = httpReadRequest(client->http, client->path_info, sizeof(client->path_info))) == HTTP_STATE_WAITING)
       usleep(1);
 
@@ -165,14 +143,11 @@ moauthdRunClient(
 
     client->request_method = state;
 
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "%s %s", states[state], client->path_info);
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "%s %s", httpStateString(state), client->path_info);
 
     if (client->path_info[0] != '/' && !strncmp(client->path_info, uri_prefix, uri_prefix_len) && client->path_info[uri_prefix_len] == '/')
     {
-     /*
-      * Full URL, trim off "https://name:port" part...
-      */
-
+      // Full URL, trim off "https://name:port" part...
       size_t path_info_len = strlen(client->path_info);
 
       memmove(client->path_info, client->path_info + uri_prefix_len, path_info_len - uri_prefix_len + 1);
@@ -180,19 +155,13 @@ moauthdRunClient(
 
     if ((client->query_string = strchr(client->path_info, '?')) != NULL)
     {
-     /*
-      * Chop the query string off the end...
-      */
-
+      // Chop the query string off the end...
       *(client->query_string)++ = '\0';
     }
 
     if ((client->path_info[0] != '/' || strstr(client->path_info, "/../")) && (strcmp(client->path_info, "*") || client->request_method != HTTP_STATE_OPTIONS))
     {
-     /*
-      * Not a supported path or URI...
-      */
-
+      // Not a supported path or URI...
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad request URI \"%s\".", client->path_info);
       moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
       break;
@@ -202,19 +171,13 @@ moauthdRunClient(
 
     if (status != HTTP_STATUS_OK)
     {
-     /*
-      * Unable to get the request headers...
-      */
-
+      // Unable to get the request headers...
       moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Problem getting request headers.");
       moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
       break;
     }
 
-   /*
-    * Validate Host: header...
-    */
-
+    // Validate Host: header...
     strncpy(host_value, httpGetField(client->http, HTTP_FIELD_HOST), sizeof(host_value) - 1);
     host_value[sizeof(host_value) - 1] = '\0';
 
@@ -229,32 +192,26 @@ moauthdRunClient(
     }
 
     if (host_ptr > host_value && host_ptr[-1] == '.')
-      host_ptr --;			/* Also strip trailing dot */
+      host_ptr --;			// Also strip trailing dot
     *host_ptr = '\0';
 
     if (strcasecmp(host_value, client->server->name) || host_port != client->server->port)
     {
-     /*
-      * Bad "Host:" field...
-      */
-
+      // Bad "Host:" field...
       if (!strcasecmp(host_value, "localhost"))
       {
        /*
         * Redirect to the correct server name...
         */
 
-        char uri[1024];			/* Redirection URI */
+        char uri[1024];			// Redirection URI
 
         httpAssembleURI(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, client->path_info);
         moauthdRespondClient(client, HTTP_STATUS_MOVED_PERMANENTLY, NULL, uri, 0, 0);
       }
       else
       {
-       /*
-        * Log it...
-        */
-
+        // Log it...
 	moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Bad Host: header value \"%s\" (expected \"%s:%d\").", httpGetField(client->http, HTTP_FIELD_HOST), client->server->name, client->server->port);
 	moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
 	break;
@@ -268,20 +225,17 @@ moauthdRunClient(
     {
       if (!strncmp(authorization, "Basic ", 6))
       {
-       /*
-        * Basic authentication...
-        */
-
-	char	username[512],		/* Username value */
-		*password;		/* Password value */
-        int	userlen = sizeof(username);
-					/* Length of username:password */
-        struct passwd *user;		/* User information */
+        // Basic authentication...
+	char	username[512],		// Username value
+		*password;		// Password value
+        size_t	userlen = sizeof(username);
+					// Length of username:password
+        struct passwd *user;		// User information
 
 
         for (authorization += 6; *authorization && isspace(*authorization & 255); authorization ++);
 
-        httpDecode64_2(username, &userlen, authorization);
+        httpDecode64(username, &userlen, authorization);
         if ((password = strchr(username, ':')) != NULL)
         {
           *password++ = '\0';
@@ -300,7 +254,7 @@ moauthdRunClient(
               if (getgrouplist(client->remote_user, (int)user->pw_gid, client->remote_groups, &client->num_remote_groups))
 #else
               if (getgrouplist(client->remote_user, user->pw_gid, client->remote_groups, &client->num_remote_groups))
-#endif /* __APPLE__ */
+#endif // __APPLE__
               {
                 moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup groups for user \"%s\": %s", username, strerror(errno));
                 client->num_remote_groups = 0;
@@ -323,11 +277,8 @@ moauthdRunClient(
       }
       else if (!strncmp(authorization, "Bearer ", 7))
       {
-       /*
-        * Bearer (OAuth) token...
-        */
-
-        moauthd_token_t *token;		/* Access token */
+        // Bearer (OAuth) token...
+        moauthd_token_t *token;		// Access token
 
         for (authorization += 7; *authorization && isspace(*authorization & 255); authorization ++);
 
@@ -364,7 +315,7 @@ moauthdRunClient(
 	  if (getgrouplist(token->user, (int)token->gid, client->remote_groups, &client->num_remote_groups))
 #else
 	  if (getgrouplist(token->user, token->gid, client->remote_groups, &client->num_remote_groups))
-#endif /* __APPLE__ */
+#endif // __APPLE__
 	  {
 	    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup groups for user \"%s\": %s", token->user, strerror(errno));
 	    client->num_remote_groups = 0;
@@ -373,11 +324,8 @@ moauthdRunClient(
       }
       else
       {
-       /*
-        * Unsupported Authorization scheme...
-        */
-
-        char	scheme[32];		/* Scheme name */
+        // Unsupported Authorization scheme...
+        char	scheme[32];		// Scheme name
 
         strncpy(scheme, authorization, sizeof(scheme) - 1);
         scheme[sizeof(scheme) - 1] = '\0';
@@ -395,28 +343,19 @@ moauthdRunClient(
 
     if (httpGetExpect(client->http) && client->request_method == HTTP_STATE_POST)
     {
-     /*
-      * Handle Expect: nnn
-      */
-
+      // Handle Expect: nnn
       if (httpGetExpect(client->http) == HTTP_STATUS_CONTINUE)
       {
-       /*
-	* Send 100-continue header...
-	*
-	* TODO: Update as needed based on the URL path - some endpoints need
-	* authentication...
-	*/
-
+        // Send 100-continue header...
+	//
+	// TODO: Update as needed based on the URL path - some endpoints need
+	// authentication...
 	if (!moauthdRespondClient(client, HTTP_STATUS_CONTINUE, NULL, NULL, 0, 0))
 	  break;
       }
       else
       {
-       /*
-	* Send 417-expectation-failed header...
-	*/
-
+        // Send 417-expectation-failed header...
 	if (!moauthdRespondClient(client, HTTP_STATUS_EXPECTATION_FAILED, NULL, NULL, 0, 0))
 	  break;
       }
@@ -425,48 +364,53 @@ moauthdRunClient(
     switch (client->request_method)
     {
       case HTTP_STATE_OPTIONS :
-	 /*
-	  * Do OPTIONS command...
-	  */
-
+	  // Do OPTIONS command...
 	  if (!moauthdRespondClient(client, HTTP_STATUS_OK, NULL, NULL, 0, 0))
-	    done = 1;
+	    done = true;
 	  break;
 
       case HTTP_STATE_HEAD :
 	  if (!strcmp(client->path_info, "/authorize"))
 	    done = !do_authorize(client);
 	  else if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
-	    done = 1;
+	    done = true;
 	  break;
 
       case HTTP_STATE_GET :
 	  if (!strcmp(client->path_info, "/authorize"))
 	    done = !do_authorize(client);
 	  else if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
-	    done = 1;
+	    done = true;
 	  break;
 
       case HTTP_STATE_POST :
 	  if (!strcmp(client->path_info, "/authorize"))
+	  {
 	    done = !do_authorize(client);
+	  }
 	  else if (!strcmp(client->path_info, "/introspect"))
+	  {
 	    done = !do_introspect(client);
+	  }
 	  else if (!strcmp(client->path_info, "/register"))
+	  {
 	    done = !do_register(client);
+	  }
 	  else if (!strcmp(client->path_info, "/token"))
+	  {
 	    done = !do_token(client);
+	  }
 	  else
 	  {
 	    moauthdRespondClient(client, HTTP_STATUS_NOT_FOUND, NULL, NULL, 0, 0);
-            done = 1;
+            done = true;
 	  }
           break;
 
       default :
 	  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Unexpected HTTP state %d.", client->request_method);
 	  moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0);
-          done = 1;
+          done = true;
 	  break;
     }
   }
@@ -477,29 +421,29 @@ moauthdRunClient(
 }
 
 
-/*
- * 'do_authorize()' - Process a request for the /authorize endpoint.
- */
+//
+// 'do_authorize()' - Process a request for the /authorize endpoint.
+//
 
-static int				/* O - 1 on success, 0 on failure */
-do_authorize(moauthd_client_t *client)	/* I - Client object */
+static bool				// O - `true` on success, `false` on failure
+do_authorize(moauthd_client_t *client)	// I - Client object
 {
-  int		num_vars;		/* Number of form variables */
-  cups_option_t	*vars;			/* Form variables */
-  char		*data;			/* Form data */
-  const char	*client_id,		/* client_id variable (REQUIRED) */
-		*redirect_uri,		/* redirect_uri variable (OPTIONAL) */
-		*response_type,		/* response_type variable (REQUIRED) */
-		*scope,			/* scope variable (OPTIONAL) */
-		*state,			/* state variable (RECOMMENDED) */
-		*challenge,		/* code_challenge variable (OPTIONAL) */
-		*method,		/* code_challenge_method variable (OPTIONAL) */
-		*username,		/* username variable */
-		*password;		/* password variable */
-  moauthd_application_t *app;		/* Application */
-  moauthd_token_t *token;		/* Token */
-  char		uri[2048];		/* Redirect URI */
-  const char	*prefix;		/* Prefix string */
+  size_t	num_vars;		// Number of form variables
+  cups_option_t	*vars;			// Form variables
+  char		*data;			// Form data
+  const char	*client_id,		// client_id variable (REQUIRED)
+		*redirect_uri,		// redirect_uri variable (OPTIONAL)
+		*response_type,		// response_type variable (REQUIRED)
+		*scope,			// scope variable (OPTIONAL)
+		*state,			// state variable (RECOMMENDED)
+		*challenge,		// code_challenge variable (OPTIONAL)
+		*method,		// code_challenge_method variable (OPTIONAL)
+		*username,		// username variable
+		*password;		// password variable
+  moauthd_application_t *app;		// Application
+  moauthd_token_t *token;		// Token
+  char		uri[2048];		// Redirect URI
+  const char	*prefix;		// Prefix string
 
 
   switch (client->request_method)
@@ -508,10 +452,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         return (moauthdRespondClient(client, HTTP_STATUS_OK, "text/html", NULL, 0, 0));
 
     case HTTP_STATE_GET :
-       /*
-        * Get form variable on the request line...
-        */
-
+        // Get form variable on the request line...
         num_vars      = _moauthFormDecode(client->query_string, &vars);
         client_id     = cupsGetOption("client_id", num_vars, vars);
         redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
@@ -523,10 +464,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
 
         if (!client_id || !response_type || strcmp(response_type, "code") || (method && strcmp(method, "S256")))
         {
-	 /*
-	  * Missing required variables!
-	  */
-
+	  // Missing required variables!
           if (!client_id)
             moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing client_id in authorize request.");
           if (!response_type)
@@ -561,7 +499,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
         {
 	  cupsFreeOptions(num_vars, vars);
 
-          return (0);
+          return (false);
 	}
 
         moauthdHTMLHeader(client, "Authorization");
@@ -633,10 +571,7 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
 
         if (!client_id || !response_type || strcmp(response_type, "code"))
         {
-	 /*
-	  * Missing required variables!
-	  */
-
+	  // Missing required variables!
           if (!client_id)
             moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing client_id in authorize request.");
           if (!response_type)
@@ -686,35 +621,35 @@ do_authorize(moauthd_client_t *client)	/* I - Client object */
 
         cupsFreeOptions(num_vars, vars);
 
-        return (moauthdRespondClient(client, HTTP_STATUS_MOVED_TEMPORARILY, NULL, uri, 0, 0));
+        return (moauthdRespondClient(client, HTTP_STATUS_FOUND, NULL, uri, 0, 0));
 
     default :
-        return (0);
+        return (false);
   }
 
-  return (1);
+  return (true);
 }
 
 
-/*
- * 'do_introspect()' - Process a request for the /introspect endpoint.
- */
+//
+// 'do_introspect()' - Process a request for the /introspect endpoint.
+//
 
-static int				/* O - 1 on success, 0 on failure */
-do_introspect(moauthd_client_t *client)	/* I - Client object */
+static bool				// O - `true` on success, `false` on failure
+do_introspect(moauthd_client_t *client)	// I - Client object
 {
-  http_status_t	status = HTTP_STATUS_OK;/* Response status */
-  int		num_vars;		/* Number of form (request) variables */
-  cups_option_t	*vars;			/* Form (request) variables */
-  char		*data;			/* Form data */
-  const char	*token_var;		/* token variable (REQUIRED) */
-  moauthd_token_t *token;		/* Token */
-  int		num_json = 0;		/* Number of JSON (response) variables */
-  cups_option_t	*json = NULL;		/* JSON (response) variables */
-  size_t	datalen;		/* Length of JSON data */
-  char		exp[32],		/* Expiration time */
-		iat[32];		/* Issue time */
-  static const char * const types[] =	/* Token types */
+  http_status_t	status = HTTP_STATUS_OK;// Response status
+  size_t	num_vars;		// Number of form (request) variables
+  cups_option_t	*vars;			// Form (request) variables
+  char		*data;			// Form data
+  const char	*token_var;		// token variable (REQUIRED)
+  moauthd_token_t *token;		// Token
+  size_t	num_json = 0;		// Number of JSON (response) variables
+  cups_option_t	*json = NULL;		// JSON (response) variables
+  size_t	datalen;		// Length of JSON data
+  char		exp[32],		// Expiration time
+		iat[32];		// Issue time
+  static const char * const types[] =	// Token types
   {
     "access",
     "grant",
@@ -724,21 +659,15 @@ do_introspect(moauthd_client_t *client)	/* I - Client object */
 
   if (client->server->introspect_group != (gid_t)-1)
   {
-   /*
-    * See if the authenticated user is in the specified group...
-    */
-
+    // See if the authenticated user is in the specified group...
     if (!client->remote_user[0])
     {
-     /*
-      * Not yet authenticated...
-      */
-
+      // Not yet authenticated...
       status = HTTP_STATUS_UNAUTHORIZED;
     }
     else
     {
-      int i;				/* Looping var */
+      int i;				// Looping var
 
       for (i = 0; i < client->num_remote_groups; i ++)
 	if (client->remote_groups[i] == client->server->introspect_group)
@@ -762,10 +691,7 @@ do_introspect(moauthd_client_t *client)	/* I - Client object */
 
   if (!token_var)
   {
-   /*
-    * Missing required variables!
-    */
-
+    // Missing required variables!
     moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing token in introspect request.");
 
     goto bad_request;
@@ -806,23 +732,20 @@ do_introspect(moauthd_client_t *client)	/* I - Client object */
   if (!moauthdRespondClient(client, HTTP_STATUS_OK, "application/json", NULL, 0, datalen))
   {
     free(data);
-    return (0);
+    return (false);
   }
 
-  if (httpWrite2(client->http, data, datalen) < datalen)
+  if (httpWrite(client->http, data, datalen) < datalen)
   {
     free(data);
-    return (0);
+    return (false);
   }
 
   free(data);
 
-  return (1);
+  return (true);
 
- /*
-  * If we get here there was a bad request...
-  */
-
+  // If we get here there was a bad request...
   bad_request:
 
   cupsFreeOptions(num_vars, vars);
@@ -831,52 +754,46 @@ do_introspect(moauthd_client_t *client)	/* I - Client object */
 }
 
 
-/*
- * 'do_register()' - Process a request for the /register endpoint.
- */
+//
+// 'do_register()' - Process a request for the /register endpoint.
+//
 
-static int				/* O - 1 on success, 0 on failure */
-do_register(moauthd_client_t *client)	/* I - Client object */
+static bool				// O - `true` on success, `false` on failure
+do_register(moauthd_client_t *client)	// I - Client object
 {
   http_status_t	status = HTTP_STATUS_CREATED;
-					/* Return status */
-  int		num_vars;		/* Number of form (request) variables */
-  cups_option_t	*vars;			/* Form (request) variables */
-  char		*data;			/* Form data */
-  const char	*redirect_uris,		/* redirect_uris variable (REQUIRED) */
-		*client_name,		/* client_name variable (RECOMMENDED) */
-		*client_uri,		/* client_uri variable (RECOMMENDED) */
-		*logo_uri,		/* logo_uri variable (OPTIONAL) */
-		*tos_uri;		/* tos_uri variable (OPTIONAL) */
-  int		num_json = 0;		/* Number of JSON (response) variables */
-  cups_option_t	*json = NULL;		/* JSON (response) variables */
-  size_t	datalen;		/* Length of JSON data */
-  unsigned char	client_id_hash[32];	/* SHA2-256 hash of client_name or redirect_uris */
-  char		client_id[65];		/* client_id value */
-  char		*uri,			/* Copy of redirect_uris */
-		*uristart,		/* Start of URI */
-		*uriend;		/* End of URI */
-  const char	*error = NULL;		/* Error code, if any */
-  char		error_message[1024];	/* Error message, if any */
+					// Return status
+  size_t	num_vars;		// Number of form (request) variables
+  cups_option_t	*vars;			// Form (request) variables
+  char		*data;			// Form data
+  const char	*redirect_uris,		// redirect_uris variable (REQUIRED)
+		*client_name,		// client_name variable (RECOMMENDED)
+		*client_uri,		// client_uri variable (RECOMMENDED)
+		*logo_uri,		// logo_uri variable (OPTIONAL)
+		*tos_uri;		// tos_uri variable (OPTIONAL)
+  size_t	num_json = 0;		// Number of JSON (response) variables
+  cups_option_t	*json = NULL;		// JSON (response) variables
+  size_t	datalen;		// Length of JSON data
+  unsigned char	client_id_hash[32];	// SHA2-256 hash of client_name or redirect_uris
+  char		client_id[65];		// client_id value
+  char		*uri,			// Copy of redirect_uris
+		*uristart,		// Start of URI
+		*uriend;		// End of URI
+  const char	*error = NULL;		// Error code, if any
+  char		error_message[1024];	// Error message, if any
 
 
   if (client->server->register_group != (gid_t)-1)
   {
-   /*
-    * See if the authenticated user is in the specified group...
-    */
-
+    // See if the authenticated user is in the specified group...
     if (!client->remote_user[0])
     {
-     /*
-      * Not yet authenticated...
-      */
-
+      // Not yet authenticated...
       status = HTTP_STATUS_UNAUTHORIZED;
     }
     else
     {
-      int i;				/* Looping var */
+      int i;				// Looping var
 
       for (i = 0; i < client->num_remote_groups; i ++)
 	if (client->remote_groups[i] == client->server->register_group)
@@ -890,10 +807,7 @@ do_register(moauthd_client_t *client)	/* I - Client object */
   if (status != HTTP_STATUS_CREATED)
     return (moauthdRespondClient(client, status, NULL, NULL, 0, 0));
 
- /*
-  * Get request data...
-  */
-
+  // Get request data...
   if ((data = _moauthCopyMessageBody(client->http)) == NULL)
     return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
@@ -908,10 +822,7 @@ do_register(moauthd_client_t *client)	/* I - Client object */
 
   if (!redirect_uris)
   {
-   /*
-    * Missing required variables!
-    */
-
+    // Missing required variables!
     moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing redirect_uris in register request.");
 
     error = "invalid_redirect_uri";
@@ -921,10 +832,7 @@ do_register(moauthd_client_t *client)	/* I - Client object */
   }
   else if (strncmp(redirect_uris, "[\"", 2))
   {
-   /*
-    * Bad redirect_uris variable!
-    */
-
+    // Bad redirect_uris variable!
     moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad redirect_uris \"%s\".", redirect_uris);
 
     error = "invalid_redirect_uri";
@@ -954,10 +862,7 @@ do_register(moauthd_client_t *client)	/* I - Client object */
     goto bad_request;
   }
 
- /*
-  * Parse redirect_uris to add application entries...
-  */
-
+  // Parse redirect_uris to add application entries...
   if (client_name)
     cupsHashData("sha2-256", client_name, strlen(client_name), client_id_hash, sizeof(client_id_hash));
   else
@@ -999,15 +904,12 @@ do_register(moauthd_client_t *client)	/* I - Client object */
     else
     {
       moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Unable to register client %s %s.", client_id, uristart);
-      /* TODO: Return an error? Nothing defined in RFC 7591 for internal errors... */
+      // TODO: Return an error? Nothing defined in RFC 7591 for internal errors...
     }
   }
   free(uri);
 
- /*
-  * Respond with the metadata and generated client_id...
-  */
-
+  // Respond with the metadata and generated client_id...
   num_json = cupsAddOption("client_id", client_id, num_json, &json);
 
   if (redirect_uris)
@@ -1042,23 +944,20 @@ do_register(moauthd_client_t *client)	/* I - Client object */
   if (!moauthdRespondClient(client, HTTP_STATUS_CREATED, "application/json", NULL, 0, datalen))
   {
     free(data);
-    return (0);
+    return (false);
   }
 
-  if (httpWrite2(client->http, data, datalen) < datalen)
+  if (httpWrite(client->http, data, datalen) < datalen)
   {
     free(data);
-    return (0);
+    return (false);
   }
 
   free(data);
 
-  return (1);
+  return (true);
 
- /*
-  * If we get here there was a bad request...
-  */
-
+  // If we get here there was a bad request...
   bad_request:
 
   cupsFreeOptions(num_vars, vars);
@@ -1073,7 +972,7 @@ do_register(moauthd_client_t *client)	/* I - Client object */
 
     if (data)
     {
-      int status;			/* Return status */
+      int status;			// Return status
 
       datalen = strlen(data);
       status  = moauthdRespondClient(client, HTTP_STATUS_CREATED, "application/json", NULL, 0, datalen);
@@ -1086,31 +985,31 @@ do_register(moauthd_client_t *client)	/* I - Client object */
 }
 
 
-/*
- * 'do_token()' - Process a request for the /token endpoint.
- */
+//
+// 'do_token()' - Process a request for the /token endpoint.
+//
 
-static int				/* O - 1 on success, 0 on failure */
-do_token(moauthd_client_t *client)	/* I - Client object */
+static bool				// O - `true` on success, `false` on failure
+do_token(moauthd_client_t *client)	// I - Client object
 {
-  int		num_vars;		/* Number of form (request) variables */
-  cups_option_t	*vars;			/* Form (request) variables */
-  char		*data;			/* Form data */
-  const char	*client_id,		/* client_id variable (REQUIRED) */
-		*code,			/* code variable (REQUIRED) */
-		*grant_type,		/* grant_type variable (REQUIRED) */
-		*password,		/* password variable (REQURIED for Resource Owner Password Grant) */
-		*redirect_uri,		/* redirect_uri variable (OPTIONAL) */
-		*scope,			/* scope variable (OPTIONAL) */
-		*username,		/* username variable (REQURIED for Resource Owner Password Grant) */
-		*verifier;		/* code_verify variable (OPTIONAL) */
-  moauthd_application_t *app;		/* Application */
-  moauthd_token_t *grant_token,		/* Grant token */
-		*access_token;		/* Access token */
-  int		num_json = 0;		/* Number of JSON (response) variables */
-  cups_option_t	*json = NULL;		/* JSON (response) variables */
-  size_t	datalen;		/* Length of JSON data */
-  char		expires_in[32];		/* Expiration time */
+  size_t	num_vars;		// Number of form (request) variables
+  cups_option_t	*vars;			// Form (request) variables
+  char		*data;			// Form data
+  const char	*client_id,		// client_id variable (REQUIRED)
+		*code,			// code variable (REQUIRED)
+		*grant_type,		// grant_type variable (REQUIRED)
+		*password,		// password variable (REQURIED for Resource Owner Password Grant)
+		*redirect_uri,		// redirect_uri variable (OPTIONAL)
+		*scope,			// scope variable (OPTIONAL)
+		*username,		// username variable (REQURIED for Resource Owner Password Grant)
+		*verifier;		// code_verify variable (OPTIONAL)
+  moauthd_application_t *app;		// Application
+  moauthd_token_t *grant_token,		// Grant token
+		*access_token;		// Access token
+  size_t	num_json = 0;		// Number of JSON (response) variables
+  cups_option_t	*json = NULL;		// JSON (response) variables
+  size_t	datalen;		// Length of JSON data
+  char		expires_in[32];		// Expiration time
 
 
   if ((data = _moauthCopyMessageBody(client->http)) == NULL)
@@ -1148,10 +1047,7 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   }
   else if (strcmp(grant_type, "password") && (!client_id || !code))
   {
-   /*
-    * Missing required variables!
-    */
-
+    // Missing required variables!
     if (!client_id)
       moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Missing client_id in token request.");
     if (!code)
@@ -1206,11 +1102,11 @@ do_token(moauthd_client_t *client)	/* I - Client object */
     {
       if (verifier)
       {
-	unsigned char	sha256[32];	/* SHA-256 hash of verifier */
-	char		challenge[45];	/* Base64 version of hash */
+	unsigned char	sha256[32];	// SHA-256 hash of verifier
+	char		challenge[45];	// Base64 version of hash
 
 	cupsHashData("sha2-256", verifier, strlen(verifier), sha256, sizeof(sha256));
-	httpEncode64_2(challenge, (int)sizeof(challenge), (char *)sha256, (int)sizeof(sha256));
+	httpEncode64(challenge, (int)sizeof(challenge), (char *)sha256, sizeof(sha256), true);
 
 	if (strcmp(grant_token->challenge, challenge))
 	{
@@ -1260,24 +1156,22 @@ do_token(moauthd_client_t *client)	/* I - Client object */
   if (!moauthdRespondClient(client, HTTP_STATUS_OK, "application/json", NULL, 0, datalen))
   {
     free(data);
-    return (0);
+    return (false);
   }
 
-  if (httpWrite2(client->http, data, datalen) < datalen)
+  if (httpWrite(client->http, data, datalen) < datalen)
   {
     free(data);
-    return (0);
+    return (false);
   }
 
   free(data);
 
-  return (1);
+  return (true);
 
- /*
-  * If we get here there was a bad request...
-  */
+  // If we get here there was a bad request...
 
-  /* TODO: generate JSON error message body */
+  // TODO: generate JSON error message body
   bad_request:
 
   cupsFreeOptions(num_vars, vars);
@@ -1286,28 +1180,28 @@ do_token(moauthd_client_t *client)	/* I - Client object */
 }
 
 
-/*
- * 'validate_uri()' - Validate the URI.
- *
- * The "uri" argument specifies the URI and must conform to STD 66.
- *
- * The "urischeme" argument specifies the required URI scheme.  If NULL, any
- * URI scheme *except* "http" is allowed.
- */
+//
+// 'validate_uri()' - Validate the URI.
+//
+// The "uri" argument specifies the URI and must conform to STD 66.
+//
+// The "urischeme" argument specifies the required URI scheme.  If NULL, any
+// URI scheme *except* "http" is allowed.
+//
 
-static int				/* O - 1 if OK, 0 if not */
-validate_uri(const char *uri,		/* I - URI */
-             const char *urischeme)	/* I - Required URI scheme or `NULL` */
+static bool				// O - `true` on success, `false` on failure
+validate_uri(const char *uri,		// I - URI
+             const char *urischeme)	// I - Required URI scheme or `NULL`
 {
-  char	scheme[32],			/* Scheme name */
-        userpass[256],			/* Username:password */
-        host[256],			/* Hostname */
-        resource[256];			/* Resource path */
-  int	port;				/* Port number */
+  char	scheme[32],			// Scheme name
+        userpass[256],			// Username:password
+        host[256],			// Hostname
+        resource[256];			// Resource path
+  int	port;				// Port number
 
 
   if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK)
-    return (0);
+    return (false);
   else if (urischeme)
     return (!strcmp(scheme, urischeme));
   else

@@ -40,16 +40,16 @@
 		270E13E41FC31E8F0053DAE4 /* testmoauth.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13E21FC31E8A0053DAE4 /* testmoauth.c */; };
 		273FE65721F4030900F34014 /* register.c in Sources */ = {isa = PBXBuildFile; fileRef = 273FE65621F4030700F34014 /* register.c */; };
 		278AC45A1FC3216100588F26 /* libmoauth.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 270E13AF1FC31D6A0053DAE4 /* libmoauth.a */; };
-		278AC45C1FC3217100588F26 /* libcups.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 278AC45B1FC3216200588F26 /* libcups.tbd */; };
 		278AC45D1FC321BB00588F26 /* libmoauth.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 270E13AF1FC31D6A0053DAE4 /* libmoauth.a */; };
-		278AC45E1FC321C200588F26 /* libcups.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 278AC45B1FC3216200588F26 /* libcups.tbd */; };
 		279187231FE5EFC300FBA1E3 /* post.c in Sources */ = {isa = PBXBuildFile; fileRef = 279187221FE5EFA800FBA1E3 /* post.c */; };
-		2791872A1FE5FAB000FBA1E3 /* libcups.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 278AC45B1FC3216200588F26 /* libcups.tbd */; };
 		2791872B1FE5FAB000FBA1E3 /* libmoauth.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 270E13AF1FC31D6A0053DAE4 /* libmoauth.a */; };
 		279187321FE5FAD900FBA1E3 /* testmoauthd.c in Sources */ = {isa = PBXBuildFile; fileRef = 279187311FE5FAC500FBA1E3 /* testmoauthd.c */; };
 		27960FFA1FD4774C000D20A7 /* web.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FF81FD4774B000D20A7 /* web.c */; };
 		27960FFB1FD4774C000D20A7 /* mmd.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FF91FD4774B000D20A7 /* mmd.c */; };
 		27960FFD1FD4D20F000D20A7 /* auth.c in Sources */ = {isa = PBXBuildFile; fileRef = 27960FFC1FD4D20F000D20A7 /* auth.c */; };
+		2797D73B28E8C13B0056D546 /* libcups3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2797D73A28E8C13B0056D546 /* libcups3.dylib */; };
+		2797D73D28E8C1440056D546 /* libcups3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2797D73C28E8C1440056D546 /* libcups3.dylib */; };
+		2797D73F28E8C14C0056D546 /* libcups3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2797D73E28E8C14C0056D546 /* libcups3.dylib */; };
 		27BF7AE121EE3E0A00A7D756 /* random.c in Sources */ = {isa = PBXBuildFile; fileRef = 27BF7AE021EE3E0A00A7D756 /* random.c */; };
 		27BF7AE821F1447C00A7D756 /* libpam.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 27BF7AE721F1447C00A7D756 /* libpam.tbd */; };
 		27BF7AEA21F1448400A7D756 /* libdl.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 27BF7AE921F1448400A7D756 /* libdl.tbd */; };
@@ -175,6 +175,9 @@
 		27960FF81FD4774B000D20A7 /* web.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = web.c; sourceTree = "<group>"; };
 		27960FF91FD4774B000D20A7 /* mmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mmd.c; sourceTree = "<group>"; };
 		27960FFC1FD4D20F000D20A7 /* auth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = auth.c; sourceTree = "<group>"; };
+		2797D73A28E8C13B0056D546 /* libcups3.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libcups3.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		2797D73C28E8C1440056D546 /* libcups3.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libcups3.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		2797D73E28E8C14C0056D546 /* libcups3.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libcups3.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		27BF7AE021EE3E0A00A7D756 /* random.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = random.c; sourceTree = "<group>"; };
 		27BF7AE321F1220E00A7D756 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		27BF7AE421F1220E00A7D756 /* DOCUMENTATION.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = DOCUMENTATION.md; path = ../DOCUMENTATION.md; sourceTree = "<group>"; };
@@ -189,9 +192,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2797D73B28E8C13B0056D546 /* libcups3.dylib in Frameworks */,
 				27BF7AEA21F1448400A7D756 /* libdl.tbd in Frameworks */,
 				27BF7AE821F1447C00A7D756 /* libpam.tbd in Frameworks */,
-				278AC45E1FC321C200588F26 /* libcups.tbd in Frameworks */,
 				278AC45D1FC321BB00588F26 /* libmoauth.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -207,7 +210,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				278AC45C1FC3217100588F26 /* libcups.tbd in Frameworks */,
+				2797D73D28E8C1440056D546 /* libcups3.dylib in Frameworks */,
 				278AC45A1FC3216100588F26 /* libmoauth.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -216,7 +219,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2791872A1FE5FAB000FBA1E3 /* libcups.tbd in Frameworks */,
+				2797D73F28E8C14C0056D546 /* libcups3.dylib in Frameworks */,
 				2791872B1FE5FAB000FBA1E3 /* libmoauth.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -299,6 +302,9 @@
 		278AC4591FC3216100588F26 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				2797D73E28E8C14C0056D546 /* libcups3.dylib */,
+				2797D73C28E8C1440056D546 /* libcups3.dylib */,
+				2797D73A28E8C13B0056D546 /* libcups3.dylib */,
 				27BF7AE921F1448400A7D756 /* libdl.tbd */,
 				27BF7AE721F1447C00A7D756 /* libpam.tbd */,
 				278AC45B1FC3216200588F26 /* libcups.tbd */,
@@ -410,7 +416,7 @@
 		270E13931FC31A530053DAE4 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1010;
+				LastUpgradeCheck = 1400;
 				ORGANIZATIONNAME = "Michael R Sweet";
 				TargetAttributes = {
 					270E139A1FC31A530053DAE4 = {
@@ -439,6 +445,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
 			mainGroup = 270E13921FC31A530053DAE4;
 			productRefGroup = 270E139C1FC31A530053DAE4 /* Products */;
@@ -575,6 +582,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
@@ -582,10 +590,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0.1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -648,6 +657,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
@@ -655,10 +665,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0.1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = RU58A2256H;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -691,7 +702,10 @@
 		270E13A31FC31A530053DAE4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				PRODUCT_BUNDLE_IDENTIFIER = org.msweet.moauthd;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -699,7 +713,10 @@
 		270E13A41FC31A530053DAE4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				PRODUCT_BUNDLE_IDENTIFIER = org.msweet.moauthd;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -707,6 +724,7 @@
 		270E13B11FC31D6A0053DAE4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				EXECUTABLE_PREFIX = lib;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -718,6 +736,7 @@
 		270E13B21FC31D6A0053DAE4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				EXECUTABLE_PREFIX = lib;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -729,6 +748,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -738,6 +758,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -746,6 +767,8 @@
 		270E13DE1FC31E520053DAE4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -754,6 +777,8 @@
 		270E13DF1FC31E520053DAE4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -762,6 +787,8 @@
 		2791872E1FE5FAB000FBA1E3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -770,6 +797,8 @@
 		2791872F1FE5FAB000FBA1E3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

@@ -1,57 +1,48 @@
-/*
- * Main entry for moauth daemon
- *
- * Copyright © 2017-2019 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Main entry for moauth daemon
+//
+// Copyright © 2017-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
 #include "moauthd.h"
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static void	usage(void);
 
 
-/*
- * 'main()' - Main entry for moauth daemon.
- */
+//
+// 'main()' - Main entry for moauth daemon.
+//
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int					// O - Exit status
+main(int  argc,				// I - Number of command-line arguments
+     char *argv[])			// I - Command-line arguments
 {
-  int		i;			/* Looping var */
-  const char	*opt;			/* Current command-line option */
-  const char	*configfile = NULL;	/* Server configuration file, if any */
-  int		verbosity = 0;		/* Verbosity level */
+  int		i;			// Looping var
+  const char	*opt;			// Current command-line option
+  const char	*configfile = NULL;	// Server configuration file, if any
+  int		verbosity = 0;		// Verbosity level
 
 
- /*
-  * Parse command-line options...
-  */
-
+  // Parse command-line options...
   for (i = 1; i < argc; i ++)
   {
     if (!strcmp(argv[i], "--help"))
     {
-     /*
-      * Show help and exit...
-      */
-
+      // Show help and exit...
       usage();
       return (0);
     }
     else if (!strcmp(argv[i], "--version"))
     {
-     /*
-      * Show version and exit...
-      */
-
+      // Show version and exit...
       puts(MOAUTH_VERSION);
       return (0);
     }
@@ -61,7 +52,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       {
         switch (*opt)
         {
-          case 'c' : /* -c configfile */
+          case 'c' : // -c configfile
               i ++;
               if (i < argc && !configfile)
                 configfile = argv[i];
@@ -76,7 +67,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 	      }
 	      break;
 
-          case 'v' : /* -v */
+          case 'v' : // -v
               verbosity ++;
               break;
 
@@ -89,20 +80,14 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
     else
     {
-     /*
-      * Unknown option...
-      */
-
+      // Unknown option...
       fprintf(stderr, "moauthd: Unknown option \"%s\".\n", argv[i]);
       usage();
       return (1);
     }
   }
 
- /*
-  * Default config file is /etc/moauthd.conf or /usr/local/etc/moauthd.conf...
-  */
-
+  // Default config file is /etc/moauthd.conf or /usr/local/etc/moauthd.conf...
   if (!configfile)
   {
     if (!access("/etc/moauthd.conf", 0))
@@ -111,17 +96,14 @@ main(int  argc,				/* I - Number of command-line arguments */
       configfile = "/usr/local/etc/moauthd.conf";
   }
 
- /*
-  * Create the server object and run it...
-  */
-
+  // Create the server object and run it...
   return (moauthdRunServer(moauthdCreateServer(configfile, verbosity)));
 }
 
 
-/*
- * 'usage()' - Show program usage.
- */
+//
+// 'usage()' - Show program usage.
+//
 
 static void
 usage(void)

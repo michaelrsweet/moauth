@@ -1,47 +1,44 @@
-/*
- * Dynamic client registration support for moauth library.
- *
- * Copyright © 22019 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Dynamic client registration support for moauth library.
+//
+// Copyright © 2019-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
 #include <config.h>
 #include "moauth-private.h"
 #include <errno.h>
 
 
-/*
- * 'moauthRegisterClient()' - Register a client application.
- */
+//
+// 'moauthRegisterClient()' - Register a client application.
+//
 
-char *					/* O - client_id string */
+char *					// O - client_id string
 moauthRegisterClient(
-    moauth_t   *server,			/* I - OAuth server */
-    const char *redirect_uri,		/* I - Redirection URL */
-    const char *client_name,		/* I - Client name or `NULL` */
-    const char *client_uri,		/* I - Client information URL or `NULL` */
-    const char *logo_uri,		/* I - Logo URL or `NULL` */
-    const char *tos_uri,		/* I - Terms-of-service URL or `NULL` */
-    char       *client_id,		/* I - client_id buffer */
-    size_t     client_id_size)		/* I - Size of client_id buffer */
+    moauth_t   *server,			// I - OAuth server
+    const char *redirect_uri,		// I - Redirection URL
+    const char *client_name,		// I - Client name or `NULL`
+    const char *client_uri,		// I - Client information URL or `NULL`
+    const char *logo_uri,		// I - Logo URL or `NULL`
+    const char *tos_uri,		// I - Terms-of-service URL or `NULL`
+    char       *client_id,		// I - client_id buffer
+    size_t     client_id_size)		// I - Size of client_id buffer
 {
-  http_t	*http = NULL;		/* HTTP connection */
-  char		resource[256];		/* Registration endpoint resource */
-  http_status_t	status;			/* Response status */
-  char		*json_data = NULL;	/* JSON data */
-  size_t	json_length;		/* Length of JSON data */
-  int		num_json = 0;		/* Number of JSON variables */
-  cups_option_t	*json = NULL;		/* JSON variables */
-  char		temp[1024];		/* Temporary string */
-  const char	*value;			/* JSON value */
+  http_t	*http = NULL;		// HTTP connection
+  char		resource[256];		// Registration endpoint resource
+  http_status_t	status;			// Response status
+  char		*json_data = NULL;	// JSON data
+  size_t	json_length;		// Length of JSON data
+  size_t	num_json = 0;		// Number of JSON variables
+  cups_option_t	*json = NULL;		// JSON variables
+  char		temp[1024];		// Temporary string
+  const char	*value;			// JSON value
 
 
- /*
-  * Range check input...
-  */
-
+  // Range check input...
   if (client_id)
     *client_id = '\0';
 
@@ -56,13 +53,10 @@ moauthRegisterClient(
   if (!server->registration_endpoint)
   {
     snprintf(server->error, sizeof(server->error), "Introspection not supported.");
-    return (0);
+    return (NULL);
   }
 
- /*
-  * Prepare JSON data to register the client application...
-  */
-
+  // Prepare JSON data to register the client application...
   snprintf(temp, sizeof(temp), "[\"%s\"]", redirect_uri);
   num_json = cupsAddOption("redirect_uris", temp, num_json, &json);
   if (client_name)
@@ -90,10 +84,7 @@ moauthRegisterClient(
 
   json_length = strlen(json_data);
 
- /*
-  * Send a POST request with the JSON data...
-  */
-
+  // Send a POST request with the JSON data...
   if ((http = _moauthConnect(server->registration_endpoint, resource, sizeof(resource))) == NULL)
   {
     snprintf(server->error, sizeof(server->error), "Connection to registration endpoint failed: %s", cupsLastErrorString());
@@ -104,22 +95,22 @@ moauthRegisterClient(
   httpSetField(http, HTTP_FIELD_CONTENT_TYPE, "text/json");
   httpSetLength(http, json_length);
 
-  if (httpPost(http, resource))
+  if (!httpWriteRequest(http, "POST", resource))
   {
-    if (httpReconnect2(http, 30000, NULL))
+    if (httpReconnect(http, 30000, NULL))
     {
       snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsLastErrorString());
       goto done;
     }
 
-    if (httpPost(http, resource))
+    if (!httpWriteRequest(http, "POST", resource))
     {
       snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
       goto done;
     }
   }
 
-  if (httpWrite2(http, json_data, json_length) < json_length)
+  if (httpWrite(http, json_data, json_length) < json_length)
   {
     snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
     goto done;
@@ -151,10 +142,7 @@ moauthRegisterClient(
     snprintf(server->error, sizeof(server->error), "Unable to register client: POST status %d", status);
   }
 
- /*
-  * Return whatever we got...
-  */
-
+  // Return whatever we got...
   done:
 
   httpClose(http);

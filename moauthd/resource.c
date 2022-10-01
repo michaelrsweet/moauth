@@ -1,11 +1,11 @@
-/*
- * Resource handling for moauth daemon
- *
- * Copyright © 2017-2019 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Resource handling for moauth daemon
+//
+// Copyright © 2017-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
 #include "moauthd.h"
 #include "mmd.h"
@@ -13,9 +13,9 @@
 #include <sys/fcntl.h>
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static int		compare_resources(moauthd_resource_t *a, moauthd_resource_t *b);
 static void		free_resource(moauthd_resource_t *resource);
@@ -25,21 +25,21 @@ static void		write_leaf(moauthd_client_t *client, mmd_t *node);
 static void		write_string(moauthd_client_t *client, const char *s);
 
 
-/*
- * 'moauthdCreateResource()' - Create a resource record for a server.
- */
+//
+// 'moauthdCreateResource()' - Create a resource record for a server.
+//
 
-moauthd_resource_t *			/* O - New resource object */
+moauthd_resource_t *			// O - New resource object
 moauthdCreateResource(
-    moauthd_server_t  *server,		/* I - Server object */
-    moauthd_restype_t type,		/* I - Resource type */
-    const char        *remote_path,	/* I - Remote path */
-    const char        *local_path,	/* I - Local path, if any */
-    const char        *content_type,	/* I - MIME media type, if any */
-    const char        *scope)		/* I - Scope string */
+    moauthd_server_t  *server,		// I - Server object
+    moauthd_restype_t type,		// I - Resource type
+    const char        *remote_path,	// I - Remote path
+    const char        *local_path,	// I - Local path, if any
+    const char        *content_type,	// I - MIME media type, if any
+    const char        *scope)		// I - Scope string
 {
-  moauthd_resource_t	*resource;	/* Resource object */
-  static const char * const types[] =	/* Resource types */
+  moauthd_resource_t	*resource;	// Resource object
+  static const char * const types[] =	// Resource types
   {
     "Directory",
     "User-Directory",
@@ -60,50 +60,48 @@ moauthdCreateResource(
   resource->content_type = content_type ? strdup(content_type) : NULL;
   resource->scope        = strdup(scope);
 
-  pthread_rwlock_wrlock(&server->resources_lock);
+  cupsRWLockWrite(&server->resources_lock);
 
   if (!server->resources)
-    server->resources = cupsArrayNew3((cups_array_func_t)compare_resources, NULL, NULL, 0, NULL, (cups_afree_func_t)free_resource);
+    server->resources = cupsArrayNew((cups_array_cb_t)compare_resources, NULL, NULL, 0, NULL, (cups_afree_cb_t)free_resource);
 
   cupsArrayAdd(server->resources, resource);
 
-  pthread_rwlock_unlock(&server->resources_lock);
+  cupsRWUnlock(&server->resources_lock);
 
   return (resource);
 }
 
 
-/*
- * 'moauthdFindResource()' - Find the best matching resource for the request
- *                           path.
- */
+//
+// 'moauthdFindResource()' - Find the best matching resource for the request
+//                           path.
+//
 
-moauthd_resource_t *			/* O - Matching resource */
+moauthd_resource_t *			// O - Matching resource
 moauthdFindResource(
-    moauthd_server_t *server,		/* I - Server object */
-    const char       *path_info,	/* I - Remote path */
-    char             *name,		/* I - Filename buffer */
-    size_t           namesize,		/* I - Size of filename buffer */
-    struct stat      *info)		/* O - File information */
+    moauthd_server_t *server,		// I - Server object
+    const char       *path_info,	// I - Remote path
+    char             *name,		// I - Filename buffer
+    size_t           namesize,		// I - Size of filename buffer
+    struct stat      *info)		// O - File information
 {
-  int			i,		/* Looping var */
-			count;		/* Number of resources */
-  moauthd_resource_t	*resource,	/* Current resource */
-			*best = NULL;	/* Best match */
+  size_t		i,		// Looping var
+			count;		// Number of resources
+  moauthd_resource_t	*resource,	// Current resource
+			*best = NULL;	// Best match
 
 
   moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "FindResource %s", path_info);
+  memset(info, 0, sizeof(struct stat));
 
- /*
-  * Find the best matching (longest path match) resource based on the remote
-  * path...
-  */
+  // Find the best matching (longest path match) resource based on the remote
+  // path...
+  cupsRWLockRead(&server->resources_lock);
 
-  pthread_rwlock_rdlock(&server->resources_lock);
-
-  for (i = 0, count = cupsArrayCount(server->resources); i < count; i ++)
+  for (i = 0, count = cupsArrayGetCount(server->resources); i < count; i ++)
   {
-    resource = cupsArrayIndex(server->resources, i);
+    resource = cupsArrayGetElement(server->resources, i);
 
     if (!strncmp(path_info, resource->remote_path, resource->remote_len) && (!path_info[resource->remote_len] || path_info[resource->remote_len] == '/' || !strcmp(resource->remote_path, "/")))
     {
@@ -112,7 +110,7 @@ moauthdFindResource(
     }
   }
 
-  pthread_rwlock_unlock(&server->resources_lock);
+  cupsRWUnlock(&server->resources_lock);
 
   if (best)
     moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "FindResource %s matches %s", path_info, best->remote_path);
@@ -121,16 +119,10 @@ moauthdFindResource(
 
   if (best && best->local_path)
   {
-   /*
-    * Map local filename...
-    */
-
+    // Map local filename...
     if (path_info[best->remote_len])
     {
-     /*
-      * Directory match...
-      */
-
+      // Directory match...
       if (best->remote_len == 1)
 	snprintf(name, namesize, "%s%s", best->local_path, path_info);
       else
@@ -138,24 +130,15 @@ moauthdFindResource(
     }
     else
     {
-     /*
-      * Exact match...
-      */
-
+      // Exact match...
       strncpy(name, best->local_path, namesize - 1);
       name[namesize - 1] = '\0';
     }
 
-   /*
-    * Make sure we can access the file or directory...
-    */
-
+    // Make sure we can access the file or directory...
     if (stat(name, info) || (S_ISDIR(info->st_mode) && best->type == MOAUTHD_RESTYPE_FILE) || (!S_ISDIR(info->st_mode) && !S_ISREG(info->st_mode)))
     {
-     /*
-      * No, return NULL for no match...
-      */
-
+      // No, return NULL for no match...
       best  = NULL;
       *name = '\0';
     }
@@ -178,28 +161,25 @@ moauthdFindResource(
 }
 
 
-/*
- * 'moauthdGetFile()' - Get the named resource file.
- *
- * This function is also responsible for authorizing client access to the named
- * resource.
- */
+//
+// 'moauthdGetFile()' - Get the named resource file.
+//
+// This function is also responsible for authorizing client access to the named
+// resource.
+//
 
-int					/* O - HTTP status */
-moauthdGetFile(moauthd_client_t *client)/* I - Client object */
+http_status_t				// O - HTTP status
+moauthdGetFile(moauthd_client_t *client)// I - Client object
 {
-  moauthd_resource_t	*best;		/* Matching resource */
-  char			uri[1024],	/* Content-URI value */
-			localfile[1024];/* Local filename */
-  struct stat		localinfo;	/* Local file information */
-  const char		*ext,		/* Extension on local file */
-			*content_type;	/* Content type of file */
+  moauthd_resource_t	*best;		// Matching resource
+  char			uri[1024],	// Content-URI value
+			localfile[1024];// Local filename
+  struct stat		localinfo;	// Local file information
+  const char		*ext,		// Extension on local file
+			*content_type;	// Content type of file
 
 
- /*
-  * Find the file...
-  */
-
+  // Find the file...
   if ((best = moauthdFindResource(client->server, client->path_info, localfile, sizeof(localfile), &localinfo)) == NULL)
   {
     if (!strcmp(client->path_info, "/"))
@@ -212,20 +192,14 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
     }
   }
 
- /*
-  * Support authentication...
-  */
-
+  // Support authentication...
   if (best->scope && strcmp(best->scope, "public"))
   {
-   /*
-    * Need authentication...
-    */
-
+    // Need authentication...
     if (!client->remote_user[0] || (!strcmp(best->scope, "private") && client->remote_uid != localinfo.st_uid))
     {
       http_status_t status = client->remote_user[0] ? HTTP_STATUS_FORBIDDEN : HTTP_STATUS_UNAUTHORIZED;
-					/* Returned HTTP status */
+					// Returned HTTP status
 
       moauthdRespondClient(client, status, NULL, NULL, 0, 0);
 
@@ -233,26 +207,17 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
     }
   }
 
- /*
-  * Redirect for directories...
-  */
-
+  // Redirect for directories...
   if (S_ISDIR(localinfo.st_mode))
   {
-   /*
-    * Directory match, see if we have an index file...
-    */
-
-    char	temp[1024],		/* Temporary filename buffer */
-		*ptr;			/* Pointer into path_info */
+    // Directory match, see if we have an index file...
+    char	temp[1024],		// Temporary filename buffer
+		*ptr;			// Pointer into path_info
 
     ptr = client->path_info + strlen(client->path_info) - 1;
     if (ptr >= client->path_info && *ptr != '/')
     {
-     /*
-      * No trailing slash, need to redirect...
-      */
-
+      // No trailing slash, need to redirect...
       httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, "%s/", client->path_info);
       moauthdRespondClient(client, HTTP_STATUS_MOVED_PERMANENTLY, NULL, uri, 0, 0);
       return (HTTP_STATUS_MOVED_PERMANENTLY);
@@ -287,16 +252,10 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
   else
     httpAssembleURI(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, client->path_info);
 
- /*
-  * Serve the file...
-  */
-
+  // Serve the file...
   if (best->content_type)
   {
-   /*
-    * Content type is known...
-    */
-
+    // Content type is known...
     if (!strcmp(best->content_type, "text/markdown"))
     {
       content_type = "text/html";
@@ -310,10 +269,7 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
   }
   else
   {
-   /*
-    * Unknown type, guess...
-    */
-
+    // Unknown type, guess...
     if ((ext = strrchr(uri, '.')) == NULL)
       ext = ".txt";
 
@@ -339,27 +295,24 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
   {
     if (!strcmp(ext, ".md"))
     {
-     /*
-      * Serve a Markdown file...
-      */
-
-      FILE	*fp;			/* File */
-      mmd_t	*doc;			/* Markdown document */
-      const char *title;		/* Document title */
-      char	buffer[1024],		/* Temporary buffer */
-		*bufptr;		/* Pointer into buffer */
+      // Serve a Markdown file...
+      FILE	*fp;			// File
+      mmd_t	*doc;			// Markdown document
+      const char *title;		// Document title
+      char	buffer[1024],		// Temporary buffer
+		*bufptr;		// Pointer into buffer
 
       if (best->data)
         fp = fmemopen((void *)best->data, best->length, "rb");
       else
         fp = fopen(localfile, "rb");
 
-      doc = mmdLoadFile(fp);
+      doc = mmdLoadFile(NULL, fp);
       fclose(fp);
 
       if ((title = mmdGetMetadata(doc, "title")) == NULL)
       {
-        mmd_t *node;			/* Current Markdown node */
+        mmd_t *node;			// Current Markdown node
 
         for (node = mmdGetFirstChild(doc); node; node = mmdGetNextSibling(node))
         {
@@ -393,31 +346,25 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
     }
     else if (best->data)
     {
-     /*
-      * Serve a static/cached file...
-      */
-
+      // Serve a static/cached file...
       moauthdRespondClient(client, HTTP_STATUS_OK, content_type, uri, localinfo.st_mtime, best->length);
 
-      if (httpWrite2(client->http, best->data, best->length) < best->length)
+      if (httpWrite(client->http, best->data, best->length) < best->length)
         return (HTTP_STATUS_BAD_REQUEST);
     }
     else
     {
-     /*
-      * Serve any other file...
-      */
-
-      int	fd;			/* File descriptor */
-      char	buffer[16384];		/* Buffer */
-      ssize_t	bytes;			/* Bytes read/written */
+      // Serve any other file...
+      int	fd;			// File descriptor
+      char	buffer[16384];		// Buffer
+      ssize_t	bytes;			// Bytes read/written
 
       if ((fd = open(localfile, O_RDONLY)) >= 0)
       {
 	moauthdRespondClient(client, HTTP_STATUS_OK, content_type, uri, localinfo.st_mtime, localinfo.st_size);
 
         while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
-          httpWrite2(client->http, buffer, (size_t)bytes);
+          httpWrite(client->http, buffer, (size_t)bytes);
 
         close(fd);
       }
@@ -433,25 +380,25 @@ moauthdGetFile(moauthd_client_t *client)/* I - Client object */
 }
 
 
-/*
- * 'compare_resources()' - Compare the remote path of two resource objects...
- */
+//
+// 'compare_resources()' - Compare the remote path of two resource objects...
+//
 
-static int				/* O - Result of comparison */
-compare_resources(moauthd_resource_t *a,/* I - First resource */
-                  moauthd_resource_t *b)/* I - Second resource */
+static int				// O - Result of comparison
+compare_resources(moauthd_resource_t *a,// I - First resource
+                  moauthd_resource_t *b)// I - Second resource
 {
   return (strcmp(a->remote_path, b->remote_path));
 }
 
 
-/*
- * 'free_resource()' - Free a resource object.
- */
+//
+// 'free_resource()' - Free a resource object.
+//
 
 static void
 free_resource(
-    moauthd_resource_t *resource)	/* I - Resource object */
+    moauthd_resource_t *resource)	// I - Resource object
 {
   free(resource->remote_path);
   if (resource->local_path)
@@ -463,17 +410,17 @@ free_resource(
 }
 
 
-/*
- * 'make_anchor()' - Make an anchor for internal links.
- */
+//
+// 'make_anchor()' - Make an anchor for internal links.
+//
 
-static const char *                     /* O - Anchor string */
-make_anchor(const char *text,           /* I - Text */
-            char       *buffer,		/* I - Buffer */
-            size_t     bufsize)		/* I - Size of buffer */
+static const char *                     // O - Anchor string
+make_anchor(const char *text,           // I - Text
+            char       *buffer,		// I - Buffer
+            size_t     bufsize)		// I - Size of buffer
 {
-  char	*bufptr,			/* Pointer into buffer */
-	*bufend = buffer + bufsize - 1;	/* End of buffer */
+  char	*bufptr,			// Pointer into buffer
+	*bufend = buffer + bufsize - 1;	// End of buffer
 
 
   for (bufptr = buffer; *text && bufptr < bufend; text ++)
@@ -490,18 +437,18 @@ make_anchor(const char *text,           /* I - Text */
 }
 
 
-/*
- * 'write_block()' - Write a block node as HTML.
- */
+//
+// 'write_block()' - Write a block node as HTML.
+//
 
 static void
-write_block(moauthd_client_t *client,	/* I - Client connection */
-            mmd_t            *parent)	/* I - Parent node */
+write_block(moauthd_client_t *client,	// I - Client connection
+            mmd_t            *parent)	// I - Parent node
 {
-  const char	*element,		/* Enclosing element, if any */
-		*hclass = NULL;		/* HTML class, if any */
-  mmd_t         *node;                  /* Current child node */
-  mmd_type_t    type;                   /* Node type */
+  const char	*element,		// Enclosing element, if any
+		*hclass = NULL;		// HTML class, if any
+  mmd_t         *node;                  // Current child node
+  mmd_type_t    type;                   // Node type
 
 
   switch (type = mmdGetType(parent))
@@ -602,14 +549,11 @@ write_block(moauthd_client_t *client,	/* I - Client connection */
 
   if (type >= MMD_TYPE_HEADING_1 && type <= MMD_TYPE_HEADING_6)
   {
-   /*
-    * Add an anchor for each heading...
-    */
-
+    // Add an anchor for each heading...
     moauthdHTMLPrintf(client, "    <%s id=\"", element);
     for (node = mmdGetFirstChild(parent); node; node = mmdGetNextSibling(node))
     {
-      char	anchor[1024];		/* Anchor string */
+      char	anchor[1024];		// Anchor string
 
       if (mmdGetWhitespace(node))
         write_string(client, "-");
@@ -633,17 +577,17 @@ write_block(moauthd_client_t *client,	/* I - Client connection */
 }
 
 
-/*
- * 'write_leaf()' - Write a leaf node as HTML.
- */
+//
+// 'write_leaf()' - Write a leaf node as HTML.
+//
 
 static void
-write_leaf(moauthd_client_t *client,	/* I - Client connection */
-           mmd_t            *node)	/* I - Leaf node */
+write_leaf(moauthd_client_t *client,	// I - Client connection
+           mmd_t            *node)	// I - Leaf node
 {
-  const char    *element,               /* Encoding element, if any */
-                *text,                  /* Text to write */
-                *url;                   /* URL to write */
+  const char    *element,               // Encoding element, if any
+                *text,                  // Text to write
+                *url;                   // URL to write
 
 
   if (mmdGetWhitespace(node))
@@ -696,7 +640,7 @@ write_leaf(moauthd_client_t *client,	/* I - Client connection */
 
   if (url)
   {
-    char	anchor[1024];		/* Anchor string */
+    char	anchor[1024];		// Anchor string
 
     if (!strcmp(url, "@"))
       moauthdHTMLPrintf(client, "<a href=\"#%s\">", make_anchor(text, anchor, sizeof(anchor)));
@@ -724,13 +668,13 @@ write_leaf(moauthd_client_t *client,	/* I - Client connection */
 }
 
 
-/*
- * 'write_string()' - Write a string to the client...
- */
+//
+// 'write_string()' - Write a string to the client...
+//
 
 static void
-write_string(moauthd_client_t *client,	/* I - Client connection */
-             const char       *s)	/* I - String to write */
+write_string(moauthd_client_t *client,	// I - Client connection
+             const char       *s)	// I - String to write
 {
-  httpWrite2(client->http, s, strlen(s));
+  httpWrite(client->http, s, strlen(s));
 }

@@ -1,44 +1,44 @@
-/*
- * Logging support for moauth daemon
- *
- * Copyright © 2017 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
- */
+//
+// Logging support for moauth daemon
+//
+// Copyright © 2017-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+//
 
 #include "moauthd.h"
 #include <stdarg.h>
 #include <syslog.h>
 
 
-/*
- * Local globals...
- */
+//
+// Local globals...
+//
 
 static const int priorities[] = { LOG_ERR, LOG_INFO, LOG_DEBUG };
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static void	file_log(int fd, const char *message, va_list ap);
 
 
-/*
- * 'moauthdLogc()' - Log a client message.
- */
+//
+// 'moauthdLogc()' - Log a client message.
+//
 
 void
-moauthdLogc(moauthd_client_t   *client,	/* I - Client object */
-            moauthd_loglevel_t level,	/* I - Log level */
-            const char         *message,/* I - Printf-style message */
-            ...)			/* I - Additional arguments as needed */
+moauthdLogc(moauthd_client_t   *client,	// I - Client object
+            moauthd_loglevel_t level,	// I - Log level
+            const char         *message,// I - Printf-style message
+            ...)			// I - Additional arguments as needed
 {
   moauthd_server_t *server = client->server;
-					/* Server object */
-  char		cmessage[1024];		/* Client message */
-  va_list	ap;			/* Argument pointer */
+					// Server object
+  char		cmessage[1024];		// Client message
+  va_list	ap;			// Argument pointer
 
 
   if (level > server->log_level || server->log_file < 0)
@@ -56,17 +56,17 @@ moauthdLogc(moauthd_client_t   *client,	/* I - Client object */
 }
 
 
-/*
- * 'moauthdLogs()' - Log a server message.
- */
+//
+// 'moauthdLogs()' - Log a server message.
+//
 
 void
-moauthdLogs(moauthd_server_t   *server,	/* I - Server object */
-            moauthd_loglevel_t level,	/* I - Log level */
-            const char         *message,/* I - Printf-style message */
-            ...)			/* I - Additional arguments as needed */
+moauthdLogs(moauthd_server_t   *server,	// I - Server object
+            moauthd_loglevel_t level,	// I - Log level
+            const char         *message,// I - Printf-style message
+            ...)			// I - Additional arguments as needed
 {
-  va_list	ap;			/* Argument pointer */
+  va_list	ap;			// Argument pointer
 
 
   if (level > server->log_level || server->log_file < 0)
@@ -83,21 +83,21 @@ moauthdLogs(moauthd_server_t   *server,	/* I - Server object */
 }
 
 
-/*
- * "file_log()" - Log a message to a file.
- */
+//
+// "file_log()" - Log a message to a file.
+//
 
 static void
-file_log(int        fd,			/* I - File to write to */
-         const char *message,		/* I - Printf-style message */
-         va_list    ap)			/* I - Argument pointer */
+file_log(int        fd,			// I - File to write to
+         const char *message,		// I - Printf-style message
+         va_list    ap)			// I - Argument pointer
 {
-  time_t	curtime;		/* Current date/time in seconds */
-  struct tm	curdate;		/* Current date/time info */
-  char		buffer[8192],		/* Message buffer */
-		*bufptr;		/* Pointer into buffer */
-  size_t        total;                  /* Length of log line */
-  ssize_t       bytes;                  /* Bytes written */
+  time_t	curtime;		// Current date/time in seconds
+  struct tm	curdate;		// Current date/time info
+  char		buffer[8192],		// Message buffer
+		*bufptr;		// Pointer into buffer
+  size_t        total;                  // Length of log line
+  ssize_t       bytes;                  // Bytes written
 
 
   time(&curtime);

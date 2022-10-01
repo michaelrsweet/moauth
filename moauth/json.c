@@ -1,43 +1,40 @@
-/*
- * JSON support for moauth library
- *
- * Copyright © 2017-2018 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
- */
+//
+// JSON support for moauth library
+//
+// Copyright © 2017-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+//
 
 #include <config.h>
 #include "moauth-private.h"
 #include <ctype.h>
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static const char *decode_string(const char *data, char term, char *buffer, size_t bufsize);
 static char *encode_string(const char *s, char *bufptr, char *bufend);
 
 
-/*
- * '_moauthJSONDecode()' - Decode an application/json object.
- */
+//
+// '_moauthJSONDecode()' - Decode an application/json object.
+//
 
-int					/* O - Number of JSON member variables or 0 on error */
-_moauthJSONDecode(const char    *data,	/* I - JSON data */
-                  cups_option_t **vars)	/* O - JSON member variables or @code NULL@ on error */
+size_t					// O - Number of JSON member variables or 0 on error
+_moauthJSONDecode(const char    *data,	// I - JSON data
+                  cups_option_t **vars)	// O - JSON member variables or `NULL` on error
 {
-  int	num_vars = 0;			/* Number of form variables */
-  char	name[1024],			/* Variable name */
-	value[4096],			/* Variable value */
-	*ptr,				/* Pointer into value */
-	*end;				/* End of value */
+  size_t	num_vars = 0;		// Number of form variables
+  char		name[1024],		// Variable name
+		value[4096],		// Variable value
+		*ptr,			// Pointer into value
+		*end;			// End of value
 
 
- /*
-  * Scan the string for "name":"value" pairs, unescaping values as needed.
-  */
-
+  // Scan the string for "name":"value" pairs, unescaping values as needed.
   *vars = NULL;
 
   if (!data || *data != '{')
@@ -47,17 +44,11 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
 
   while (*data)
   {
-   /*
-    * Skip leading whitespace/commas...
-    */
-
+    // Skip leading whitespace/commas...
     while (*data && (isspace(*data & 255) || *data == ','))
       data ++;
 
-   /*
-    * Get the member variable name, unless we have the end of the object...
-    */
-
+    // Get the member variable name, unless we have the end of the object...
     if (*data == '}')
       break;
     else if (*data != '\"')
@@ -77,10 +68,7 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
 
     if (*data == '\"')
     {
-     /*
-      * Quoted string value...
-      */
-
+      // Quoted string value...
       data = decode_string(data + 1, '\"', value, sizeof(value));
 
       if (*data != '\"')
@@ -90,10 +78,7 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
     }
     else if (*data == '[')
     {
-     /*
-      * Array value...
-      */
-
+      // Array value...
       ptr    = value;
       end    = value + sizeof(value) - 1;
       *ptr++ = '[';
@@ -109,10 +94,7 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
         }
         else if (*data == '\"')
         {
-         /*
-          * Quoted string value...
-          */
-
+          // Quoted string value...
           do
           {
 	    if (*data == '\\')
@@ -137,7 +119,7 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
 		  *ptr++ = *data++;
 		  *ptr++ = *data++;
 		  *ptr++ = *data++;
-		  /* 4th character is copied below */
+		  // 4th character is copied below
 	        }
 	        else
 	          goto decode_error;
@@ -161,18 +143,12 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
         }
         else if (*data == '{' || *data == '[')
         {
-         /*
-          * Unsupported nested array or object value...
-          */
-
+          // Unsupported nested array or object value...
 	  goto decode_error;
 	}
 	else
 	{
-	 /*
-	  * Number, boolean, etc.
-	  */
-
+	  // Number, boolean, etc.
           while (*data && *data != ',' && !isspace(*data & 255))
           {
             if (ptr < end)
@@ -193,18 +169,12 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
     }
     else if (*data == '{')
     {
-     /*
-      * Unsupported object value...
-      */
-
+      // Unsupported object value...
       goto decode_error;
     }
     else
     {
-     /*
-      * Number, boolean, etc.
-      */
-
+      // Number, boolean, etc.
       for (ptr = value; *data && *data != ',' && !isspace(*data & 255); data ++)
         if (ptr < (value + sizeof(value) - 1))
           *ptr++ = *data;
@@ -212,19 +182,13 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
       *ptr = '\0';
     }
 
-   /*
-    * Add the variable...
-    */
-
+    // Add the variable...
     num_vars = cupsAddOption(name, value, num_vars, vars);
   }
 
   return (num_vars);
 
- /*
-  * If we get here there was an error in the form data...
-  */
-
+  // If we get here there was an error in the form data...
   decode_error:
 
   cupsFreeOptions(num_vars, *vars);
@@ -235,23 +199,23 @@ _moauthJSONDecode(const char    *data,	/* I - JSON data */
 }
 
 
-/*
- * '_moauthJSONEncode()' - Encode variables as a JSON object.
- *
- * The caller is responsible for calling @code free@ on the returned string.
- */
+//
+// '_moauthJSONEncode()' - Encode variables as a JSON object.
+//
+// The caller is responsible for calling @code free@ on the returned string.
+//
 
-char *					/* O - Encoded data or @code NULL@ on error */
+char *					// O - Encoded data or `NULL` on error
 _moauthJSONEncode(
-    int           num_vars,		/* I - Number of JSON member variables */
-    cups_option_t *vars)		/* I - JSON member variables */
+    size_t        num_vars,		// I - Number of JSON member variables
+    cups_option_t *vars)		// I - JSON member variables
 {
-  char		buffer[65536],		/* Temporary buffer */
-		*bufptr = buffer,	/* Current position in buffer */
+  char		buffer[65536],		// Temporary buffer
+		*bufptr = buffer,	// Current position in buffer
 		*bufend = buffer + sizeof(buffer) - 2;
-					/* End of buffer */
-  const char	*valptr;		/* Pointer into value */
-  int		is_number;		/* Is the value a number? */
+					// End of buffer
+  const char	*valptr;		// Pointer into value
+  int		is_number;		// Is the value a number?
 
   *bufptr++ = '{';
   *bufend   = '\0';
@@ -267,11 +231,8 @@ _moauthJSONEncode(
 
     if (vars->value[0] == '[')
     {
-     /*
-      * Array value, already encoded...
-      */
-
-      strncpy(bufptr, vars->value, bufend - bufptr);
+      // Array value, already encoded...
+      cupsCopyString(bufptr, vars->value, bufend - bufptr);
       bufptr += strlen(bufptr);
     }
     else
@@ -288,10 +249,7 @@ _moauthJSONEncode(
 
       if (is_number)
       {
-       /*
-	* Copy number literal...
-	*/
-
+        // Copy number literal...
 	for (valptr = vars->value; *valptr; valptr ++)
 	{
 	  if (bufptr < bufend)
@@ -300,10 +258,7 @@ _moauthJSONEncode(
       }
       else
       {
-       /*
-	* Copy string value...
-	*/
-
+        // Copy string value...
 	bufptr = encode_string(vars->value, bufptr, bufend);
       }
     }
@@ -327,29 +282,26 @@ _moauthJSONEncode(
 }
 
 
-/*
- * 'decode_string()' - Decode a URL-encoded string.
- */
+//
+// 'decode_string()' - Decode a URL-encoded string.
+//
 
-static const char *                     /* O - New pointer into string */
-decode_string(const char *data,         /* I - Pointer into data string */
-              char       term,          /* I - Terminating character */
-              char       *buffer,       /* I - String buffer */
-              size_t     bufsize)       /* I - Size of string buffer */
+static const char *                     // O - New pointer into string
+decode_string(const char *data,         // I - Pointer into data string
+              char       term,          // I - Terminating character
+              char       *buffer,       // I - String buffer
+              size_t     bufsize)       // I - Size of string buffer
 {
-  int	ch;				/* Current character */
-  char	*ptr,				/* Pointer info buffer */
-	*end;				/* Pointer to end of buffer */
+  int	ch;				// Current character
+  char	*ptr,				// Pointer info buffer
+	*end;				// Pointer to end of buffer
 
 
   for (ptr = buffer, end = buffer + bufsize - 1; *data && *data != term; data ++)
   {
     if ((ch = *data) == '\\')
     {
-     /*
-      * "\something" is an escaped character...
-      */
-
+      // "\something" is an escaped character...
       data ++;
 
       switch (*data)
@@ -404,7 +356,7 @@ decode_string(const char *data,         /* I - Pointer into data string */
               break;
             }
 
-            /* Fall through to default on error */
+            // Fall through to default on error
 	default :
 	    *buffer = '\0';
 	    return (NULL);
@@ -421,16 +373,16 @@ decode_string(const char *data,         /* I - Pointer into data string */
 }
 
 
-/*
- * 'encode_string()' - URL-encode a string.
- *
- * The new buffer pointer can go past bufend, but we don't write past there...
- */
+//
+// 'encode_string()' - URL-encode a string.
+//
+// The new buffer pointer can go past bufend, but we don't write past there...
+//
 
-static char *                           /* O - New buffer pointer */
-encode_string(const char *s,            /* I - String to encode */
-              char       *bufptr,       /* I - Pointer into buffer */
-              char       *bufend)       /* I - End of buffer */
+static char *                           // O - New buffer pointer
+encode_string(const char *s,            // I - String to encode
+              char       *bufptr,       // I - Pointer into buffer
+              char       *bufend)       // I - End of buffer
 {
   if (bufptr < bufend)
     *bufptr++ = '\"';

@@ -1,10 +1,10 @@
-/*
- * Unit test program for moauth library
- *
- * Copyright © 2017-2018 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
- */
+//
+// Unit test program for moauth library
+//
+// Copyright © 2017-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+//
 
 #include <config.h>
 #include <stdio.h>
@@ -12,21 +12,21 @@
 #include "moauth-private.h"
 
 
-/*
- * 'main()' - Main entry for unit test program.
- */
+//
+// 'main()' - Main entry for unit test program.
+//
 
-int					/* O - Exit status */
+int					// O - Exit status
 main(void)
 {
-  int           status = 0;             /* Exit status */
-  int           i;                      /* Looping var */
-  char          *data;                  /* Data pointer */
-  int           count,                  /* Expected variable count */
-                num_vars;               /* Number of variables */
-  cups_option_t *vars;                  /* Variables */
-  const char    *value;                 /* Value */
-  static const char * const decodes[] = /* Decode string tests */
+  int           status = 0;             // Exit status
+  int           i;                      // Looping var
+  char          *data;                  // Data pointer
+  size_t	count,                  // Expected variable count
+		num_vars;               // Number of variables
+  cups_option_t *vars;                  // Variables
+  const char    *value;                 // Value
+  static const char * const decodes[] = // Decode string tests
   {
     "0?",
     "0?name",
@@ -40,7 +40,7 @@ main(void)
     "1?challenge=zUbp6O0S%2Byxx1VwQkOU9clcNDoBTddyY2e2SDwV1ha0%3D"
   };
   static const char * const encodes[][3] =
-  {                                     /* Encode string tests */
+  {                                     // Encode string tests
     { "empty", "", "empty=" },
     { "name", "value", "empty=&name=value" },
     { "name", "value with spaces", "empty=&name=value+with+spaces" },
@@ -67,10 +67,7 @@ main(void)
     "}";
 
 
- /*
-  * Test decoding different URL strings...
-  */
-
+  // Test decoding different URL strings...
   for (i = 0; i < (int)(sizeof(decodes) / sizeof(decodes[0])); i ++)
   {
     printf("_moauthFormDecode(\"%s\", ...): ", decodes[i]);
@@ -80,7 +77,7 @@ main(void)
 
     if (count != num_vars)
     {
-      printf("FAIL (got %d variables, expected %d)\n", num_vars, count);
+      printf("FAIL (got %d variables, expected %d)\n", (int)num_vars, (int)count);
       status = 1;
     }
     else if ((value = cupsGetOption("empty", num_vars, vars)) != NULL && strcmp(value, ""))
@@ -119,15 +116,14 @@ main(void)
       status = 1;
     }
     else
+    {
       puts("PASS");
+    }
 
     cupsFreeOptions(num_vars, vars);
   }
 
- /*
-  * Test encoding different form variables...
-  */
-
+  // Test encoding different form variables...
   for (i = 0, num_vars = 0, vars = NULL; i < (int)(sizeof(encodes) / sizeof(encodes[0])); i ++)
   {
     printf("_moauthFormEncode(\"%s=%s\", ...): ", encodes[i][0], encodes[i][1]);
@@ -154,17 +150,14 @@ main(void)
 
   cupsFreeOptions(num_vars, vars);
 
- /*
-  * Test JSON encoding/decoding...
-  */
-
+  // Test JSON encoding/decoding...
   fputs("_moauthJSONDecode(...): ", stdout);
 
   num_vars = _moauthJSONDecode(json_in, &vars);
 
   if (num_vars != 6)
   {
-    printf("FAIL (got %d vars, expected 6)\n", num_vars);
+    printf("FAIL (got %d vars, expected 6)\n", (int)num_vars);
     status = 1;
   }
   else if ((value = cupsGetOption("access_token", num_vars, vars)) == NULL || strcmp(value, "2YotnFZFEjr1zCsicMWpAA"))
@@ -244,9 +237,6 @@ main(void)
 
   cupsFreeOptions(num_vars, vars);
 
- /*
-  * Return the test results...
-  */
-
+  // Return the test results...
   return (status);
 }

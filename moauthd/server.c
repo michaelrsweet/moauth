@@ -1,11 +1,11 @@
-/*
- * Server support for moauth daemon
- *
- * Copyright © 2017-2019 by Michael R Sweet
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Server support for moauth daemon
+//
+// Copyright © 2017-2022 by Michael R Sweet
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
 #include "moauthd.h"
 #include <unistd.h>
@@ -20,9 +20,9 @@
 
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static int	compare_applications(moauthd_application_t *a, moauthd_application_t *b);
 static moauthd_application_t *copy_application(moauthd_application_t *a);
@@ -30,22 +30,23 @@ static void	free_application(moauthd_application_t *a);
 static int	get_seconds(const char *value);
 
 
-/*
- * 'moauthdAddApplication()' - Add an application (OAuth client) to the server.
- */
+//
+// 'moauthdAddApplication()' - Add an application (OAuth client) to the server.
+//
 
-moauthd_application_t *			/* O - New application object */
+moauthd_application_t *			// O - New application object
 moauthdAddApplication(
-    moauthd_server_t *server,		/* I - Server */
-    const char       *client_id,	/* I - Client ID */
-    const char       *redirect_uri,	/* I - Redirection URI */
-    const char       *client_name,	/* I - Human-readable name or `NULL` for none */
-    const char       *client_uri,	/* I - Web page or `NULL` for none */
-    const char       *logo_uri,		/* I - Logo URI or `NULL` for none */
-    const char       *tos_uri)		/* I - Terms-of-service URI or `NULL` for none */
+    moauthd_server_t *server,		// I - Server
+    const char       *client_id,	// I - Client ID
+    const char       *redirect_uri,	// I - Redirection URI
+    const char       *client_name,	// I - Human-readable name or `NULL` for none
+    const char       *client_uri,	// I - Web page or `NULL` for none
+    const char       *logo_uri,		// I - Logo URI or `NULL` for none
+    const char       *tos_uri)		// I - Terms-of-service URI or `NULL` for none
 {
-  moauthd_application_t	temp,		/* Temporary application data */
-			*app;		/* New application */
+  moauthd_application_t	temp,		// Temporary application data
+			*app;		// New application
+
 
   temp.client_id    = (char *)client_id;
   temp.redirect_uri = (char *)redirect_uri;
@@ -54,100 +55,88 @@ moauthdAddApplication(
   temp.logo_uri     = (char *)logo_uri;
   temp.tos_uri      = (char *)tos_uri;
 
-  pthread_mutex_lock(&server->applications_lock);
+  cupsMutexLock(&server->applications_lock);
 
   if (!server->applications)
-    server->applications = cupsArrayNew3((cups_array_func_t)compare_applications, NULL, NULL, 0, (cups_acopy_func_t)copy_application, (cups_afree_func_t)free_application);
+    server->applications = cupsArrayNew((cups_array_cb_t)compare_applications, NULL, NULL, 0, (cups_acopy_cb_t)copy_application, (cups_afree_cb_t)free_application);
 
   cupsArrayAdd(server->applications, &temp);
 
   app = (moauthd_application_t *)cupsArrayFind(server->applications, &temp);
 
-  pthread_mutex_unlock(&server->applications_lock);
+  cupsMutexUnlock(&server->applications_lock);
 
   return (app);
 }
 
 
-/*
- * 'moauthdCreateServer()' - Create a new server object and load the specified config file.
- */
+//
+// 'moauthdCreateServer()' - Create a new server object and load the specified config file.
+//
 
-moauthd_server_t *			/* O - New server object */
+moauthd_server_t *			// O - New server object
 moauthdCreateServer(
-    const char *configfile,		/* I - Configuration file to load */
-    int        verbosity)		/* I - Extra verbosity from command-line */
+    const char *configfile,		// I - Configuration file to load
+    int        verbosity)		// I - Extra verbosity from command-line
 {
-  moauthd_server_t *server;		/* Server object */
-  cups_file_t	*fp = NULL;		/* Opened config file */
-  char		server_name[256],	/* Server name */
-		server_ports[8],	/* Listening port (string) */
-		*ptr;			/* Pointer into server name */
+  moauthd_server_t *server;		// Server object
+  cups_file_t	*fp = NULL;		// Opened config file
+  char		server_name[256],	// Server name
+		server_ports[8],	// Listening port (string)
+		*ptr;			// Pointer into server name
   int		server_port = 9000 + (getuid() % 1000);
-					/* Listening port (number) */
-  http_addrlist_t *addrlist,		/* List of listener addresses */
-		*addr;			/* Current address */
-  char		temp[1024];		/* Temporary filename */
-  struct stat	tempinfo;		/* Temporary information */
-  int		num_json;		/* Number of OpenID JSON variables */
-  cups_option_t	*json;			/* OpenID JSON variables */
-  moauthd_resource_t *r;		/* Resource */
-  struct group	*group;			/* Group information */
+					// Listening port (number)
+  http_addrlist_t *addrlist,		// List of listener addresses
+		*addr;			// Current address
+  char		temp[1024];		// Temporary filename
+  struct stat	tempinfo;		// Temporary information
+  size_t	num_json;		// Number of OpenID JSON variables
+  cups_option_t	*json;			// OpenID JSON variables
+  moauthd_resource_t *r;		// Resource
+  struct group	*group;			// Group information
 
 
- /*
-  * Open the configuration file if one is specified...
-  */
-
+  // Open the configuration file if one is specified...
   if (configfile && (fp = cupsFileOpen(configfile, "r")) == NULL)
   {
     fprintf(stderr, "moauthd: Unable to open configuration file \"%s\": %s\n", configfile, strerror(errno));
     return (NULL);
   }
 
- /*
-  * Allocate a server object and initialize with defaults...
-  */
-
+  // Allocate a server object and initialize with defaults...
   server = calloc(1, sizeof(moauthd_server_t));
 
-  pthread_mutex_init(&server->applications_lock, NULL);
-  pthread_rwlock_init(&server->resources_lock, NULL);
-  pthread_rwlock_init(&server->tokens_lock, NULL);
+  cupsMutexInit(&server->applications_lock);
+  cupsRWInit(&server->resources_lock);
+  cupsRWInit(&server->tokens_lock);
 
-  server->introspect_group = -1;	/* none */
-  server->log_file         = 2;		/* stderr */
+  server->introspect_group = -1;	// none
+  server->log_file         = 2;		// stderr
   server->log_level        = MOAUTHD_LOGLEVEL_ERROR;
-  server->max_grant_life   = 300;	/* 5 minutes */
-  server->max_token_life   = 604800;	/* 1 week */
-  server->register_group   = -1;	/* none */
+  server->max_grant_life   = 300;	// 5 minutes
+  server->max_token_life   = 604800;	// 1 week
+  server->register_group   = -1;	// none
 
   httpGetHostname(NULL, server_name, sizeof(server_name));
   ptr = server_name + strlen(server_name) - 1;
   if (ptr > server_name && *ptr == '.')
-    *ptr = '\0';			/* Strip trailing "." from hostname */
+    *ptr = '\0';			// Strip trailing "." from hostname
 
   if (fp)
   {
-   /*
-    * Load configuration from file...
-    */
-
-    char	line[2048],		/* Line from config file */
-		*value;			/* Value from config file */
-    int		linenum = 0;		/* Current line number */
+    // Load configuration from file...
+    char	line[2048],		// Line from config file
+		*value;			// Value from config file
+    int		linenum = 0;		// Current line number
 
     while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
     {
       if (!strcasecmp(line, "Application"))
       {
-       /*
-        * Application client-id redirect-uri client-name
-        */
-
-        const char	*client_id,	/* Client ID */
-			*client_name,	/* Client name */
-			*redirect_uri;	/* Redirection URI */
+        // Application client-id redirect-uri client-name
+        const char	*client_id,	// Client ID
+			*client_name,	// Client name
+			*redirect_uri;	// Redirection URI
 
         if (!value)
         {
@@ -179,10 +168,7 @@ moauthdCreateServer(
       }
       else if (!strcasecmp(line, "LogFile"))
       {
-       /*
-        * LogFile {filename,none,stderr,syslog}
-        */
-
+        // LogFile {filename,none,stderr,syslog}
         if (!value || !strcasecmp(value, "stderr"))
         {
           server->log_file = 2;
@@ -204,10 +190,7 @@ moauthdCreateServer(
       }
       else if (!strcasecmp(line, "LogLevel"))
       {
-       /*
-        * LogLevel {error,info,debug}
-        */
-
+        // LogLevel {error,info,debug}
         if (!value)
         {
           fprintf(stderr, "moauthd: Missing log level on line %d of \"%s\".\n", linenum, configfile);
@@ -226,14 +209,11 @@ moauthdCreateServer(
       }
       else if (!strcasecmp(line, "IntrospectGroup"))
       {
-       /*
-        * IntrospectGroup nnn
-        * IntrospectGroup name
-        *
-        * Required group membership (and thus required authentication for)
-        * token introspection.
-        */
-
+        // IntrospectGroup nnn
+        // IntrospectGroup name
+        //
+        // Required group membership (and thus required authentication for)
+        // token introspection.
         if (!value)
         {
 	  fprintf(stderr, "moauthd: Missing IntrospectGroup on line %d of \"%s\".\n", linenum, configfile);
@@ -261,14 +241,11 @@ moauthdCreateServer(
       }
       else if (!strcasecmp(line, "RegisterGroup"))
       {
-       /*
-        * RegisterGroup nnn
-        * RegisterGroup name
-        *
-        * Required group membership (and thus required authentication for)
-        * client registration.
-        */
-
+        // RegisterGroup nnn
+        // RegisterGroup name
+        //
+        // Required group membership (and thus required authentication for)
+        // client registration.
         if (!value)
         {
 	  fprintf(stderr, "moauthd: Missing RegisterGroup on line %d of \"%s\".\n", linenum, configfile);
@@ -296,14 +273,11 @@ moauthdCreateServer(
       }
       else if (!strcasecmp(line, "MaxGrantLife"))
       {
-       /*
-        * MaxGrantLife NNN{m,h,d,w}
-        *
-        * Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
-        * and "w" is weeks.
-        */
-
-        int	max_grant_life;		/* Maximum grant life value */
+        // MaxGrantLife NNN{m,h,d,w}
+        //
+        // Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
+        // and "w" is weeks.
+        int	max_grant_life;		// Maximum grant life value
 
         if (!value)
         {
@@ -321,14 +295,11 @@ moauthdCreateServer(
       }
       else if (!strcasecmp(line, "MaxTokenLife"))
       {
-       /*
-        * MaxTokenLife NNN{m,h,d,w}
-        *
-        * Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
-        * and "w" is weeks.
-        */
-
-        int	max_token_life;		/* Maximum token life value */
+        // MaxTokenLife NNN{m,h,d,w}
+        //
+        // Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
+        // and "w" is weeks.
+        int	max_token_life;		// Maximum token life value
 
         if (!value)
         {
@@ -346,10 +317,7 @@ moauthdCreateServer(
       }
       else if (!strcasecmp(line, "Option"))
       {
-       /*
-        * Option {[-]BasicAuth}
-        */
-
+        // Option {[-]BasicAuth}
         if (!value)
         {
 	  fprintf(stderr, "moauthd: Bad Option on line %d of \"%s\".\n", linenum, configfile);
@@ -363,14 +331,11 @@ moauthdCreateServer(
       }
       else if (!strcasecmp(line, "Resource"))
       {
-       /*
-        * Resource {public,private,shared} /remote/path /local/path
-        */
-
-        char		*scope,		/* Access scope */
-			*remote_path,	/* Remote path */
-			*local_path;	/* Local path */
-        struct stat	local_info;	/* Local file info */
+        // Resource {public,private,shared} /remote/path /local/path
+        char		*scope,		// Access scope
+			*remote_path,	// Remote path
+			*local_path;	// Local path
+        struct stat	local_info;	// Local file info
 
         if (!value)
         {
@@ -398,11 +363,8 @@ moauthdCreateServer(
       }
       else if (!strcasecmp(line, "ServerName"))
       {
-       /*
-        * ServerName hostname[:port]
-        */
-
-	char	*portptr;		/* Pointer to port in line */
+        // ServerName hostname[:port]
+	char	*portptr;		// Pointer to port in line
 
         if (!value)
         {
@@ -412,10 +374,7 @@ moauthdCreateServer(
 
         if ((portptr = strrchr(value, ':')) != NULL && isdigit(portptr[1] & 255))
 	{
-	 /*
-	  * Extract ":port" portion...
-	  */
-
+	  // Extract ":port" portion...
 	  *portptr++ = '\0';
 	  server_port = atoi(portptr);
 	}
@@ -447,33 +406,27 @@ moauthdCreateServer(
   server->name = strdup(server_name);
   server->port = server_port;
 
- /*
-  * Setup listeners...
-  */
-
+  // Setup listeners...
   snprintf(server_ports, sizeof(server_ports), "%d", server_port);
   addrlist = httpAddrGetList(NULL, AF_UNSPEC, server_ports);
   for (addr = addrlist; addr; addr = addr->next)
   {
     int			sock = httpAddrListen(&(addr->addr), server_port);
-					/* Listener socket */
+					// Listener socket
     struct pollfd	*lis = server->listeners + server->num_listeners;
-					/* Pointer to polling data */
+					// Pointer to polling data
 
     if (sock < 0)
     {
-      char temp[256];			/* Address string */
+      char temp[256];			// Address string
 
-      fprintf(stderr, "moauthd: Unable to listen to \"%s:%d\": %s\n", httpAddrString(&(addr->addr), temp, sizeof(temp)), server_port, strerror(errno));
+      fprintf(stderr, "moauthd: Unable to listen to \"%s:%d\": %s\n", httpAddrGetString(&(addr->addr), temp, sizeof(temp)), server_port, strerror(errno));
       continue;
     }
 
     if (server->num_listeners >= (int)(sizeof(server->listeners) / sizeof(server->listeners[0])))
     {
-     /*
-      * Unlikely, but ignore more than N listeners...
-      */
-
+      // Unlikely, but ignore more than N listeners...
       fputs("moauthd: Ignoring extra listener addresses.\n", stderr);
       break;
     }
@@ -491,10 +444,7 @@ moauthdCreateServer(
     goto create_failed;
   }
 
- /*
-  * Update logging and log our authorization server's URL...
-  */
-
+  // Update logging and log our authorization server's URL...
   if (verbosity == 1 && server->log_level < MOAUTHD_LOGLEVEL_DEBUG)
     server->log_level ++;
   else if (verbosity > 1)
@@ -507,167 +457,120 @@ moauthdCreateServer(
 
   cupsSetServerCredentials(getenv("SNAP_DATA"), server->name, 1);
 
- /*
-  * Generate OpenID/RFC 8414 JSON metadata...
-  */
-
+  // Generate OpenID/RFC 8414 JSON metadata...
   num_json = 0;
   json     = NULL;
 
- /*
-  * issuer
-  *
-  * REQUIRED. URL using the https scheme with no query or fragment component
-  * that the OP asserts as its Issuer Identifier. If Issuer discovery is
-  * supported (see Section 2), this value MUST be identical to the issuer value
-  * returned by WebFinger. This also MUST be identical to the iss Claim value
-  * in ID Tokens issued from this Issuer.
-  */
-
+  // issuer
+  //
+  // REQUIRED. URL using the https scheme with no query or fragment component
+  // that the OP asserts as its Issuer Identifier. If Issuer discovery is
+  // supported (see Section 2), this value MUST be identical to the issuer value
+  // returned by WebFinger. This also MUST be identical to the iss Claim value
+  // in ID Tokens issued from this Issuer.
   snprintf(temp, sizeof(temp), "https://%s:%d/", server_name, server_port);
   num_json = cupsAddOption("issuer", temp, num_json, &json);
 
- /*
-  * authorization_endpoint
-  *
-  * REQUIRED. URL of the OP's OAuth 2.0 Authorization Endpoint [RFC8414].
-  */
-
+  // authorization_endpoint
+  //
+  // REQUIRED. URL of the OP's OAuth 2.0 Authorization Endpoint [RFC8414].
   snprintf(temp, sizeof(temp), "https://%s:%d/authorize", server_name, server_port);
   num_json = cupsAddOption("authorization_endpoint", temp, num_json, &json);
 
- /*
-  * token_endpoint
-  *
-  * URL of the OP's OAuth 2.0 Token Endpoint [RFC8414]. This is REQUIRED
-  * unless only the Implicit Flow is used.
-  */
-
+  // token_endpoint
+  //
+  // URL of the OP's OAuth 2.0 Token Endpoint [RFC8414]. This is REQUIRED
+  // unless only the Implicit Flow is used.
   snprintf(temp, sizeof(temp), "https://%s:%d/token", server_name, server_port);
   num_json = cupsAddOption("token_endpoint", temp, num_json, &json);
 
- /*
-  * token_endpoint_auth_methods_supported
-  *
-  * List of auth methods for the token endpoint [RFC8414].  The default is
-  * "client_secret_basic" but we want "none".
-  */
-
+  // token_endpoint_auth_methods_supported
+  //
+  // List of auth methods for the token endpoint [RFC8414].  The default is
+  // "client_secret_basic" but we want "none".
   num_json = cupsAddOption("token_endpoint_auth_methods_supported", "[\"none\"]", num_json, &json);
 
- /*
-  * introspection_endpoint
-  *
-  * URL of the OP's OAuth 2.0 Introspection Endpoint [RFC8414] [RFC7662].
-  */
-
+  // introspection_endpoint
+  //
+  // URL of the OP's OAuth 2.0 Introspection Endpoint [RFC8414] [RFC7662].
   snprintf(temp, sizeof(temp), "https://%s:%d/introspect", server_name, server_port);
   num_json = cupsAddOption("introspection_endpoint", temp, num_json, &json);
 
- /*
-  * grant_types_supported
-  *
-  * OPTIONAL. JSON array containing a list of the OAuth 2.0 Grant Type values
-  * that this OP supports. Dynamic OpenID Providers MUST support the
-  * authorization_code and implicit Grant Type values and MAY support other
-  * Grant Types. If omitted, the default value is
-  * ["authorization_code", "implicit"].
-  */
-
+  // grant_types_supported
+  //
+  // OPTIONAL. JSON array containing a list of the OAuth 2.0 Grant Type values
+  // that this OP supports. Dynamic OpenID Providers MUST support the
+  // authorization_code and implicit Grant Type values and MAY support other
+  // Grant Types. If omitted, the default value is
+  // ["authorization_code", "implicit"].
   num_json = cupsAddOption("grant_types_supported", "[\"authorization_code\",\"password\",\"refresh_token\"]", num_json, &json);
 
- /*
-  * scopes_supported
-  *
-  * RECOMMENDED. JSON array containing a list of the OAuth 2.0 [RFC6749]
-  * scope values that this server supports. The server MUST support the
-  * openid scope value. Servers MAY choose not to advertise some supported
-  * scope values even when this parameter is used, although those defined in
-  * [OpenID.Core] SHOULD be listed, if supported.
-  */
-
-  /* TODO: Add "openid" scope once Issue #7 is resolved */
+  // scopes_supported
+  //
+  // RECOMMENDED. JSON array containing a list of the OAuth 2.0 [RFC6749]
+  // scope values that this server supports. The server MUST support the
+  // openid scope value. Servers MAY choose not to advertise some supported
+  // scope values even when this parameter is used, although those defined in
+  // [OpenID.Core] SHOULD be listed, if supported.
+  // TODO: Add "openid" scope once Issue #7 is resolved
   num_json = cupsAddOption("scopes_supported", "[\"private\",\"public\",\"shared\"]", num_json, &json);
 
- /*
-  * response_types_supported
-  *
-  * REQUIRED. JSON array containing a list of the OAuth 2.0 response_type
-  * values that this OP supports. Dynamic OpenID Providers MUST support the
-  * code, id_token, and the token Response Type values.
-  */
-
-  /* TODO: Add "id_token" scope once Issue #7 is resolved */
+  // response_types_supported
+  //
+  // REQUIRED. JSON array containing a list of the OAuth 2.0 response_type
+  // values that this OP supports. Dynamic OpenID Providers MUST support the
+  // code, id_token, and the token Response Type values.
+  // TODO: Add "id_token" scope once Issue #7 is resolved
   num_json = cupsAddOption("response_types_supported", "[\"code\",\"token\"]", num_json, &json);
 
-#if 0 /* Issue #7: Implement JSON Web Key Set */
- /*
-  * jwks_uri
-  *
-  * REQUIRED. URL of the OP's JSON Web Key Set [RFC7517] document. This
-  * contains the signing key(s) the RP uses to validate signatures from the OP.
-  * The JWK Set MAY also contain the Server's encryption key(s), which are used
-  * by RPs to encrypt requests to the Server. When both signing and encryption
-  * keys are made available, a use (Key Use) parameter value is REQUIRED for
-  * all keys in the referenced JWK Set to indicate each key's intended usage.
-  * Although some algorithms allow the same key to be used for both signatures
-  * and encryption, doing so is NOT RECOMMENDED, as it is less secure. The JWK
-  * x5c parameter MAY be used to provide X.509 representations of keys
-  * provided. When used, the bare key values MUST still be present and MUST
-  * match those in the certificate.
-  */
-
+#if 0 // Issue #7: Implement JSON Web Key Set
+  // jwks_uri
+  //
+  // REQUIRED. URL of the OP's JSON Web Key Set [RFC7517] document. This
+  // contains the signing key(s) the RP uses to validate signatures from the OP.
+  // The JWK Set MAY also contain the Server's encryption key(s), which are used
+  // by RPs to encrypt requests to the Server. When both signing and encryption
+  // keys are made available, a use (Key Use) parameter value is REQUIRED for
+  // all keys in the referenced JWK Set to indicate each key's intended usage.
+  // Although some algorithms allow the same key to be used for both signatures
+  // and encryption, doing so is NOT RECOMMENDED, as it is less secure. The JWK
+  // x5c parameter MAY be used to provide X.509 representations of keys
+  // provided. When used, the bare key values MUST still be present and MUST
+  // match those in the certificate.
   snprintf(temp, sizeof(temp), "https://%s:%d/jwks", server_name, server_port);
   num_json = cupsAddOption("token_endpoint", temp, num_json, &json);
 
- /*
-  * subject_types_supported
-  *
-  * REQUIRED. JSON array containing a list of the Subject Identifier types
-  * that this OP supports. Valid types include pairwise and public.
-  */
+  // subject_types_supported
+  //
+  // REQUIRED. JSON array containing a list of the Subject Identifier types
+  // that this OP supports. Valid types include pairwise and public.
 
- /*
-  * id_token_signing_alg_values_supported
-  *
-  * REQUIRED. JSON array containing a list of the JWS signing algorithms (alg
-  * values) supported by the OP for the ID Token to encode the Claims in a
-  * JWT [JWT]. The algorithm RS256 MUST be included. The value none MAY be
-  * supported, but MUST NOT be used unless the Response Type used returns no
-  * ID Token from the Authorization Endpoint (such as when using the
-  * Authorization Code Flow).
-  */
-#endif /* 0 */
+  // id_token_signing_alg_values_supported
+  //
+  // REQUIRED. JSON array containing a list of the JWS signing algorithms (alg
+  // values) supported by the OP for the ID Token to encode the Claims in a
+  // JWT [JWT]. The algorithm RS256 MUST be included. The value none MAY be
+  // supported, but MUST NOT be used unless the Response Type used returns no
+  // ID Token from the Authorization Endpoint (such as when using the
+  // Authorization Code Flow).
+#endif // 0
 
- /*
-  * registration_endpoint
-  *
-  * RECOMMENDED. URL of the OP's Dynamic Client Registration Endpoint
-  * [RFC7591].
-  */
-
+  // registration_endpoint
+  //
+  // RECOMMENDED. URL of the OP's Dynamic Client Registration Endpoint [RFC7591].
   snprintf(temp, sizeof(temp), "https://%s:%d/register", server_name, server_port);
   num_json = cupsAddOption("registration_endpoint", temp, num_json, &json);
 
- /*
-  * Encode the metadata for later delivery to clients...
-  */
-
+  // Encode the metadata for later delivery to clients...
   server->metadata = _moauthJSONEncode(num_json, json);
   cupsFreeOptions(num_json, json);
 
- /*
-  * Final setup...
-  */
-
+  // Final setup...
   time(&server->start_time);
 
   if (!server->secret)
   {
-   /*
-    * Generate a random secret string that is used when creating token UUIDs.
-    */
-
+    // Generate a random secret string that is used when creating token UUIDs.
     _moauthGetRandomBytes(temp, sizeof(temp) - 1);
     for (ptr = temp; ptr < (temp + sizeof(temp) - 1); ptr ++)
       *ptr = (*ptr % 95) + ' ';
@@ -675,32 +578,20 @@ moauthdCreateServer(
     server->secret = strdup(temp);
   }
 
- /*
-  * Add RFC 8414 configuration file.
-  */
-
+  // Add RFC 8414 configuration file.
   r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/.well-known/oauth-authorization-server", NULL, "text/json", "public");
   r->data   = server->metadata;
   r->length = strlen(server->metadata);
 
- /*
-  * Add OpenID configuration file.
-  */
-
+  // Add OpenID configuration file.
   r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/.well-known/openid-configuration", NULL, "text/json", "public");
   r->data   = server->metadata;
   r->length = strlen(server->metadata);
 
- /*
-  * Add other standard resources...
-  */
-
+  // Add other standard resources...
   if (!moauthdFindResource(server, "/index.html", temp, sizeof(temp), &tempinfo) && !moauthdFindResource(server, "/index.md", temp, sizeof(temp), &tempinfo))
   {
-   /*
-    * Add default home page file...
-    */
-
+    // Add default home page file...
     r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/index.md", NULL, "text/markdown", "public");
     r->data   = index_md;
     r->length = strlen(index_md);
@@ -708,10 +599,7 @@ moauthdCreateServer(
 
   if (!moauthdFindResource(server, "/moauth.png", temp, sizeof(temp), &tempinfo))
   {
-   /*
-    * Add default moauth.png file...
-    */
-
+    // Add default moauth.png file...
     r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/moauth.png", NULL, "image/png", "public");
     r->data   = moauth_png;
     r->length = sizeof(moauth_png);
@@ -719,26 +607,17 @@ moauthdCreateServer(
 
   if (!moauthdFindResource(server, "/style.css", temp, sizeof(temp), &tempinfo))
   {
-   /*
-    * Add default style.css file...
-    */
-
+    // Add default style.css file...
     r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/style.css", NULL, "text/css", "public");
     r->data   = style_css;
     r->length = strlen(style_css);
   }
 
- /*
-  * Return the server object...
-  */
-
+  // Return the server object...
   return (server);
 
 
- /*
-  * If we get here something went wrong...
-  */
-
+  // If we get here something went wrong...
   create_failed:
 
   moauthdDeleteServer(server);
@@ -747,15 +626,15 @@ moauthdCreateServer(
 }
 
 
-/*
- * 'moauthdDeleteServer()' - Delete a server object.
- */
+//
+// 'moauthdDeleteServer()' - Delete a server object.
+//
 
 void
 moauthdDeleteServer(
-    moauthd_server_t *server)		/* I - Server object */
+    moauthd_server_t *server)		// I - Server object
 {
-  int	i;				/* Looping var */
+  int	i;				// Looping var
 
 
   if (server->name)
@@ -771,8 +650,9 @@ moauthdDeleteServer(
   cupsArrayDelete(server->resources);
   cupsArrayDelete(server->tokens);
 
-  pthread_mutex_destroy(&server->applications_lock);
-  pthread_rwlock_destroy(&server->resources_lock);
+  cupsMutexDestroy(&server->applications_lock);
+  cupsRWDestroy(&server->resources_lock);
+  cupsRWDestroy(&server->tokens_lock);
 
   if (server->test_password)
     free(server->test_password);
@@ -784,28 +664,25 @@ moauthdDeleteServer(
 }
 
 
-/*
- * 'moauthdFindApplication()' - Find an application by its client ID.
- */
+//
+// 'moauthdFindApplication()' - Find an application by its client ID.
+//
 
-moauthd_application_t *			/* O - Matching application, if any */
+moauthd_application_t *			// O - Matching application, if any
 moauthdFindApplication(
-    moauthd_server_t *server,		/* I - Server object */
-    const char       *client_id,	/* I - Client ID */
-    const char       *redirect_uri)	/* I - Redirect URI or NULL */
+    moauthd_server_t *server,		// I - Server object
+    const char       *client_id,	// I - Client ID
+    const char       *redirect_uri)	// I - Redirect URI or NULL
 {
-  moauthd_application_t	*app,		/* Matching application */
-			key;		/* Search key */
+  moauthd_application_t	*app,		// Matching application
+			key;		// Search key
 
 
-  pthread_mutex_lock(&server->applications_lock);
+  cupsMutexLock(&server->applications_lock);
 
   if (redirect_uri)
   {
-   /*
-    * Exact match...
-    */
-
+    // Exact match...
     key.client_id    = (char *)client_id;
     key.redirect_uri = (char *)redirect_uri;
 
@@ -813,30 +690,30 @@ moauthdFindApplication(
   }
   else
   {
-   /*
-    * First matching client ID...
-    */
-
-    for (app = (moauthd_application_t *)cupsArrayFirst(server->applications); app; app = (moauthd_application_t *)cupsArrayNext(server->applications))
+    // First matching client ID...
+    for (app = (moauthd_application_t *)cupsArrayGetFirst(server->applications); app; app = (moauthd_application_t *)cupsArrayGetNext(server->applications))
+    {
       if (!strcmp(app->client_id, client_id))
         break;
+    }
   }
 
-  pthread_mutex_unlock(&server->applications_lock);
+  cupsMutexUnlock(&server->applications_lock);
 
   return (app);
 }
 
 
-/*
- * 'moauthdRunServer()' - Listen for client connections and process requests.
- */
+//
+// 'moauthdRunServer()' - Listen for client connections and process requests.
+//
 
-int					/* O - Exit status */
+int					// O - Exit status
 moauthdRunServer(
-    moauthd_server_t *server)		/* I - Server object */
+    moauthd_server_t *server)		// I - Server object
 {
-  int	done = 0;			/* Are we done yet? */
+  bool	done = false;			// Are we done yet?
+
 
   if (!server)
     return (1);
@@ -850,41 +727,35 @@ moauthdRunServer(
       if (errno != EAGAIN && errno != EINTR)
       {
         moauthdLogs(server, MOAUTHD_LOGLEVEL_ERROR, "poll() failed: %s", strerror(errno));
-        done = 1;
+        done = true;
       }
     }
     else
     {
-      int		i;		/* Looping var */
-      struct pollfd	*lis;		/* Current listener */
+      int		i;		// Looping var
+      struct pollfd	*lis;		// Current listener
 
       for (i = server->num_listeners, lis = server->listeners; i > 0; i --, lis ++)
       {
         if (lis->revents & POLLIN)
 	{
 	  moauthd_client_t *client = moauthdCreateClient(server, lis->fd);
-					/* New client */
+					// New client
 
           if (client)
           {
-            pthread_t tid;		/* New processing thread */
+            cups_thread_t tid;		// New processing thread
 
-            if (pthread_create(&tid, NULL, (void *(*)(void *))moauthdRunClient, client))
+            if ((tid = cupsThreadCreate((void *(*)(void *))moauthdRunClient, client)) == NULL)
             {
-             /*
-              * Unable to create client thread...
-              */
-
+              // Unable to create client thread...
               moauthdLogs(server, MOAUTHD_LOGLEVEL_ERROR, "Unable to create client processing thread: %s", strerror(errno));
               moauthdDeleteClient(client);
 	    }
 	    else
 	    {
-	     /*
-	      * Client thread created, detach!
-	      */
-
-	      pthread_detach(tid);
+	      // Client thread created, detach!
+	      cupsThreadDetach(tid);
 	    }
           }
 	}
@@ -896,28 +767,28 @@ moauthdRunServer(
 }
 
 
-/*
- * 'compare_applications()' - Compare two application registrations.
- */
+//
+// 'compare_applications()' - Compare two application registrations.
+//
 
-static int				/* O - Result of comparison */
+static int				// O - Result of comparison
 compare_applications(
-    moauthd_application_t *a,		/* I - First application */
-    moauthd_application_t *b)		/* I - Second application */
+    moauthd_application_t *a,		// I - First application
+    moauthd_application_t *b)		// I - Second application
 {
   return (strcmp(a->client_id, b->client_id));
 }
 
 
-/*
- * 'copy_application()' - Make a copy of an application object.
- */
+//
+// 'copy_application()' - Make a copy of an application object.
+//
 
-static moauthd_application_t *		/* O - New application object */
+static moauthd_application_t *		// O - New application object
 copy_application(
-    moauthd_application_t *a)		/* I - Application object */
+    moauthd_application_t *a)		// I - Application object
 {
-  moauthd_application_t	*na;		/* New application object */
+  moauthd_application_t	*na;		// New application object
 
 
   if ((na = (moauthd_application_t *)calloc(1, sizeof(moauthd_application_t))) != NULL)
@@ -939,38 +810,34 @@ copy_application(
 }
 
 
-/*
- * 'free_application()' - Free an application object.
- */
+//
+// 'free_application()' - Free an application object.
+//
 
 static void
 free_application(
-    moauthd_application_t *a)		/* I - Application object */
+    moauthd_application_t *a)		// I - Application object
 {
   free(a->client_id);
   free(a->redirect_uri);
-  if (a->client_name)
-    free(a->client_name);
-  if (a->client_uri)
-    free(a->client_uri);
-  if (a->logo_uri)
-    free(a->logo_uri);
-  if (a->tos_uri)
-    free(a->tos_uri);
+  free(a->client_name);
+  free(a->client_uri);
+  free(a->logo_uri);
+  free(a->tos_uri);
   free(a);
 }
 
 
-/*
- * 'get_seconds()' - Get a time value in seconds.
- */
+//
+// 'get_seconds()' - Get a time value in seconds.
+//
 
-static int				/* O - Number of seconds or -1 on error */
-get_seconds(const char *value)		/* I - Value string */
+static int				// O - Number of seconds or -1 on error
+get_seconds(const char *value)		// I - Value string
 {
-  char	*units;				/* Pointer to units */
+  char	*units;				// Pointer to units
   int	tval = (int)strtol(value, &units, 10);
-					/* Time value */
+					// Time value
 
   if (!strcasecmp(units, "m"))
     tval *= 60;

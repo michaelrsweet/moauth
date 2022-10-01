@@ -3,7 +3,7 @@ static const char *style_css =
   "/*\n"
   " * Stylesheet for moauth daemon web interface\n"
   " *\n"
-  " * Copyright © 2017-2018 by Michael R Sweet\n"
+  " * Copyright © 2017-2022 by Michael R Sweet\n"
   " *\n"
   " * Licensed under Apache License v2.0.  See the file \"LICENSE\" for more\n"
   " * information.\n"
