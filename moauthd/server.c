@@ -746,7 +746,7 @@ moauthdRunServer(
           {
             cups_thread_t tid;		// New processing thread
 
-            if ((tid = cupsThreadCreate((void *(*)(void *))moauthdRunClient, client)) == NULL)
+            if ((tid = cupsThreadCreate((void *(*)(void *))moauthdRunClient, client)) == CUPS_THREAD_INVALID)
             {
               // Unable to create client thread...
               moauthdLogs(server, MOAUTHD_LOGLEVEL_ERROR, "Unable to create client processing thread: %s", strerror(errno));

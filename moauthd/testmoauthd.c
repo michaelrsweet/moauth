@@ -118,7 +118,7 @@ main(int  argc,				// I - Number of command-line arguments
   snprintf(redirect_data.state, sizeof(redirect_data.state), "%d", getpid());
   redirect_data.grant = NULL;
 
-  if ((redirect_tid = cupsThreadCreate((cups_thread_func_t)redirect_server, &redirect_data)) == NULL)
+  if ((redirect_tid = cupsThreadCreate((cups_thread_func_t)redirect_server, &redirect_data)) == CUPS_THREAD_INVALID)
   {
     perror("Unable to create redirect server thread");
     return (1);

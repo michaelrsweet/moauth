@@ -70,7 +70,7 @@ _moauthConnect(const char *uri,		// I - URI to connect to
         return (NULL);
   }
 
-  if (!httpLoadCredentials(NULL, &screds, host) && !screds)
+  if (httpLoadCredentials(NULL, &screds, host) && !screds)
     httpSaveCredentials(NULL, ccreds, host);
 
   httpFreeCredentials(ccreds);
