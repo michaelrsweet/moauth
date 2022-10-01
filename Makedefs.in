@@ -1,7 +1,7 @@
 #
 # Common moauth makefile definitions
 #
-# Copyright © 2017-2021 by Michael R Sweet
+# Copyright © 2017-2022 by Michael R Sweet
 #
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more
 # information.
@@ -10,23 +10,30 @@
 # Be silent...
 .SILENT:
 
+# Version...
+MOAUTH_VERSION	=	@MOAUTH_VERSION@
+
+
 # Programs and options...
 AR		=	@AR@
 ARFLAGS		=	@ARFLAGS@
 CC		=	@CC@
-CFLAGS		=	$(CPPFLAGS) @CFLAGS@ $(OPTIM) @WARNINGS@
-CPPFLAGS	=	-I.. @CPPFLAGS@
-CODESIGN_IDENTITY =	Developer ID
+CFLAGS		=	$(CPPFLAGS) @CFLAGS@ $(OPTIM) $(WARNINGS)
+CODE_SIGN	=	@CODE_SIGN@
+CODESIGN_IDENTITY =	-
+CPPFLAGS	=	-I.. -I../libcups @CPPFLAGS@
+CSFLAGS		=	-s "$(CODESIGN_IDENTITY)" @CSFLAGS@ --timestamp
 INSTALL		=	@INSTALL@
 LDFLAGS		=	-L../moauth @LDFLAGS@ $(OPTIM)
-LIBS		=	@LIBS@
+LIBS		=	-L../libcups/cups `PKG_CONFIG_PATH=../libcups pkg-config --libs cups3` @LIBS@
 MKDIR           =       @MKDIR@ -p
 OPTIM		=	@OPTIM@
-PAMLIBS		=	@PAMLIBS@
 RANLIB		=	@RANLIB@
 RM		=	@RM@ -f
 RMDIR		=	@RMDIR@
 SHELL		=	/bin/sh
+WARNINGS	=	@WARNINGS@
+
 
 # Directories...
 bindir		=	@bindir@
@@ -50,7 +57,9 @@ top_srcdir	=	@top_srcdir@
 
 BUILDROOT	=	$(DSTROOT)$(RPM_BUILD_ROOT)$(DESTDIR)
 
+
 # Build commands...
+.SUFFIXES:	.c .h .o
 .c.o:
 	echo Compiling $<...
 	$(CC) $(CFLAGS) -c -o $@ $<

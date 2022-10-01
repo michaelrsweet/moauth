@@ -1,18 +1,13 @@
 /*
  * Header file for moauth daemon
  *
- * Copyright © 2017-2018 by Michael R Sweet
+ * Copyright © 2017-2022 by Michael R Sweet
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
 
-#ifndef _MOAUTHD_H_
-#  define _MOAUTHD_H_
-
-/*
- * Include necessary headers...
- */
-
+#ifndef MOAUTHD_H
+#  define MOAUTHD_H
 #  include <config.h>
 #  include <moauth/moauth-private.h>
 #  include <stdio.h>
@@ -21,22 +16,22 @@
 #  include <ctype.h>
 #  include <errno.h>
 #  include <poll.h>
-#  include <pthread.h>
 #  include <sys/stat.h>
+#  include <cups/thread.h>
 
 
-/*
- * Constants...
- */
+//
+// Constants...
+//
 
-#  define MOAUTHD_MAX_LISTENERS	4	/* Maximum number of listener sockets */
+#  define MOAUTHD_MAX_LISTENERS	4	// Maximum number of listener sockets
 
 
-/*
- * Types...
- */
+//
+// Types...
+//
 
-typedef struct moauthd_application_s	/**** Application (Client) ****/
+typedef struct moauthd_application_s	//// Application (Client)
 {
   char	*client_id,			/* Client identifier */
 	*redirect_uri,			/* Redirection URI */
@@ -185,4 +180,4 @@ extern int		moauthdRespondClient(moauthd_client_t *client, http_status_t code, c
 extern void		*moauthdRunClient(moauthd_client_t *client);
 extern int		moauthdRunServer(moauthd_server_t *server);
 
-#endif /* !_MOAUTHD_H_ */
+#endif // !MOAUTHD_H
