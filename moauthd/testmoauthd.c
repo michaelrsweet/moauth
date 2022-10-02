@@ -309,7 +309,7 @@ get_url(const char *url,		// I - URL to fetch
   httpSetAuthString(http, "Bearer", token);
   httpSetField(http, HTTP_FIELD_AUTHORIZATION, httpGetAuthString(http));
 
-  if (httpWriteRequest(http, "GET", resource))
+  if (!httpWriteRequest(http, "GET", resource))
   {
     snprintf(filename, filesize, "\"GET %s\" failed: %s", resource, cupsLastErrorString());
     httpClose(http);
