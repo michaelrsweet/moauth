@@ -57,7 +57,7 @@ moauthdCreateClient(
 
   moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Accepted connection from \"%s\".", client->remote_host);
 
-  if (httpSetEncryption(client->http, HTTP_ENCRYPTION_ALWAYS))
+  if (!httpSetEncryption(client->http, HTTP_ENCRYPTION_ALWAYS))
   {
     moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to establish TLS session: %s", cupsLastErrorString());
     httpClose(client->http);

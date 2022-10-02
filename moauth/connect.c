@@ -175,10 +175,12 @@ moauthConnect(
 		userpass[256],		// Username:password (unused)
 		host[256];		// Host
     int		port;			// Port number
+    bool	is_json = !*content_type || !strcmp(content_type, "text/json");
+					// JSON metadata?
 
     httpClose(http);
 
-    if (content_type && body && (!*content_type || !strcmp(content_type, "text/json")))
+    if (is_json)
     {
       // OpenID/RFC 8414 JSON metadata...
       const char *uri;			// Authorization/token URI
@@ -234,8 +236,7 @@ moauthConnect(
       }
     }
 
-    if (body)
-      free(body);
+    free(body);
   }
 
   if (!server->authorization_endpoint || !server->token_endpoint)

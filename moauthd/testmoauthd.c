@@ -460,7 +460,7 @@ redirect_server(
             continue;
 	  }
 
-          if (httpSetEncryption(http, HTTP_ENCRYPTION_ALWAYS))
+          if (!httpSetEncryption(http, HTTP_ENCRYPTION_ALWAYS))
           {
             fprintf(stderr, "testmoauthd: Unable to encrypt client connection - %s\n", cupsLastErrorString());
             continue;
