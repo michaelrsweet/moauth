@@ -52,7 +52,7 @@ install:	all
 # Test everything...
 .PHONY:	test
 test:
-	for dir in $(SUBDIRS); do \
+	for dir in moauth moauthd; do \
 		echo "======== test in $$dir ========"; \
 		(cd $$dir; $(MAKE) $(MFLAGS) test || exit 1); \
 	done

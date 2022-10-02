@@ -379,8 +379,7 @@ moauthdCreateServer(
 	  server_port = atoi(portptr);
 	}
 
-        strncpy(server_name, value, sizeof(server_name) - 1);
-        server_name[sizeof(server_name) - 1] = '\0';
+        cupsCopyString(server_name, value, sizeof(server_name));
       }
       else if (!strcasecmp(line, "TestPassword"))
       {
@@ -402,6 +401,8 @@ moauthdCreateServer(
 
     cupsFileClose(fp);
   }
+
+  fprintf(stderr, "server name=\"%s\", port=%d\n", server_name, server_port);
 
   server->name = strdup(server_name);
   server->port = server_port;
