@@ -1,7 +1,7 @@
 //
 // Connection support for moauth library
 //
-// Copyright © 2017-2022 by Michael R Sweet
+// Copyright © 2017-2024 by Michael R Sweet
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
 //
@@ -40,8 +40,7 @@ _moauthConnect(const char *uri,		// I - URI to connect to
 		host[256];		// Host
   int		port;			// Port number
   http_t	*http;			// HTTP connection
-  cups_array_t	*ccreds,		// Connection TLS credentials
-		*screds;		// Saved TLS credentials
+  char		*peercreds;		// Peer credentials
 
 
   if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, (int)resourcelen) < HTTP_URI_STATUS_OK || strcmp(scheme, "https"))
@@ -49,13 +48,13 @@ _moauthConnect(const char *uri,		// I - URI to connect to
 
   http = httpConnect(host, port, NULL, AF_UNSPEC, HTTP_ENCRYPTION_ALWAYS, true, 30000, NULL);
 
-  if (httpCopyCredentials(http, &ccreds))
+  if ((peercreds = httpCopyPeerCredentials(http)) == NULL)
   {
     httpClose(http);
     return (NULL);
   }
 
-  switch (httpCredentialsGetTrust(ccreds, host))
+  switch (cupsGetCredentialsTrust(/*path*/NULL, host, peercreds))
   {
     case HTTP_TRUST_OK :      // Credentials are OK/trusted
     case HTTP_TRUST_RENEWED : // Credentials have been renewed
@@ -66,15 +65,12 @@ _moauthConnect(const char *uri,		// I - URI to connect to
     case HTTP_TRUST_CHANGED : // Credentials have changed
     case HTTP_TRUST_EXPIRED : // Credentials are expired
         httpClose(http);
-        httpFreeCredentials(ccreds);
+        free(peercreds);
         return (NULL);
   }
 
-  if (httpLoadCredentials(NULL, &screds, host) && !screds)
-    httpSaveCredentials(NULL, ccreds, host);
-
-  httpFreeCredentials(ccreds);
-  httpFreeCredentials(screds);
+  cupsSaveCredentials(/*path*/NULL, host, peercreds, /*key*/NULL);
+  free(peercreds);
 
   return (http);
 }

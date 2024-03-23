@@ -1,7 +1,7 @@
 //
 // Token grant/introspection support for moauth library
 //
-// Copyright © 2017-2022 by Michael R Sweet
+// Copyright © 2017-2024 by Michael R Sweet
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more
 // information.
@@ -85,7 +85,7 @@ moauthGetToken(
   // Send a POST request with the form data...
   if ((http = _moauthConnect(server->token_endpoint, resource, sizeof(resource))) == NULL)
   {
-    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed: %s", cupsGetErrorString());
     goto done;
   }
 
@@ -97,20 +97,20 @@ moauthGetToken(
   {
     if (!httpReconnect(http, 30000, NULL))
     {
-      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsGetErrorString());
       goto done;
     }
 
     if (!httpWriteRequest(http, "POST", resource))
     {
-      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsGetErrorString());
       goto done;
     }
   }
 
   if (httpWrite(http, form_data, form_length) < form_length)
   {
-    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsGetErrorString());
     goto done;
   }
 
@@ -218,7 +218,7 @@ moauthIntrospectToken(
   // Send a POST request with the form data...
   if ((http = _moauthConnect(server->introspection_endpoint, resource, sizeof(resource))) == NULL)
   {
-    snprintf(server->error, sizeof(server->error), "Connection to introspection endpoint failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Connection to introspection endpoint failed: %s", cupsGetErrorString());
     goto done;
   }
 
@@ -230,20 +230,20 @@ moauthIntrospectToken(
   {
     if (!httpReconnect(http, 30000, NULL))
     {
-      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsGetErrorString());
       goto done;
     }
 
     if (!httpWriteRequest(http, "POST", resource))
     {
-      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsGetErrorString());
       goto done;
     }
   }
 
   if (httpWrite(http, form_data, form_length) < form_length)
   {
-    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsGetErrorString());
     goto done;
   }
 
@@ -360,7 +360,7 @@ moauthPasswordToken(
   // Send a POST request with the form data...
   if ((http = _moauthConnect(server->token_endpoint, resource, sizeof(resource))) == NULL)
   {
-    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed: %s", cupsGetErrorString());
     goto done;
   }
 
@@ -372,20 +372,20 @@ moauthPasswordToken(
   {
     if (!httpReconnect(http, 30000, NULL))
     {
-      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsGetErrorString());
       goto done;
     }
 
     if (!httpWriteRequest(http, "POST", resource))
     {
-      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsGetErrorString());
       goto done;
     }
   }
 
   if (httpWrite(http, form_data, form_length) < form_length)
   {
-    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsGetErrorString());
     goto done;
   }
 
@@ -493,7 +493,7 @@ moauthRefreshToken(
   // Send a POST request with the form data...
   if ((http = _moauthConnect(server->token_endpoint, resource, sizeof(resource))) == NULL)
   {
-    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Connection to token endpoint failed: %s", cupsGetErrorString());
     goto done;
   }
 
@@ -505,20 +505,20 @@ moauthRefreshToken(
   {
     if (!httpReconnect(http, 30000, NULL))
     {
-      snprintf(server->error, sizeof(server->error), "Reconnect to token endpoint failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect to token endpoint failed: %s", cupsGetErrorString());
       goto done;
     }
 
     if (!httpWriteRequest(http, "POST", resource))
     {
-      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsGetErrorString());
       goto done;
     }
   }
 
   if (httpWrite(http, form_data, form_length) < form_length)
   {
-    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsGetErrorString());
     goto done;
   }
 

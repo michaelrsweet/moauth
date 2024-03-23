@@ -1,7 +1,7 @@
 //
 // Client support for moauth daemon
 //
-// Copyright © 2017-2022 by Michael R Sweet
+// Copyright © 2017-2024 by Michael R Sweet
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more
 // information.
@@ -47,7 +47,7 @@ moauthdCreateClient(
 
   if ((client->http = httpAcceptConnection(fd, false)) == NULL)
   {
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to accept client connection: %s", cupsLastErrorString());
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to accept client connection: %s", cupsGetErrorString());
     free(client);
 
     return (NULL);
@@ -59,7 +59,7 @@ moauthdCreateClient(
 
   if (!httpSetEncryption(client->http, HTTP_ENCRYPTION_ALWAYS))
   {
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to establish TLS session: %s", cupsLastErrorString());
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to establish TLS session: %s", cupsGetErrorString());
     httpClose(client->http);
     free(client);
 
@@ -121,10 +121,10 @@ moauthdRunClient(
 
     if (state == HTTP_STATE_ERROR)
     {
-      if (httpError(client->http) == EPIPE || httpError(client->http) == ETIMEDOUT || httpError(client->http) == 0)
+      if (httpGetError(client->http) == EPIPE || httpGetError(client->http) == ETIMEDOUT || httpGetError(client->http) == 0)
 	moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Client closed connection.");
       else
-	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad request line (%s).", strerror(httpError(client->http)));
+	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad request line (%s).", strerror(httpGetError(client->http)));
 
       break;
     }
@@ -235,7 +235,7 @@ moauthdRunClient(
 
         for (authorization += 6; *authorization && isspace(*authorization & 255); authorization ++);
 
-        httpDecode64(username, &userlen, authorization);
+        httpDecode64(username, &userlen, authorization, /*end*/NULL);
         if ((password = strchr(username, ':')) != NULL)
         {
           *password++ = '\0';

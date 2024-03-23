@@ -1,7 +1,7 @@
 //
 // Unit test program for moauth daemon
 //
-// Copyright © 2017-2022 by Michael R Sweet
+// Copyright © 2017-2024 by Michael R Sweet
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more
 // information.
@@ -300,7 +300,7 @@ get_url(const char *url,		// I - URL to fetch
 
   if ((http = httpConnect(host, port, NULL, AF_UNSPEC, encryption, 1, 30000, NULL)) == NULL)
   {
-    snprintf(filename, filesize, "Unable to connect to \"%s\" on port %d: %s", host, port, cupsLastErrorString());
+    snprintf(filename, filesize, "Unable to connect to \"%s\" on port %d: %s", host, port, cupsGetErrorString());
     return (NULL);
   }
 
@@ -311,7 +311,7 @@ get_url(const char *url,		// I - URL to fetch
 
   if (!httpWriteRequest(http, "GET", resource))
   {
-    snprintf(filename, filesize, "\"GET %s\" failed: %s", resource, cupsLastErrorString());
+    snprintf(filename, filesize, "\"GET %s\" failed: %s", resource, cupsGetErrorString());
     httpClose(http);
     return (NULL);
   }
@@ -325,7 +325,7 @@ get_url(const char *url,		// I - URL to fetch
     return (NULL);
   }
 
-  if ((fd = cupsTempFd(NULL, NULL, filename, filesize)) < 0)
+  if ((fd = cupsCreateTempFd(/*prefix*/NULL, /*suffix*/NULL, filename, filesize)) < 0)
   {
     snprintf(filename, filesize, "Unable to create temporary file: %s", strerror(errno));
     httpClose(http);
@@ -456,13 +456,13 @@ redirect_server(
 
           if ((http = httpAcceptConnection(lis->fd, true)) == NULL)
           {
-            fprintf(stderr, "testmoauthd: Unable to accept client connection - %s\n", cupsLastErrorString());
+            fprintf(stderr, "testmoauthd: Unable to accept client connection - %s\n", cupsGetErrorString());
             continue;
 	  }
 
           if (!httpSetEncryption(http, HTTP_ENCRYPTION_ALWAYS))
           {
-            fprintf(stderr, "testmoauthd: Unable to encrypt client connection - %s\n", cupsLastErrorString());
+            fprintf(stderr, "testmoauthd: Unable to encrypt client connection - %s\n", cupsGetErrorString());
             continue;
 	  }
 
@@ -471,10 +471,10 @@ redirect_server(
 
 	  if (state == HTTP_STATE_ERROR)
 	  {
-	    if (httpError(http) == EPIPE || httpError(http) == ETIMEDOUT || httpError(http) == 0)
+	    if (httpGetError(http) == EPIPE || httpGetError(http) == ETIMEDOUT || httpGetError(http) == 0)
 	      fputs("Client closed connection.\n", stderr);
 	    else
-	      fprintf(stderr, "Bad request line (%s).\n", strerror(httpError(http)));
+	      fprintf(stderr, "Bad request line (%s).\n", strerror(httpGetError(http)));
 
             httpClose(http);
 	    continue;

@@ -1,7 +1,7 @@
 //
 // Dynamic client registration support for moauth library.
 //
-// Copyright © 2019-2022 by Michael R Sweet
+// Copyright © 2019-2024 by Michael R Sweet
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more
 // information.
@@ -87,7 +87,7 @@ moauthRegisterClient(
   // Send a POST request with the JSON data...
   if ((http = _moauthConnect(server->registration_endpoint, resource, sizeof(resource))) == NULL)
   {
-    snprintf(server->error, sizeof(server->error), "Connection to registration endpoint failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Connection to registration endpoint failed: %s", cupsGetErrorString());
     goto done;
   }
 
@@ -99,20 +99,20 @@ moauthRegisterClient(
   {
     if (httpReconnect(http, 30000, NULL))
     {
-      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsGetErrorString());
       goto done;
     }
 
     if (!httpWriteRequest(http, "POST", resource))
     {
-      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsLastErrorString());
+      snprintf(server->error, sizeof(server->error), "POST failed: %s", cupsGetErrorString());
       goto done;
     }
   }
 
   if (httpWrite(http, json_data, json_length) < json_length)
   {
-    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsLastErrorString());
+    snprintf(server->error, sizeof(server->error), "Write failed: %s", cupsGetErrorString());
     goto done;
   }
 
