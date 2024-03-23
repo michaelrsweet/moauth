@@ -1,7 +1,7 @@
 #
 # Common moauth makefile definitions
 #
-# Copyright © 2017-2022 by Michael R Sweet
+# Copyright © 2017-2024 by Michael R Sweet
 #
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more
 # information.
@@ -25,7 +25,7 @@ CPPFLAGS	=	-I.. -I../libcups @CPPFLAGS@
 CSFLAGS		=	-s "$(CODESIGN_IDENTITY)" @CSFLAGS@ --timestamp
 INSTALL		=	@INSTALL@
 LDFLAGS		=	-L../moauth @LDFLAGS@ $(OPTIM)
-LIBS		=	-L../libcups/cups `PKG_CONFIG_PATH=../libcups pkg-config --libs cups3` @LIBS@
+LIBS		=	-L../libcups/cups $$(PKG_CONFIG_PATH=../libcups pkg-config --libs cups3) @LIBS@
 MKDIR           =       @MKDIR@ -p
 OPTIM		=	@OPTIM@
 RANLIB		=	@RANLIB@
@@ -61,5 +61,5 @@ BUILDROOT	=	$(DSTROOT)$(RPM_BUILD_ROOT)$(DESTDIR)
 # Build commands...
 .SUFFIXES:	.c .h .o
 .c.o:
-	echo Compiling $<...
+	echo "Compiling $<..."
 	$(CC) $(CFLAGS) -c -o $@ $<

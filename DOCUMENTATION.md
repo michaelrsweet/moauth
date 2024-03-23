@@ -13,9 +13,9 @@ server is both an Authorization Server and a Resource Server that supports:
 - Basic Resource Server functionality with implicit and explicit ACLs
 - Customizable web interface
 
-mOAuth currently requires CUPS 2.2 or later for its HTTPS support.
+mOAuth currently requires libcups v3 for its HTTPS and JWT support.
 
-Copyright © 2017-2019 by Michael R Sweet.
+Copyright © 2017-2024 by Michael R Sweet.
 
 mOAuth is licensed under the Apache License Version 2.0 with an exception to
 allow linking against GPL2/LGPL2 software (like older versions of CUPS).  See
@@ -35,7 +35,7 @@ interact with an OAuth 2.0 authorization server.  To use the library you just
 include the `<moauth.h>` header file in your source code and the `moauth` and
 `cups` libraries when you link your application, for example:
 
-    gcc -o myprogram myprogram.c -lmoauth -lcups
+    gcc -o myprogram myprogram.c -lmoauth -lcups3
 
 The library uses the `moauth_t` type to keep track of the state of and
 connection to an OAuth 2.0 authorization server.  You connect to a server using
