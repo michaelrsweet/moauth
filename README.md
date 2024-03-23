@@ -32,13 +32,13 @@ Standards Implemented
 
 The specific standards mOAuth currently implements are:
 
-- [The OAuth2 Authentication Framework (RFC6749)](https://tools.ietf.org/html/rfc6749)
-- [The OAuth2 Bearer Token (RFC6750)](https://tools.ietf.org/html/rfc6750)
-- [OAuth 2.0 Dynamic Client Registration Protocol (RFC7591)](https://tools.ietf.org/html/rfc7591)
-- [Proof Key for Code Exchange by OAuth Public Clients (RFC7636)](https://tools.ietf.org/html/rfc7636)
-- [OAuth 2.0 Token Introspection (RFC7662)](https://tools.ietf.org/html/rfc7662)
-- [OAuth 2.0 for Native Apps (RFC8252)](https://tools.ietf.org/html/rfc8252)
-- [OAuth 2.0 Authorization Server Metadata (RFC8414)](https://tools.ietf.org/html/rfc8414)
+- [The OAuth2 Authentication Framework (RFC6749)](https://datatracker.ietf.org/doc/html/rfc6749)
+- [The OAuth2 Bearer Token (RFC6750)](https://datatracker.ietf.org/doc/html/rfc6750)
+- [OAuth 2.0 Dynamic Client Registration Protocol (RFC7591)](https://datatracker.ietf.org/doc/html/rfc7591)
+- [Proof Key for Code Exchange by OAuth Public Clients (RFC7636)](https://datatracker.ietf.org/doc/html/rfc7636)
+- [OAuth 2.0 Token Introspection (RFC7662)](https://datatracker.ietf.org/doc/html/rfc7662)
+- [OAuth 2.0 for Native Apps (RFC8252)](https://datatracker.ietf.org/doc/html/rfc8252)
+- [OAuth 2.0 Authorization Server Metadata (RFC8414)](https://datatracker.ietf.org/doc/html/rfc8414)
 
 
 Using mOAuth

@@ -12,20 +12,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout mOAuth
+      uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: update build environment
+    - name: Update Build Environment
       run: sudo apt-get update --fix-missing -y
-    - name: install prerequisites
+    - name: Install Prerequisites
       run: sudo apt-get install -y cppcheck avahi-daemon libavahi-client-dev libssl-dev libpam-dev libusb-1.0-0-dev zlib1g-dev
-    - name: configure
-      env:
-        CC: /usr/bin/gcc
-      run: ./configure --enable-debug --enable-maintainer --enable-sanitizer --disable-shared
-    - name: make
+    - name: Configure mOAuth
+      run: ./configure --enable-debug --enable-maintainer --with-sanitizer --disable-shared
+    - name: Build mOAuth
       run: make
-    - name: test
+    - name: Test mOAuth
       env:
         ASAN_OPTIONS: leak_check_at_exit=false
       run: cd moauth; make test
@@ -39,14 +38,15 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout mOAuth
+      uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: configure
-      run: ./configure --enable-debug --enable-maintainer --enable-sanitizer --disable-shared
-    - name: make
+    - name: Configure mOAuth
+      run: ./configure --enable-debug --enable-maintainer --with-sanitizer --disable-shared
+    - name: Build mOAuth
       run: make
-    - name: test
+    - name: Test mOAuth
       run: cd moauth; make test
 #    - name: clang static analyzer
 #      run: make CC=clang "GHA_ERROR=::error::" clang
