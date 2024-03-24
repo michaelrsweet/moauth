@@ -22,7 +22,7 @@ CFLAGS		=	$(CPPFLAGS) @CFLAGS@ $(OPTIM) $(WARNINGS)
 CODE_SIGN	=	@CODE_SIGN@
 CODESIGN_IDENTITY =	-
 CPPFLAGS	=	-I.. -I../libcups @CPPFLAGS@
-CSFLAGS		=	-s "$(CODESIGN_IDENTITY)" @CSFLAGS@ --timestamp
+CSFLAGS		=	-s "$(CODESIGN_IDENTITY)" @CSFLAGS@ --timestamp --prefix org.msweet.
 INSTALL		=	@INSTALL@
 LDFLAGS		=	-L../moauth @LDFLAGS@ $(OPTIM)
 LIBS		=	-L../libcups/cups $$(PKG_CONFIG_PATH=../libcups pkg-config --libs cups3) @LIBS@
