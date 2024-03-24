@@ -4239,6 +4239,8 @@ printf "%s\n" "-D__USE_MISC -D_GNU_SOURCE -Wl,-z,relro,-z,now" >&6; }
 
         # When not building for debug, target macOS 11 or later, "universal"
         # binaries when possible...
+        LIBS="-framework CoreServices $LIBS"
+
         if echo "$CPPFLAGS $CFLAGS $LDFLAGS $OPTIM" | grep -q "\\-arch "
 then :
 

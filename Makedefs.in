@@ -58,6 +58,14 @@ top_srcdir	=	@top_srcdir@
 BUILDROOT	=	$(DSTROOT)$(RPM_BUILD_ROOT)$(DESTDIR)
 
 
+# Install commands...
+INSTALL_BIN	=	$(INSTALL) -c -m 755
+INSTALL_DATA	=	$(INSTALL) -c -m 444
+INSTALL_DIR	=	$(INSTALL) -d -m 755
+INSTALL_LIB	=	$(INSTALL) -c -m 755
+INSTALL_MAN	=	$(INSTALL) -c -m 444
+
+
 # Build commands...
 .SUFFIXES:	.c .h .o
 .c.o:

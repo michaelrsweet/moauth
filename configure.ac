@@ -194,6 +194,8 @@ AS_IF([test -n "$GCC"], [
     ], [darwin*], [
         # When not building for debug, target macOS 11 or later, "universal"
         # binaries when possible...
+        LIBS="-framework CoreServices $LIBS"
+
         AS_IF([echo "$CPPFLAGS $CFLAGS $LDFLAGS $OPTIM" | grep -q "\\-arch "], [
             # Don't add architecture/min-version flags if they are already present
             AC_MSG_RESULT([none])

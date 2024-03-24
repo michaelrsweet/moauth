@@ -1,7 +1,7 @@
 #
-# moauth daemon makefile
+# mOAuth daemon makefile
 #
-# Copyright © 2017-2019 by Michael R Sweet
+# Copyright © 2017-2024 by Michael R Sweet
 #
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more
 # information.
@@ -41,14 +41,14 @@ clean:
 
 # Install everything...
 install:	all
-	$(INSTALL) -d -m 755 $(BUILDROOT)$(sbindir)
-	$(INSTALL) -c -m 755 moauthd $(BUILDROOT)$(sbindir)
-	$(INSTALL) -d -m 755 $(BUILDROOT)$(mandir)/man5
-	$(INSTALL) -c -m 644 moauthd.conf.5 $(BUILDROOT)$(mandir)/man5
-	$(INSTALL) -d -m 755 $(BUILDROOT)$(mandir)/man8
-	$(INSTALL) -c -m 644 moauthd.8 $(BUILDROOT)$(mandir)/man8
-	$(INSTALL) -d -m 755 $(BUILDROOT)$(sysconfdir)
-	$(INSTALL) -c -m 644 moauthd.conf.default $(BUILDROOT)$(sysconfdir)
+	$(INSTALL_DIR) $(BUILDROOT)$(sbindir)
+	$(INSTALL_BIN) moauthd $(BUILDROOT)$(sbindir)
+	$(INSTALL_DIR) $(BUILDROOT)$(mandir)/man5
+	$(INSTALL_MAN) moauthd.conf.5 $(BUILDROOT)$(mandir)/man5
+	$(INSTALL_DIR) $(BUILDROOT)$(mandir)/man8
+	$(INSTALL_MAN) moauthd.8 $(BUILDROOT)$(mandir)/man8
+	$(INSTALL_DIR) $(BUILDROOT)$(sysconfdir)
+	$(INSTALL_DATA) moauthd.conf.default $(BUILDROOT)$(sysconfdir)
 
 
 # Test everything...
@@ -61,22 +61,14 @@ moauthd:	$(MOAUTHD_OBJS) ../moauth/libmoauth.a
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ $(MOAUTHD_OBJS) ../moauth/libmoauth.a \
 		$(PAMLIBS) $(LIBS)
-	if test `uname` = Darwin; then \
-		echo Code-signing $@...; \
-		codesign -s "$(CODESIGN_IDENTITY)" $@; \
-	fi
+	$(CODE_SIGN) $(CSFLAGS) $@
 
 
 # Daemon test program...
 testmoauthd:	testmoauthd.o ../moauth/libmoauth.a
 	echo Linking $@...
-	if test `uname` = Darwin; then \
-		$(CC) $(LDFLAGS) -o $@ testmoauthd.o ../moauth/libmoauth.a $(LIBS) -framework CoreServices; \
-		echo Code-signing $@...; \
-		codesign -s "$(CODESIGN_IDENTITY)" $@; \
-	else \
-		$(CC) $(LDFLAGS) -o $@ testmoauthd.o ../moauth/libmoauth.a $(LIBS); \
-	fi
+	$(CC) $(LDFLAGS) -o $@ testmoauthd.o ../moauth/libmoauth.a $(LIBS)
+	$(CODE_SIGN) $(CSFLAGS) $@
 
 
 # Default resource files for daemon web UI

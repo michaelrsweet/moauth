@@ -1,9 +1,10 @@
 #
-# moauth library makefile
+# mOAuth library makefile
 #
-# Copyright © 2017-2019 by Michael R Sweet
+# Copyright © 2017-2024 by Michael R Sweet
 #
-# Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+# Licensed under Apache License v2.0.  See the file "LICENSE" for more
+# information.
 #
 
 # Include common stuff...
@@ -34,7 +35,7 @@ clean:
 CODEDOC_OPTIONS = \
 		libmoauth.xml \
 		--author "Michael R Sweet" \
-		--copyright "Copyright (c) 2017-2019" \
+		--copyright "Copyright (c) 2017-2024" \
 		--docversion "$(MOAUTH_VERSION)" \
 		--title "mOAuth API Reference" \
 		--body libmoauth-body.md
@@ -49,10 +50,10 @@ doc:
 
 # Install everything...
 install:	all
-	$(INSTALL) -d -m 755 $(BUILDROOT)$(includedir)
-	$(INSTALL) -c -m 644 moauth.h $(BUILDROOT)$(includedir)
-	$(INSTALL) -d -m 755 $(BUILDROOT)$(mandir)/man3
-	$(INSTALL) -c -m 644 libmoauth.3 $(BUILDROOT)$(mandir)/man3
+	$(INSTALL_DIR) $(BUILDROOT)$(includedir)
+	$(INSTALL_DATA) moauth.h $(BUILDROOT)$(includedir)
+	$(INSTALL_DIR) $(BUILDROOT)$(mandir)/man3
+	$(INSTALL_MAN) libmoauth.3 $(BUILDROOT)$(mandir)/man3
 
 
 # Test everything...
@@ -64,6 +65,7 @@ test:	testmoauth
 testmoauth:	testmoauth.o libmoauth.a
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ testmoauth.o libmoauth.a $(LIBS)
+	$(CODE_SIGN) $(CSFLAGS) $@
 
 
 # moauth library...
