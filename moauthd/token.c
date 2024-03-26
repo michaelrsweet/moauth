@@ -32,8 +32,7 @@ moauthdCreateToken(
 {
   moauthd_token_t	*token;		// New token
   struct passwd		*passwd;	// User info
-  char			temp[1024],	// Temporary string
-			*scope;		// Current scope
+  char			temp[1024];	// Temporary string
 
 
   if (!scopes || !*scopes)
@@ -41,19 +40,11 @@ moauthdCreateToken(
 
   token = (moauthd_token_t *)calloc(1, sizeof(moauthd_token_t));
 
-  token->type        = type;
-  token->application = application;
-  token->user        = strdup(user);
-  token->scopes      = strdup(scopes);
-
-  strncpy(temp, scopes, sizeof(temp) - 1);
-  temp[sizeof(temp) - 1] = '\0';
-
-  token->scopes_array = cupsArrayNew((cups_array_cb_t)strcmp, NULL, NULL, 0, (cups_acopy_cb_t)strdup, (cups_afree_cb_t)free);
-  if ((scope = strtok(temp, " \t")) != NULL)
-    cupsArrayAdd(token->scopes_array, scope);
-  while ((scope = strtok(NULL, " \t")) != NULL)
-    cupsArrayAdd(token->scopes_array, scope);
+  token->type         = type;
+  token->application  = application;
+  token->user         = strdup(user);
+  token->scopes       = strdup(scopes);
+  token->scopes_array = cupsArrayNewStrings(scopes, ' ');
 
   if ((passwd = getpwnam(user)) != NULL)
   {
