@@ -13,7 +13,7 @@
 // Define DEBUG to get debug printf messages to stderr.
 //
 
-#define DEBUG 0
+//#define DEBUG 0
 #if DEBUG > 0
 #  define DEBUG_printf(...)	fprintf(stderr, __VA_ARGS__)
 #  define DEBUG_puts(s)		fputs(s, stderr);
@@ -601,7 +601,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
 
 	block		     = NULL;
 	stackptr[1].parent   = mmd_add(stackptr->parent, MMD_TYPE_CODE_BLOCK, 0, NULL, NULL);
-	stackptr[1].indent   = lineptr - line;
+	stackptr[1].indent   = (int)(lineptr - line);
 	stackptr[1].fence    = *lineptr;
 	stackptr[1].fencelen = mmd_is_codefence(lineptr, '\0', 0, &language);
 	stackptr ++;
@@ -720,7 +720,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
 
       lineptr	+= 2;
       linestart = lineptr;
-      newindent = linestart - line;
+      newindent = (int)(linestart - line);
 
       while (isspace(*lineptr & 255))
 	lineptr ++;
@@ -740,7 +740,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
       if (stackptr->parent->type != MMD_TYPE_UNORDERED_LIST && stackptr < (stack + sizeof(stack) / sizeof(stack[0]) - 1))
       {
 	stackptr[1].parent = mmd_add(stackptr->parent, MMD_TYPE_UNORDERED_LIST, 0, NULL, NULL);
-	stackptr[1].indent = linestart - line;
+	stackptr[1].indent = (int)(linestart - line);
 	stackptr[1].fence  = '\0';
 	stackptr ++;
       }
@@ -748,7 +748,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
       if (stackptr < (stack + sizeof(stack) / sizeof(stack[0]) - 1))
       {
 	stackptr[1].parent = mmd_add(stackptr->parent, MMD_TYPE_LIST_ITEM, 0, NULL, NULL);
-	stackptr[1].indent = linestart - line;
+	stackptr[1].indent = (int)(linestart - line);
 	stackptr[1].fence  = '\0';
 	stackptr ++;
       }
@@ -777,7 +777,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
         // Yes, ordered list.
 	lineptr	  = temp + 2;
 	linestart = lineptr;
-	newindent = linestart - line;
+	newindent = (int)(linestart - line);
 
 	while (isspace(*lineptr & 255))
 	  lineptr ++;
@@ -797,7 +797,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
 	if (stackptr->parent->type != MMD_TYPE_ORDERED_LIST && stackptr < (stack + sizeof(stack) / sizeof(stack[0]) - 1))
 	{
 	  stackptr[1].parent = mmd_add(stackptr->parent, MMD_TYPE_ORDERED_LIST, 0, NULL, NULL);
-	  stackptr[1].indent = linestart - line;
+	  stackptr[1].indent = (int)(linestart - line);
 	  stackptr[1].fence  = '\0';
 	  stackptr ++;
 	}
@@ -805,7 +805,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
 	if (stackptr < (stack + sizeof(stack) / sizeof(stack[0]) - 1))
 	{
 	  stackptr[1].parent = mmd_add(stackptr->parent, MMD_TYPE_LIST_ITEM, 0, NULL, NULL);
-	  stackptr[1].indent = linestart - line;
+	  stackptr[1].indent = (int)(linestart - line);
 	  stackptr[1].fence  = '\0';
 	  stackptr ++;
 	}
@@ -824,7 +824,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
       // Heading, count the number of '#' for the heading level...
       DEBUG_puts("     HEADING?\n");
 
-      newindent = lineptr - line;
+      newindent = (int)(lineptr - line);
       temp	= lineptr + 1;
 
       while (*temp == '#')
@@ -833,7 +833,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
       if ((temp - lineptr) <= 6 && isspace(*temp & 255))
       {
         // Heading 1-6...
-	type  = MMD_TYPE_HEADING_1 + (temp - lineptr - 1);
+	type  = MMD_TYPE_HEADING_1 + (int)(temp - lineptr - 1);
 	block = NULL;
 
         // Skip whitespace after "#"...
@@ -2147,7 +2147,7 @@ mmd_read_line(_mmd_filebuf_t *file,	// I - File buffer
     else if (ch != '\r' && lineptr < lineend)
     {
       column ++;
-      *lineptr++ = ch;
+      *lineptr++ = (char)ch;
     }
 
     if (ch == '\n')
