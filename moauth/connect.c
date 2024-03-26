@@ -19,7 +19,7 @@ moauthClose(moauth_t *server)		// I - OAuth server connection
 {
   if (server)
   {
-    cupsFreeOptions(server->num_metadata, server->metadata);
+    cupsJSONDelete(server->metadata);
     free(server);
   }
 }
@@ -181,9 +181,9 @@ moauthConnect(
       // OpenID/RFC 8414 JSON metadata...
       const char *uri;			// Authorization/token URI
 
-      server->num_metadata = _moauthJSONDecode(body, &server->metadata);
+      server->metadata = cupsJSONImportString(body);
 
-      if ((uri = cupsGetOption("authorization_endpoint", server->num_metadata, server->metadata)) != NULL)
+      if ((uri = cupsJSONGetString(cupsJSONFind(server->metadata, "authorization_endpoint"))) != NULL)
       {
 	if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK || strcmp(scheme, "https"))
         {
@@ -195,7 +195,7 @@ moauthConnect(
         server->authorization_endpoint = uri;
       }
 
-      if ((uri = cupsGetOption("introspection_endpoint", server->num_metadata, server->metadata)) != NULL)
+      if ((uri = cupsJSONGetString(cupsJSONFind(server->metadata, "introspection_endpoint"))) != NULL)
       {
 	if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK || strcmp(scheme, "https"))
         {
@@ -207,7 +207,7 @@ moauthConnect(
         server->introspection_endpoint = uri;
       }
 
-      if ((uri = cupsGetOption("registration_endpoint", server->num_metadata, server->metadata)) != NULL)
+      if ((uri = cupsJSONGetString(cupsJSONFind(server->metadata, "registration_endpoint"))) != NULL)
       {
 	if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK || strcmp(scheme, "https"))
         {
@@ -219,7 +219,7 @@ moauthConnect(
         server->registration_endpoint = uri;
       }
 
-      if ((uri = cupsGetOption("token_endpoint", server->num_metadata, server->metadata)) != NULL)
+      if ((uri = cupsJSONGetString(cupsJSONFind(server->metadata, "token_endpoint"))) != NULL)
       {
 	if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK || strcmp(scheme, "https"))
         {

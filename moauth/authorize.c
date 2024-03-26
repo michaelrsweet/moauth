@@ -9,6 +9,7 @@
 
 #include <config.h>
 #include "moauth-private.h"
+#include <cups/form.h>
 
 #ifdef __APPLE__
 #  include <CoreFoundation/CoreFoundation.h>
@@ -37,18 +38,12 @@ moauthAuthorize(
     const char *code_verifier,		// I - Code verifier string or `NULL` if none
     const char *scope)			// I - Scope to request or `NULL`
 {
-  char		scheme[32],		// URI scheme
-		userpass[256],		// Username:password (unused)
-		host[256],		// Host
-		resource[256];		// Resource path
-  int		port;			// Port number
-  char		url[2048];		// URL for authorization page
+  char		*url;			// URL for authorization page
   bool		status = true;		// Return status
   unsigned char	sha256[32];		// SHA-256 hash of code verifier
   char		code_challenge[64];	// Hashed code verifier string
   size_t	num_vars = 0;		// Number of form variables
   cups_option_t	*vars = NULL;		// Form variables
-  char		*formdata;		// Encoded form data
 
 
   // Range check input...
@@ -61,8 +56,6 @@ moauthAuthorize(
   }
 
   // Make the authorization URL using the information supplied...
-  httpSeparateURI(HTTP_URI_CODING_ALL, server->authorization_endpoint, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource));
-
   num_vars = cupsAddOption("response_type", "code", num_vars, &vars);
   num_vars = cupsAddOption("client_id", client_id, num_vars, &vars);
   num_vars = cupsAddOption("redirect_uri", redirect_uri, num_vars, &vars);
@@ -80,20 +73,8 @@ moauthAuthorize(
     num_vars = cupsAddOption("code_challenge", code_challenge, num_vars, &vars);
   }
 
-  formdata = _moauthFormEncode(num_vars, vars);
+  url = cupsFormEncode(server->authorization_endpoint, num_vars, vars);
 
-  if (snprintf(url, sizeof(url), "https://%s:%d%s%s%s", host, port, resource, strchr(resource, '?') != NULL ? "&" : "?", formdata) >= sizeof(url))
-  {
-    // URL is too long...
-    snprintf(server->error, sizeof(server->error), "Unable to create authorization URL.");
-
-    free(formdata);
-    cupsFreeOptions(num_vars, vars);
-
-    return (false);
-  }
-
-  free(formdata);
   cupsFreeOptions(num_vars, vars);
 
 #ifdef __APPLE__
@@ -135,6 +116,8 @@ moauthAuthorize(
   if (!status)
     snprintf(server->error, sizeof(server->error), "Unable to open authorization URL.");
 #endif // __APPLE__
+
+  free(url);
 
   return (status);
 }

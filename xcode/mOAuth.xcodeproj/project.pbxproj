@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 48;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -27,9 +27,7 @@
 		270D41E91FF6909A00EFA9B4 /* authorize.c in Sources */ = {isa = PBXBuildFile; fileRef = 270D41E81FF6909900EFA9B4 /* authorize.c */; };
 		270D41EC1FF698AF00EFA9B4 /* connect.c in Sources */ = {isa = PBXBuildFile; fileRef = 270D41EA1FF698AD00EFA9B4 /* connect.c */; };
 		270D41ED1FF698AF00EFA9B4 /* token.c in Sources */ = {isa = PBXBuildFile; fileRef = 270D41EB1FF698AF00EFA9B4 /* token.c */; };
-		270D41EF1FF7257900EFA9B4 /* json.c in Sources */ = {isa = PBXBuildFile; fileRef = 270D41EE1FF7257800EFA9B4 /* json.c */; };
 		270D41F12000983200EFA9B4 /* moauth-private.h in Headers */ = {isa = PBXBuildFile; fileRef = 270D41F02000983000EFA9B4 /* moauth-private.h */; };
-		270E13B31FC31D750053DAE4 /* form.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13A91FC31D3E0053DAE4 /* form.c */; };
 		270E13B41FC31D750053DAE4 /* moauth.h in Headers */ = {isa = PBXBuildFile; fileRef = 270E13A81FC31D3E0053DAE4 /* moauth.h */; };
 		270E13BF1FC31DB70053DAE4 /* resource.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13B51FC31DB70053DAE4 /* resource.c */; };
 		270E13C01FC31DB70053DAE4 /* server.c in Sources */ = {isa = PBXBuildFile; fileRef = 270E13B61FC31DB70053DAE4 /* server.c */; };
@@ -148,12 +146,10 @@
 		270D41E81FF6909900EFA9B4 /* authorize.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = authorize.c; sourceTree = "<group>"; };
 		270D41EA1FF698AD00EFA9B4 /* connect.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = connect.c; sourceTree = "<group>"; };
 		270D41EB1FF698AF00EFA9B4 /* token.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = token.c; sourceTree = "<group>"; };
-		270D41EE1FF7257800EFA9B4 /* json.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = json.c; sourceTree = "<group>"; };
 		270D41F02000983000EFA9B4 /* moauth-private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "moauth-private.h"; sourceTree = "<group>"; };
 		270E139B1FC31A530053DAE4 /* moauthd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = moauthd; sourceTree = BUILT_PRODUCTS_DIR; };
 		270E13A71FC31D220053DAE4 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		270E13A81FC31D3E0053DAE4 /* moauth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = moauth.h; sourceTree = "<group>"; };
-		270E13A91FC31D3E0053DAE4 /* form.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = form.c; sourceTree = "<group>"; };
 		270E13AF1FC31D6A0053DAE4 /* libmoauth.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmoauth.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		270E13B51FC31DB70053DAE4 /* resource.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = resource.c; sourceTree = "<group>"; };
 		270E13B61FC31DB70053DAE4 /* server.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = server.c; sourceTree = "<group>"; };
@@ -279,8 +275,6 @@
 				270D41F02000983000EFA9B4 /* moauth-private.h */,
 				270D41E81FF6909900EFA9B4 /* authorize.c */,
 				270D41EA1FF698AD00EFA9B4 /* connect.c */,
-				270E13A91FC31D3E0053DAE4 /* form.c */,
-				270D41EE1FF7257800EFA9B4 /* json.c */,
 				279187221FE5EFA800FBA1E3 /* post.c */,
 				27BF7AE021EE3E0A00A7D756 /* random.c */,
 				273FE65621F4030700F34014 /* register.c */,
@@ -416,7 +410,8 @@
 		270E13931FC31A530053DAE4 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1400;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1530;
 				ORGANIZATIONNAME = "Michael R Sweet";
 				TargetAttributes = {
 					270E139A1FC31A530053DAE4 = {
@@ -485,11 +480,9 @@
 				273FE65721F4030900F34014 /* register.c in Sources */,
 				270D41EC1FF698AF00EFA9B4 /* connect.c in Sources */,
 				270D41E91FF6909A00EFA9B4 /* authorize.c in Sources */,
-				270E13B31FC31D750053DAE4 /* form.c in Sources */,
 				27BF7AE121EE3E0A00A7D756 /* random.c in Sources */,
 				270D41ED1FF698AF00EFA9B4 /* token.c in Sources */,
 				279187231FE5EFC300FBA1E3 /* post.c in Sources */,
-				270D41EF1FF7257900EFA9B4 /* json.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -558,6 +551,7 @@
 		270E13A01FC31A530053DAE4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
@@ -599,6 +593,7 @@
 				DEVELOPMENT_TEAM = RU58A2256H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -633,6 +628,7 @@
 		270E13A11FC31A530053DAE4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
@@ -675,6 +671,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_TREAT_IMPLICIT_FUNCTION_DECLARATIONS_AS_ERRORS = YES;
@@ -705,6 +702,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = org.msweet.moauthd;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -716,6 +714,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = org.msweet.moauthd;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -728,6 +727,7 @@
 				DEVELOPMENT_TEAM = RU58A2256H;
 				EXECUTABLE_PREFIX = lib;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -739,6 +739,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
 				EXECUTABLE_PREFIX = lib;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -750,6 +751,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -760,6 +762,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -770,6 +773,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -780,6 +784,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -790,6 +795,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -800,6 +806,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = RU58A2256H;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

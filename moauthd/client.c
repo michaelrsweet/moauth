@@ -8,6 +8,7 @@
 //
 
 #include "moauthd.h"
+#include <cups/form.h>
 #include <pwd.h>
 #include <grp.h>
 
@@ -178,8 +179,7 @@ moauthdRunClient(
     }
 
     // Validate Host: header...
-    strncpy(host_value, httpGetField(client->http, HTTP_FIELD_HOST), sizeof(host_value) - 1);
-    host_value[sizeof(host_value) - 1] = '\0';
+    cupsCopyString(host_value, httpGetField(client->http, HTTP_FIELD_HOST), sizeof(host_value));
 
     if ((host_ptr = strrchr(host_value, ':')) != NULL)
     {
@@ -245,7 +245,7 @@ moauthdRunClient(
             if ((user = getpwnam(username)) != NULL)
 	    {
 	      moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authenticated as \"%s\" using Basic.", username);
-	      strncpy(client->remote_user, username, sizeof(client->remote_user) - 1);
+	      cupsCopyString(client->remote_user, username, sizeof(client->remote_user));
 	      client->remote_uid = user->pw_uid;
 
               client->num_remote_groups = (int)(sizeof(client->remote_groups) / sizeof(client->remote_groups[0]));
@@ -307,7 +307,7 @@ moauthdRunClient(
 	  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Authenticated as \"%s\" using Bearer.", token->user);
           client->remote_token = token;
           client->remote_uid   = token->uid;
-          strncpy(client->remote_user, token->user, sizeof(client->remote_user) - 1);
+          cupsCopyString(client->remote_user, token->user, sizeof(client->remote_user));
 
 	  client->num_remote_groups = (int)(sizeof(client->remote_groups) / sizeof(client->remote_groups[0]));
 
@@ -327,8 +327,7 @@ moauthdRunClient(
         // Unsupported Authorization scheme...
         char	scheme[32];		// Scheme name
 
-        strncpy(scheme, authorization, sizeof(scheme) - 1);
-        scheme[sizeof(scheme) - 1] = '\0';
+        cupsCopyString(scheme, authorization, sizeof(scheme));
         strtok(scheme, " \t");
 
 	moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unsupported Authorization scheme \"%s\".", scheme);
@@ -453,7 +452,7 @@ do_authorize(moauthd_client_t *client)	// I - Client object
 
     case HTTP_STATE_GET :
         // Get form variable on the request line...
-        num_vars      = _moauthFormDecode(client->query_string, &vars);
+        num_vars      = cupsFormDecode(client->query_string, &vars);
         client_id     = cupsGetOption("client_id", num_vars, vars);
         redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
         response_type = cupsGetOption("response_type", num_vars, vars);
@@ -557,7 +556,7 @@ do_authorize(moauthd_client_t *client)	// I - Client object
         if ((data = _moauthCopyMessageBody(client->http)) == NULL)
           return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
-        num_vars      = _moauthFormDecode(data, &vars);
+        num_vars      = cupsFormDecode(data, &vars);
         client_id     = cupsGetOption("client_id", num_vars, vars);
         redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
         response_type = cupsGetOption("response_type", num_vars, vars);
@@ -644,11 +643,9 @@ do_introspect(moauthd_client_t *client)	// I - Client object
   char		*data;			// Form data
   const char	*token_var;		// token variable (REQUIRED)
   moauthd_token_t *token;		// Token
-  size_t	num_json = 0;		// Number of JSON (response) variables
-  cups_option_t	*json = NULL;		// JSON (response) variables
+  cups_json_t	*json,			// JSON response
+		*jarray;		// JSON array
   size_t	datalen;		// Length of JSON data
-  char		exp[32],		// Expiration time
-		iat[32];		// Issue time
   static const char * const types[] =	// Token types
   {
     "access",
@@ -684,7 +681,7 @@ do_introspect(moauthd_client_t *client)	// I - Client object
   if ((data = _moauthCopyMessageBody(client->http)) == NULL)
     return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
-  num_vars  = _moauthFormDecode(data, &vars);
+  num_vars  = cupsFormDecode(data, &vars);
   token_var = cupsGetOption("token", num_vars, vars);
 
   free(data);
@@ -704,19 +701,18 @@ do_introspect(moauthd_client_t *client)	// I - Client object
     goto bad_request;
   }
 
-  snprintf(exp, sizeof(exp), "%ld", (long)token->expires);
-  snprintf(iat, sizeof(iat), "%ld", (long)token->created);
+  json = cupsJSONNew(/*parent*/NULL, /*after*/NULL, CUPS_JTYPE_OBJECT);
+  cupsJSONNew(json, cupsJSONNewKey(json, /*after*/NULL, "active"), token->expires > time(NULL) ? CUPS_JTYPE_TRUE : CUPS_JTYPE_FALSE);
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, /*after*/NULL, "scope"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, /*after*/NULL, token->scopes);// TODO: Fix this
+  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "client_id"), token->application->client_id);
+  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "username"), token->user);
+  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "token_type"), types[token->type]);
+  cupsJSONNewNumber(json, cupsJSONNewKey(json, /*after*/NULL, "exp"), (double)token->expires);
+  cupsJSONNewNumber(json, cupsJSONNewKey(json, /*after*/NULL, "iat"), (double)token->created);
 
-  num_json = cupsAddOption("active", token->expires > time(NULL) ? "true" : "false", num_json, &json);
-  num_json = cupsAddOption("scope", token->scopes, num_json, &json);
-  num_json = cupsAddOption("client_id", token->application->client_id, num_json, &json);
-  num_json = cupsAddOption("username", token->user, num_json, &json);
-  num_json = cupsAddOption("token_type", types[token->type], num_json, &json);
-  num_json = cupsAddOption("exp", exp, num_json, &json);
-  num_json = cupsAddOption("iat", iat, num_json, &json);
-
-  data = _moauthJSONEncode(num_json, json);
-  cupsFreeOptions(num_json, json);
+  data = cupsJSONExportString(json);
+  cupsJSONDelete(json);
 
   if (!data)
   {
@@ -763,22 +759,18 @@ do_register(moauthd_client_t *client)	// I - Client object
 {
   http_status_t	status = HTTP_STATUS_CREATED;
 					// Return status
-  size_t	num_vars;		// Number of form (request) variables
-  cups_option_t	*vars;			// Form (request) variables
+  cups_json_t	*request = NULL,	// JSON request
+		*response = NULL,	// JSON response
+		*jarray;		// JSON array
   char		*data;			// Form data
   const char	*redirect_uris,		// redirect_uris variable (REQUIRED)
 		*client_name,		// client_name variable (RECOMMENDED)
 		*client_uri,		// client_uri variable (RECOMMENDED)
 		*logo_uri,		// logo_uri variable (OPTIONAL)
 		*tos_uri;		// tos_uri variable (OPTIONAL)
-  size_t	num_json = 0;		// Number of JSON (response) variables
-  cups_option_t	*json = NULL;		// JSON (response) variables
   size_t	datalen;		// Length of JSON data
   unsigned char	client_id_hash[32];	// SHA2-256 hash of client_name or redirect_uris
   char		client_id[65];		// client_id value
-  char		*uri,			// Copy of redirect_uris
-		*uristart,		// Start of URI
-		*uriend;		// End of URI
   const char	*error = NULL;		// Error code, if any
   char		error_message[1024];	// Error message, if any
 
@@ -811,12 +803,12 @@ do_register(moauthd_client_t *client)	// I - Client object
   if ((data = _moauthCopyMessageBody(client->http)) == NULL)
     return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
-  num_vars      = _moauthJSONDecode(data, &vars);
-  redirect_uris = cupsGetOption("redirect_uris", num_vars, vars);
-  client_name   = cupsGetOption("client_name", num_vars, vars);
-  client_uri    = cupsGetOption("client_uri", num_vars, vars);
-  logo_uri      = cupsGetOption("logo_uri", num_vars, vars);
-  tos_uri       = cupsGetOption("tos_uri", num_vars, vars);
+  request       = cupsJSONImportString(data);
+  redirect_uris = cupsJSONGetString(cupsJSONGetChild(cupsJSONFind(request, "redirect_uris"), 0));
+  client_name   = cupsJSONGetString(cupsJSONFind(request, "client_name"));
+  client_uri    = cupsJSONGetString(cupsJSONFind(request, "client_uri"));
+  logo_uri      = cupsJSONGetString(cupsJSONFind(request, "logo_uri"));
+  tos_uri       = cupsJSONGetString(cupsJSONFind(request, "tos_uri"));
 
   free(data);
 
@@ -830,13 +822,10 @@ do_register(moauthd_client_t *client)	// I - Client object
 
     goto bad_request;
   }
-  else if (strncmp(redirect_uris, "[\"", 2))
+  else if (!validate_uri(redirect_uris, NULL))
   {
-    // Bad redirect_uris variable!
-    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad redirect_uris \"%s\".", redirect_uris);
-
     error = "invalid_redirect_uri";
-    snprintf(error_message, sizeof(error_message), "Bad redirect_uris \"%s\".", redirect_uris);
+    snprintf(error_message, sizeof(error_message), "Bad redirect_uri \"%s\".", redirect_uris);
 
     goto bad_request;
   }
@@ -871,64 +860,50 @@ do_register(moauthd_client_t *client)	// I - Client object
   cupsHashString(client_id_hash, sizeof(client_id_hash), client_id, sizeof(client_id));
   client_id[16] = '\0';
 
-  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Registering client \"%s\" with redirect URIs \"%s\".", client_id, redirect_uris);
+  moauthdLogc(client, MOAUTHD_LOGLEVEL_INFO, "Registering client \"%s\" with redirect URI \"%s\".", client_id, redirect_uris);
 
-  uri = strdup(redirect_uris + 2);
-  for (uristart = uri; uristart; uristart = uriend)
+  if (moauthdFindApplication(client->server, client_id, redirect_uris))
   {
-    if ((uriend = strstr(uristart, "\",\"")) != NULL)
-    {
-      *uriend++ = '\0';
-    }
-    else if ((uriend = strstr(uristart, "\"]")) != NULL)
-    {
-      *uriend = '\0';
-      uriend  = NULL;
-    }
-
-    if (!validate_uri(uristart, NULL))
-    {
-      error = "invalid_redirect_uri";
-      snprintf(error_message, sizeof(error_message), "Bad redirect_uri \"%s\".", uristart);
-
-      goto bad_request;
-    }
-    else if (moauthdFindApplication(client->server, client_id, uristart))
-    {
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Client %s %s is already registered.", client_id, uristart);
-    }
-    else if (moauthdAddApplication(client->server, client_id, uristart, client_name, client_uri, logo_uri, tos_uri))
-    {
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Client %s %s registered.", client_id, uristart);
-    }
-    else
-    {
-      moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Unable to register client %s %s.", client_id, uristart);
-      // TODO: Return an error? Nothing defined in RFC 7591 for internal errors...
-    }
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Client %s %s is already registered.", client_id, redirect_uris);
   }
-  free(uri);
+  else if (moauthdAddApplication(client->server, client_id, redirect_uris, client_name, client_uri, logo_uri, tos_uri))
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Client %s %s registered.", client_id, redirect_uris);
+  }
+  else
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "Unable to register client %s %s.", client_id, redirect_uris);
+    // TODO: Return an error? Nothing defined in RFC 7591 for internal errors...
+  }
 
   // Respond with the metadata and generated client_id...
-  num_json = cupsAddOption("client_id", client_id, num_json, &json);
-
+  response = cupsJSONNew(/*parent*/NULL, /*after*/NULL, CUPS_JTYPE_OBJECT);
+  cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "client_id"), client_id);
   if (redirect_uris)
-    num_json = cupsAddOption("redirect_uris", client_name, num_json, &json);
+  {
+    jarray = cupsJSONNew(response, cupsJSONNewKey(response, /*after*/NULL, "redirect_uris"), CUPS_JTYPE_ARRAY);
+    cupsJSONNewString(jarray, /*after*/NULL, redirect_uris);
+  }
   if (client_name)
-    num_json = cupsAddOption("client_name", client_name, num_json, &json);
+    cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "client_name"), client_name);
   if (client_uri)
-    num_json = cupsAddOption("client_uri", client_name, num_json, &json);
+    cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "client_uri"), client_uri);
   if (logo_uri)
-    num_json = cupsAddOption("logo_uri", client_name, num_json, &json);
+    cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "logo_uri"), logo_uri);
   if (tos_uri)
-    num_json = cupsAddOption("tos_uri", client_name, num_json, &json);
+    cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "tos_uri"), tos_uri);
 
-  num_json = cupsAddOption("token_endpoint_auth_method", "none", num_json, &json);
-  num_json = cupsAddOption("grant_types", "[\"authorization_code\",\"password\",\"refresh_token\"]", num_json, &json);
-  num_json = cupsAddOption("token_endpoint_auth_methods_supported", "[\"none\"]", num_json, &json);
+  cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "token_endpoint_auth_method"), "none");
 
-  data = _moauthJSONEncode(num_json, json);
-  cupsFreeOptions(num_json, json);
+  jarray = cupsJSONNew(response, cupsJSONNewKey(response, /*after*/NULL, "grant_types"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, /*after*/NULL, "authorization_code");
+  cupsJSONNewString(jarray, /*after*/NULL, "password");
+  cupsJSONNewString(jarray, /*after*/NULL, "refresh_token");
+
+  jarray = cupsJSONNew(response, cupsJSONNewKey(response, /*after*/NULL, "token_endpoint_auth_methods_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, /*after*/NULL, "none");
+
+  data = cupsJSONExportString(response);
 
   if (!data)
   {
@@ -937,7 +912,8 @@ do_register(moauthd_client_t *client)	// I - Client object
     goto bad_request;
   }
 
-  cupsFreeOptions(num_vars, vars);
+  cupsJSONDelete(request);
+  cupsJSONDelete(response);
 
   datalen = strlen(data);
 
@@ -960,15 +936,17 @@ do_register(moauthd_client_t *client)	// I - Client object
   // If we get here there was a bad request...
   bad_request:
 
-  cupsFreeOptions(num_vars, vars);
+  cupsJSONDelete(request);
+  cupsJSONDelete(response);
 
   if (error)
   {
-    num_json = cupsAddOption("error", error, num_json, &json);
-    num_json = cupsAddOption("error_description", error_message, num_json, &json);
+    response = cupsJSONNew(/*parent*/NULL, /*after*/NULL, CUPS_JTYPE_OBJECT);
+    cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "error"), error);
+    cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "error_description"), error_message);
 
-    data = _moauthJSONEncode(num_json, json);
-    cupsFreeOptions(num_json, json);
+    data = cupsJSONExportString(response);
+    cupsJSONDelete(response);
 
     if (data)
     {
@@ -1006,16 +984,14 @@ do_token(moauthd_client_t *client)	// I - Client object
   moauthd_application_t *app;		// Application
   moauthd_token_t *grant_token,		// Grant token
 		*access_token;		// Access token
-  size_t	num_json = 0;		// Number of JSON (response) variables
-  cups_option_t	*json = NULL;		// JSON (response) variables
+  cups_json_t	*response;		// JSON response
   size_t	datalen;		// Length of JSON data
-  char		expires_in[32];		// Expiration time
 
 
   if ((data = _moauthCopyMessageBody(client->http)) == NULL)
     return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
 
-  num_vars      = _moauthFormDecode(data, &vars);
+  num_vars      = cupsFormDecode(data, &vars);
   client_id     = cupsGetOption("client_id", num_vars, vars);
   code          = cupsGetOption("code", num_vars, vars);
   grant_type    = cupsGetOption("grant_type", num_vars, vars);
@@ -1133,14 +1109,13 @@ do_token(moauthd_client_t *client)	// I - Client object
     moauthdDeleteToken(client->server, grant_token);
   }
 
-  snprintf(expires_in, sizeof(expires_in), "%d", client->server->max_token_life);
+  response = cupsJSONNew(/*parent*/NULL, /*after*/NULL, CUPS_JTYPE_OBJECT);
+  cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "access_token"), access_token->token);
+  cupsJSONNewString(response, cupsJSONNewKey(response, /*after*/NULL, "token_type"), "access");
+  cupsJSONNewNumber(response, cupsJSONNewKey(response, /*after*/NULL, "expires_in"), client->server->max_token_life);
 
-  num_json = cupsAddOption("access_token", access_token->token, num_json, &json);
-  num_json = cupsAddOption("token_type", "access", num_json, &json);
-  num_json = cupsAddOption("expires_in", expires_in, num_json, &json);
-
-  data = _moauthJSONEncode(num_json, json);
-  cupsFreeOptions(num_json, json);
+  data = cupsJSONExportString(response);
+  cupsJSONDelete(response);
 
   if (!data)
   {

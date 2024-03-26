@@ -1,13 +1,14 @@
 //
 // Server support for moauth daemon
 //
-// Copyright © 2017-2022 by Michael R Sweet
+// Copyright © 2017-2024 by Michael R Sweet
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more
 // information.
 //
 
 #include "moauthd.h"
+#include <cups/json.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -90,8 +91,8 @@ moauthdCreateServer(
 		*addr;			// Current address
   char		temp[1024];		// Temporary filename
   struct stat	tempinfo;		// Temporary information
-  size_t	num_json;		// Number of OpenID JSON variables
-  cups_option_t	*json;			// OpenID JSON variables
+  cups_json_t	*json,			// OpenID/RFC 8414 JSON metadata
+		*jarray;		// Array value
   moauthd_resource_t *r;		// Resource
   struct group	*group;			// Group information
 
@@ -459,8 +460,7 @@ moauthdCreateServer(
   cupsSetServerCredentials(getenv("SNAP_DATA"), server->name, 1);
 
   // Generate OpenID/RFC 8414 JSON metadata...
-  num_json = 0;
-  json     = NULL;
+  json = cupsJSONNew(NULL, NULL, CUPS_JTYPE_OBJECT);
 
   // issuer
   //
@@ -469,33 +469,34 @@ moauthdCreateServer(
   // supported (see Section 2), this value MUST be identical to the issuer value
   // returned by WebFinger. This also MUST be identical to the iss Claim value
   // in ID Tokens issued from this Issuer.
-  snprintf(temp, sizeof(temp), "https://%s:%d/", server_name, server_port);
-  num_json = cupsAddOption("issuer", temp, num_json, &json);
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/");
+  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "issuer"), temp);
 
   // authorization_endpoint
   //
   // REQUIRED. URL of the OP's OAuth 2.0 Authorization Endpoint [RFC8414].
-  snprintf(temp, sizeof(temp), "https://%s:%d/authorize", server_name, server_port);
-  num_json = cupsAddOption("authorization_endpoint", temp, num_json, &json);
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/authorize");
+  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "authorization_endpoint"), temp);
 
   // token_endpoint
   //
   // URL of the OP's OAuth 2.0 Token Endpoint [RFC8414]. This is REQUIRED
   // unless only the Implicit Flow is used.
-  snprintf(temp, sizeof(temp), "https://%s:%d/token", server_name, server_port);
-  num_json = cupsAddOption("token_endpoint", temp, num_json, &json);
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/token");
+  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "token_endpoint"), temp);
 
   // token_endpoint_auth_methods_supported
   //
   // List of auth methods for the token endpoint [RFC8414].  The default is
   // "client_secret_basic" but we want "none".
-  num_json = cupsAddOption("token_endpoint_auth_methods_supported", "[\"none\"]", num_json, &json);
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "token_endpoint_auth_methods_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "none");
 
   // introspection_endpoint
   //
   // URL of the OP's OAuth 2.0 Introspection Endpoint [RFC8414] [RFC7662].
-  snprintf(temp, sizeof(temp), "https://%s:%d/introspect", server_name, server_port);
-  num_json = cupsAddOption("introspection_endpoint", temp, num_json, &json);
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/introspect");
+  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "introspection_endpoint"), temp);
 
   // grant_types_supported
   //
@@ -504,7 +505,10 @@ moauthdCreateServer(
   // authorization_code and implicit Grant Type values and MAY support other
   // Grant Types. If omitted, the default value is
   // ["authorization_code", "implicit"].
-  num_json = cupsAddOption("grant_types_supported", "[\"authorization_code\",\"password\",\"refresh_token\"]", num_json, &json);
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "grant_types_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "authorization_code");
+  cupsJSONNewString(jarray, NULL, "password");
+  cupsJSONNewString(jarray, NULL, "refresh_token");
 
   // scopes_supported
   //
@@ -514,7 +518,10 @@ moauthdCreateServer(
   // scope values even when this parameter is used, although those defined in
   // [OpenID.Core] SHOULD be listed, if supported.
   // TODO: Add "openid" scope once Issue #7 is resolved
-  num_json = cupsAddOption("scopes_supported", "[\"private\",\"public\",\"shared\"]", num_json, &json);
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "scopes_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "private");
+  cupsJSONNewString(jarray, NULL, "public");
+  cupsJSONNewString(jarray, NULL, "shared");
 
   // response_types_supported
   //
@@ -522,7 +529,9 @@ moauthdCreateServer(
   // values that this OP supports. Dynamic OpenID Providers MUST support the
   // code, id_token, and the token Response Type values.
   // TODO: Add "id_token" scope once Issue #7 is resolved
-  num_json = cupsAddOption("response_types_supported", "[\"code\",\"token\"]", num_json, &json);
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "token_endpoint_auth_methods_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "code");
+  cupsJSONNewString(jarray, NULL, "token");
 
 #if 0 // Issue #7: Implement JSON Web Key Set
   // jwks_uri
@@ -538,8 +547,8 @@ moauthdCreateServer(
   // x5c parameter MAY be used to provide X.509 representations of keys
   // provided. When used, the bare key values MUST still be present and MUST
   // match those in the certificate.
-  snprintf(temp, sizeof(temp), "https://%s:%d/jwks", server_name, server_port);
-  num_json = cupsAddOption("token_endpoint", temp, num_json, &json);
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/jwks");
+  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "token_endpoint"), temp);
 
   // subject_types_supported
   //
@@ -554,17 +563,19 @@ moauthdCreateServer(
   // supported, but MUST NOT be used unless the Response Type used returns no
   // ID Token from the Authorization Endpoint (such as when using the
   // Authorization Code Flow).
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "token_endpoint_auth_methods_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "");
 #endif // 0
 
   // registration_endpoint
   //
   // RECOMMENDED. URL of the OP's Dynamic Client Registration Endpoint [RFC7591].
-  snprintf(temp, sizeof(temp), "https://%s:%d/register", server_name, server_port);
-  num_json = cupsAddOption("registration_endpoint", temp, num_json, &json);
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/register");
+  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "registration_endpoint"), temp);
 
   // Encode the metadata for later delivery to clients...
-  server->metadata = _moauthJSONEncode(num_json, json);
-  cupsFreeOptions(num_json, json);
+  server->metadata = cupsJSONExportString(json);
+  cupsJSONDelete(json);
 
   // Final setup...
   time(&server->start_time);

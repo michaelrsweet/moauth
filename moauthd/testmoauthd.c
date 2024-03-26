@@ -12,6 +12,7 @@
 #include <string.h>
 #include <errno.h>
 #include <spawn.h>
+#include <cups/form.h>
 #include <cups/thread.h>
 #include <signal.h>
 #include <sys/poll.h>
@@ -513,7 +514,7 @@ redirect_server(
 	    continue;
 	  }
 
-          num_vars     = _moauthFormDecode(query_string, &vars);
+          num_vars     = cupsFormDecode(query_string, &vars);
           grant        = cupsGetOption("code", num_vars, vars);
           state_string = cupsGetOption("state", num_vars, vars);
           error        = cupsGetOption("error", num_vars, vars);

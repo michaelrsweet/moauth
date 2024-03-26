@@ -131,8 +131,7 @@ moauthdFindResource(
     else
     {
       // Exact match...
-      strncpy(name, best->local_path, namesize - 1);
-      name[namesize - 1] = '\0';
+      cupsCopyString(name, best->local_path, namesize);
     }
 
     // Make sure we can access the file or directory...
@@ -226,8 +225,7 @@ moauthdGetFile(moauthd_client_t *client)// I - Client object
     snprintf(temp, sizeof(temp), "%s/index.md", localfile);
     if (!stat(localfile, &localinfo))
     {
-      strncpy(localfile, temp, sizeof(localfile) - 1);
-      localfile[sizeof(localfile) - 1] = '\0';
+      cupsCopyString(localfile, temp, sizeof(localfile));
 
       httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, "%sindex.md", client->path_info);
     }
@@ -237,8 +235,7 @@ moauthdGetFile(moauthd_client_t *client)// I - Client object
 
       if (!stat(localfile, &localinfo))
       {
-        strncpy(localfile, temp, sizeof(localfile) - 1);
-        localfile[sizeof(localfile) - 1] = '\0';
+        cupsCopyString(localfile, temp, sizeof(localfile));
 
         httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "https", NULL, client->server->name, client->server->port, "%sindex.html", client->path_info);
       }
@@ -324,7 +321,7 @@ moauthdGetFile(moauthd_client_t *client)// I - Client object
             {
               if (mmdGetWhitespace(node))
                 *bufptr++ = ' ';
-	      strncpy(bufptr, mmdGetText(node), sizeof(buffer) - (bufptr - buffer) - 1);
+	      cupsCopyString(bufptr, mmdGetText(node), sizeof(buffer) - (bufptr - buffer));
 	      bufptr += strlen(bufptr);
 	    }
 

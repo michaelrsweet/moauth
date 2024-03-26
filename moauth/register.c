@@ -10,6 +10,7 @@
 #include <config.h>
 #include "moauth-private.h"
 #include <errno.h>
+#include <cups/json.h>
 
 
 //
@@ -32,9 +33,8 @@ moauthRegisterClient(
   http_status_t	status;			// Response status
   char		*json_data = NULL;	// JSON data
   size_t	json_length;		// Length of JSON data
-  size_t	num_json = 0;		// Number of JSON variables
-  cups_option_t	*json = NULL;		// JSON variables
-  char		temp[1024];		// Temporary string
+  cups_json_t	*json,			// JSON variables
+		*jarray;		// JSON array
   const char	*value;			// JSON value
 
 
@@ -57,23 +57,17 @@ moauthRegisterClient(
   }
 
   // Prepare JSON data to register the client application...
-  snprintf(temp, sizeof(temp), "[\"%s\"]", redirect_uri);
-  num_json = cupsAddOption("redirect_uris", temp, num_json, &json);
-  if (client_name)
-    num_json = cupsAddOption("client_name", client_name, num_json, &json);
-  if (client_uri)
-    num_json = cupsAddOption("client_uri", client_uri, num_json, &json);
-  if (logo_uri)
-    num_json = cupsAddOption("logo_uri", logo_uri, num_json, &json);
-  if (tos_uri)
-    num_json = cupsAddOption("tos_uri", tos_uri, num_json, &json);
+  json = cupsJSONNew(/*parent*/NULL, /*after*/NULL, CUPS_JTYPE_OBJECT);
+  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "client_name"), client_name);
+  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "client_uri"), client_uri);
+  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "logo_uri"), logo_uri);
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, /*after*/NULL, "redirect_uris"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, /*after*/NULL, redirect_uri);
+  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "tos_uri"), tos_uri);
 
-  json_data = _moauthJSONEncode(num_json, json);
-
-  cupsFreeOptions(num_json, json);
-
-  num_json = 0;
-  json     = NULL;
+  json_data = cupsJSONExportString(json);
+  cupsJSONDelete(json);
+  json = NULL;
 
   if (!json_data)
   {
@@ -122,18 +116,17 @@ moauthRegisterClient(
   while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
 
   json_data = _moauthCopyMessageBody(http);
-  num_json  = _moauthJSONDecode(json_data, &json);
+  json      = cupsJSONImportString(json_data);
 
-  if ((value = cupsGetOption("client_id", num_json, json)) != NULL)
+  if ((value = cupsJSONGetString(cupsJSONFind(json, "client_id"))) != NULL)
   {
-    strncpy(client_id, value, client_id_size - 1);
-    client_id[client_id_size - 1] = '\0';
+    cupsCopyString(client_id, value, client_id_size);
   }
-  else if ((value = cupsGetOption("error_description", num_json, json)) != NULL)
+  else if ((value = cupsJSONGetString(cupsJSONFind(json, "error_description"))) != NULL)
   {
     snprintf(server->error, sizeof(server->error), "Unable to register client: %s", value);
   }
-  else if ((value = cupsGetOption("error", num_json, json)) != NULL)
+  else if ((value = cupsJSONGetString(cupsJSONFind(json, "error"))) != NULL)
   {
     snprintf(server->error, sizeof(server->error), "Unable to register client: %s", value);
   }
@@ -147,9 +140,8 @@ moauthRegisterClient(
 
   httpClose(http);
 
-  cupsFreeOptions(num_json, json);
-  if (json_data)
-    free(json_data);
+  cupsJSONDelete(json);
+  free(json_data);
 
   return (*client_id ? client_id : NULL);
 }

@@ -9,6 +9,7 @@
 
 #include <config.h>
 #include "moauth-private.h"
+#include <cups/form.h>
 
 
 //
@@ -36,8 +37,7 @@ moauthGetToken(
   char		*form_data = NULL;	// POST form data
   size_t	form_length;		// Length of data
   char		*json_data = NULL;	// JSON response data
-  size_t	num_json = 0;		// Number of JSON variables
-  cups_option_t	*json = NULL;		// JSON variables
+  cups_json_t	*json = NULL;		// JSON variables
   const char	*value;			// JSON value
 
 
@@ -74,7 +74,7 @@ moauthGetToken(
   if (code_verifier)
     num_form = cupsAddOption("code_verifier", code_verifier, num_form, &form);
 
-  if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
+  if ((form_data = cupsFormEncode(/*url*/NULL, num_form, form)) == NULL)
   {
     snprintf(server->error, sizeof(server->error), "Unable to encode form data.");
     goto done;
@@ -118,17 +118,22 @@ moauthGetToken(
 
   if (status == HTTP_STATUS_OK)
   {
-    json_data = _moauthCopyMessageBody(http);
-    num_json  = _moauthJSONDecode(json_data, &json);
+    double	expires_in;		// expires_in value
 
-    if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
+    json_data = _moauthCopyMessageBody(http);
+    json      = cupsJSONImportString(json_data);
+
+    if ((value = cupsJSONGetString(cupsJSONFind(json, "access_token"))) != NULL)
       cupsCopyString(token, value, tokensize);
 
-    if (expires && (value = cupsGetOption("expires_in", num_json, json)) != NULL)
-      *expires = time(NULL) + atoi(value);
+    if (expires && (expires_in = cupsJSONGetNumber(cupsJSONFind(json, "expires_in"))) > 0.0)
+      *expires = time(NULL) + (long)expires_in;
 
-    if (refresh && (value = cupsGetOption("refresh_token", num_json, json)) != NULL)
+    if (refresh && (value = cupsJSONGetString(cupsJSONFind(json, "refresh_token"))) != NULL)
       cupsCopyString(refresh, value, refreshsize);
+
+    cupsJSONDelete(json);
+    free(json_data);
   }
   else
   {
@@ -141,12 +146,7 @@ moauthGetToken(
   httpClose(http);
 
   cupsFreeOptions(num_form, form);
-  if (form_data)
-    free(form_data);
-
-  cupsFreeOptions(num_json, json);
-  if (json_data)
-    free(json_data);
+  free(form_data);
 
   return (*token ? token : NULL);
 }
@@ -174,8 +174,7 @@ moauthIntrospectToken(
   char		*form_data = NULL;	// POST form data
   size_t	form_length;		// Length of data
   char		*json_data = NULL;	// JSON response data
-  size_t	num_json = 0;		// Number of JSON variables
-  cups_option_t	*json = NULL;		// JSON variables
+  cups_json_t	*json;			// JSON variables
   const char	*value;			// JSON value
   bool		active = false;		// Is the token active?
 
@@ -207,7 +206,7 @@ moauthIntrospectToken(
   // Prepare form data to get an access token...
   num_form = cupsAddOption("token", token, num_form, &form);
 
-  if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
+  if ((form_data = cupsFormEncode(/*url*/NULL, num_form, form)) == NULL)
   {
     snprintf(server->error, sizeof(server->error), "Unable to encode form data.");
     goto done;
@@ -252,19 +251,21 @@ moauthIntrospectToken(
   if (status == HTTP_STATUS_OK)
   {
     json_data = _moauthCopyMessageBody(http);
-    num_json  = _moauthJSONDecode(json_data, &json);
+    json      = cupsJSONImportString(json_data);
 
-    if ((value = cupsGetOption("active", num_json, json)) != NULL)
-      active = !strcmp(value, "true");
+    active = cupsJSONGetType(cupsJSONFind(json, "active")) == CUPS_JTYPE_TRUE;
 
-    if (username && (value = cupsGetOption("username", num_json, json)) != NULL)
+    if (username && (value = cupsJSONGetString(cupsJSONFind(json, "username"))) != NULL)
       cupsCopyString(username, value, username_size);
 
-    if (scope && (value = cupsGetOption("scope", num_json, json)) != NULL)
+    if (scope && (value = cupsJSONGetString(cupsJSONFind(json, "scope"))) != NULL)
       cupsCopyString(scope, value, scope_size);
 
-    if (expires && (value = cupsGetOption("exp", num_json, json)) != NULL)
-      *expires = atoi(value);
+    if (expires)
+      *expires = (long)cupsJSONGetNumber(cupsJSONFind(json, "exp"));
+
+    cupsJSONDelete(json);
+    free(json_data);
   }
   else
   {
@@ -277,12 +278,7 @@ moauthIntrospectToken(
   httpClose(http);
 
   cupsFreeOptions(num_form, form);
-  if (form_data)
-    free(form_data);
-
-  cupsFreeOptions(num_json, json);
-  if (json_data)
-    free(json_data);
+  free(form_data);
 
   return (active);
 }
@@ -313,8 +309,7 @@ moauthPasswordToken(
   char		*form_data = NULL;	// POST form data
   size_t	form_length;		// Length of data
   char		*json_data = NULL;	// JSON response data
-  size_t	num_json = 0;		// Number of JSON variables
-  cups_option_t	*json = NULL;		// JSON variables
+  cups_json_t	*json;			// JSON variables
   const char	*value;			// JSON value
 
 
@@ -349,7 +344,7 @@ moauthPasswordToken(
   if (scope)
     num_form = cupsAddOption("scope", scope, num_form, &form);
 
-  if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
+  if ((form_data = cupsFormEncode(/*url*/NULL, num_form, form)) == NULL)
   {
     snprintf(server->error, sizeof(server->error), "Unable to encode form data.");
     goto done;
@@ -394,16 +389,19 @@ moauthPasswordToken(
   if (status == HTTP_STATUS_OK)
   {
     json_data = _moauthCopyMessageBody(http);
-    num_json  = _moauthJSONDecode(json_data, &json);
+    json      = cupsJSONImportString(json_data);
 
-    if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
+    if ((value = cupsJSONGetString(cupsJSONFind(json, "access_token"))) != NULL)
       cupsCopyString(token, value, tokensize);
 
-    if (expires && (value = cupsGetOption("expires_in", num_json, json)) != NULL)
-      *expires = time(NULL) + atoi(value);
+    if (expires)
+      *expires = time(NULL) + (long)cupsJSONGetNumber(cupsJSONFind(json, "expires_in"));
 
-    if (refresh && (value = cupsGetOption("refresh_token", num_json, json)) != NULL)
+    if (refresh && (value = cupsJSONGetString(cupsJSONFind(json, "refresh_token"))) != NULL)
       cupsCopyString(refresh, value, refreshsize);
+
+    cupsJSONDelete(json);
+    free(json_data);
   }
   else
   {
@@ -416,12 +414,7 @@ moauthPasswordToken(
   httpClose(http);
 
   cupsFreeOptions(num_form, form);
-  if (form_data)
-    free(form_data);
-
-  cupsFreeOptions(num_json, json);
-  if (json_data)
-    free(json_data);
+  free(form_data);
 
   return (*token ? token : NULL);
 }
@@ -449,8 +442,7 @@ moauthRefreshToken(
   char		*form_data = NULL;	// POST form data
   size_t	form_length;		// Length of data
   char		*json_data = NULL;	// JSON response data
-  size_t	num_json = 0;		// Number of JSON variables
-  cups_option_t	*json = NULL;		// JSON variables
+  cups_json_t	*json;			// JSON variables
   const char	*value;			// JSON value
 
 
@@ -482,7 +474,7 @@ moauthRefreshToken(
   num_form = cupsAddOption("grant_type", "refresh_token", num_form, &form);
   num_form = cupsAddOption("refresh_token", refresh, num_form, &form);
 
-  if ((form_data = _moauthFormEncode(num_form, form)) == NULL)
+  if ((form_data = cupsFormEncode(/*url*/NULL, num_form, form)) == NULL)
   {
     snprintf(server->error, sizeof(server->error), "Unable to encode form data.");
     goto done;
@@ -527,16 +519,19 @@ moauthRefreshToken(
   if (status == HTTP_STATUS_OK)
   {
     json_data = _moauthCopyMessageBody(http);
-    num_json  = _moauthJSONDecode(json_data, &json);
+    json      = cupsJSONImportString(json_data);
 
-    if ((value = cupsGetOption("access_token", num_json, json)) != NULL)
+    if ((value = cupsJSONGetString(cupsJSONFind(json, "access_token"))) != NULL)
       cupsCopyString(token, value, tokensize);
 
-    if (expires && (value = cupsGetOption("expires_in", num_json, json)) != NULL)
-      *expires = time(NULL) + atoi(value);
+    if (expires)
+      *expires = time(NULL) + (long)cupsJSONGetNumber(cupsJSONFind(json, "expires_in"));
 
-    if (new_refresh && (value = cupsGetOption("refresh_token", num_json, json)) != NULL)
+    if (new_refresh && (value = cupsJSONGetString(cupsJSONFind(json, "refresh_token"))) != NULL)
       cupsCopyString(new_refresh, value, new_refreshsize);
+
+    cupsJSONDelete(json);
+    free(json_data);
   }
   else
   {
@@ -549,12 +544,7 @@ moauthRefreshToken(
   httpClose(http);
 
   cupsFreeOptions(num_form, form);
-  if (form_data)
-    free(form_data);
-
-  cupsFreeOptions(num_json, json);
-  if (json_data)
-    free(json_data);
+  free(form_data);
 
   return (*token ? token : NULL);
 }

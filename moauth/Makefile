@@ -12,14 +12,23 @@ include ../Makedefs
 
 
 # Library targets...
-LIBOBJS	=	authorize.o connect.o form.o json.o post.o random.o \
-		register.o token.o
+LIBOBJS	=	\
+		authorize.o \
+		connect.o \
+		post.o \
+		random.o \
+		register.o \
+		token.o
 
-OBJS	=	$(LIBOBJS) testmoauth.o
+OBJS	=	\
+		$(LIBOBJS) \
+		testmoauth.o
 
 HEADERS	=	moauth.h
 
-TARGETS	=	libmoauth.a testmoauth
+TARGETS	=	\
+		libmoauth.a \
+		testmoauth
 
 
 # Make everything...
