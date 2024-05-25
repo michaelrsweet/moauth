@@ -108,6 +108,7 @@ typedef struct moauthd_server_s		// Server
 {
   char		*name;			// Server hostname
   int		port;			// Server port
+  char		*state_file;		// State file
   int		log_file;		// Log file descriptor
   moauthd_loglevel_t log_level;		// Log level
   char		*auth_service;		// PAM authentication service
@@ -129,6 +130,8 @@ typedef struct moauthd_server_s		// Server
   cups_array_t	*tokens;		// Tokens that have been issued
   pthread_rwlock_t tokens_lock;		// R/W lock for tokens array
   time_t	start_time;		// Startup time
+  cups_json_t	*private_key;		// JWT private key
+  char		*public_key;		// JWT public key
   char		*test_password;		// Testing password
   char		*metadata;		// JSON metadata
 } moauthd_server_t;
@@ -163,7 +166,7 @@ extern moauthd_application_t *moauthdAddApplication(moauthd_server_t *server, co
 extern bool		moauthdAuthenticateUser(moauthd_client_t *client, const char *username, const char *password);
 extern moauthd_client_t	*moauthdCreateClient(moauthd_server_t *server, int fd);
 extern moauthd_resource_t *moauthdCreateResource(moauthd_server_t *server, moauthd_restype_t type, const char *remote_path, const char *local_path, const char *content_type, const char *scope);
-extern moauthd_server_t	*moauthdCreateServer(const char *configfile, int verbosity);
+extern moauthd_server_t	*moauthdCreateServer(const char *configfile, const char *statefile, int verbosity);
 extern moauthd_token_t	*moauthdCreateToken(moauthd_server_t *server, moauthd_toktype_t type, moauthd_application_t *application, const char *user, const char *scopes);
 extern void		moauthdDeleteClient(moauthd_client_t *client);
 extern void		moauthdDeleteServer(moauthd_server_t *server);
@@ -180,5 +183,6 @@ extern void		moauthdLogs(moauthd_server_t *server, moauthd_loglevel_t level, con
 extern bool		moauthdRespondClient(moauthd_client_t *client, http_status_t code, const char *type, const char *uri, time_t mtime, size_t length);
 extern void		*moauthdRunClient(moauthd_client_t *client);
 extern int		moauthdRunServer(moauthd_server_t *server);
+extern bool		moauthdSaveServer(moauthd_server_t *server);
 
 #endif // !MOAUTHD_H

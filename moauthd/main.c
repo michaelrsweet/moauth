@@ -1,7 +1,7 @@
 //
 // Main entry for moauth daemon
 //
-// Copyright © 2017-2022 by Michael R Sweet
+// Copyright © 2017-2024 by Michael R Sweet
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more
 // information.
@@ -14,7 +14,7 @@
 // Local functions...
 //
 
-static void	usage(void);
+static void	usage(FILE *out);
 
 
 //
@@ -27,7 +27,12 @@ main(int  argc,				// I - Number of command-line arguments
 {
   int		i;			// Looping var
   const char	*opt;			// Current command-line option
-  const char	*configfile = NULL;	// Server configuration file, if any
+  const char	*configfile = NULL,	// Server configuration file, if any
+		*statefile = NULL,	// Server state file, if any
+		*snap_common = getenv("SNAP_COMMON");
+					// Snap directory, if any
+  char		configtemp[1024],	// Temporary config filename
+		statetemp[1024];	// Temporary state filename
   int		verbosity = 0;		// Verbosity level
 
 
@@ -37,7 +42,7 @@ main(int  argc,				// I - Number of command-line arguments
     if (!strcmp(argv[i], "--help"))
     {
       // Show help and exit...
-      usage();
+      usage(stdout);
       return (0);
     }
     else if (!strcmp(argv[i], "--version"))
@@ -53,18 +58,43 @@ main(int  argc,				// I - Number of command-line arguments
         switch (*opt)
         {
           case 'c' : // -c configfile
-              i ++;
-              if (i < argc && !configfile)
-                configfile = argv[i];
-	      else
+	      if (configfile)
 	      {
-		if (configfile)
-		  fputs("moauthd: Configuration file can only be specified once.\n", stderr);
-		else
-		  fputs("moauthd: Configuration file expected after \"-c\".\n", stderr);
-	        usage();
+		fputs("moauthd: Configuration file can only be specified once.\n", stderr);
+	        usage(stderr);
 	        return (1);
 	      }
+
+              i ++;
+
+              if (i >= argc)
+	      {
+		fputs("moauthd: Configuration file expected after '-c'.\n", stderr);
+	        usage(stderr);
+	        return (1);
+	      }
+
+	      configfile = argv[i];
+	      break;
+
+          case 's' : // -s statefile
+	      if (statefile)
+	      {
+		fputs("moauthd: State file can only be specified once.\n", stderr);
+	        usage(stderr);
+	        return (1);
+	      }
+
+              i ++;
+
+              if (i >= argc)
+	      {
+		fputs("moauthd: State file expected after '-s'.\n", stderr);
+	        usage(stderr);
+	        return (1);
+	      }
+
+	      statefile = argv[i];
 	      break;
 
           case 'v' : // -v
@@ -72,8 +102,8 @@ main(int  argc,				// I - Number of command-line arguments
               break;
 
 	  default :
-	      fprintf(stderr, "moauthd: Unknown option \"-%c\".\n", *opt);
-	      usage();
+	      fprintf(stderr, "moauthd: Unknown option '-%c'.\n", *opt);
+	      usage(stderr);
 	      return (1);
         }
       }
@@ -81,13 +111,21 @@ main(int  argc,				// I - Number of command-line arguments
     else
     {
       // Unknown option...
-      fprintf(stderr, "moauthd: Unknown option \"%s\".\n", argv[i]);
-      usage();
+      fprintf(stderr, "moauthd: Unknown option '%s'.\n", argv[i]);
+      usage(stderr);
       return (1);
     }
   }
 
-  // Default config file is /etc/moauthd.conf or /usr/local/etc/moauthd.conf...
+  // Default config file is "$SNAP_COMMON/moauthd.conf", "/etc/moauthd.conf", or
+  // "/usr/local/etc/moauthd.conf"...
+  if (!configfile && snap_common)
+  {
+    snprintf(configtemp, sizeof(configtemp), "%s/moauthd.conf", snap_common);
+    if (!access(configtemp, 0))
+      configfile = configtemp;
+  }
+
   if (!configfile)
   {
     if (!access("/etc/moauthd.conf", 0))
@@ -96,8 +134,39 @@ main(int  argc,				// I - Number of command-line arguments
       configfile = "/usr/local/etc/moauthd.conf";
   }
 
+  // Default state file is "$SNAP_COMMON/moauthd.state",
+  // "/var/lib/moauthd.state", "/usr/local/var/lib/moauthd.state", or
+  // "CONFIGFILE.state"...
+  if (!statefile)
+  {
+    if (snap_common && !strncmp(configfile, snap_common, strlen(snap_common)))
+    {
+      snprintf(statetemp, sizeof(statetemp), "%s/moauthd.state", snap_common);
+      statefile = statetemp;
+    }
+    else if (!strncmp(configfile, "/etc/", 5))
+    {
+      statefile = "/var/lib/moauthd.state";
+    }
+    else if (!strncmp(configfile, "/usr/local/etc/", 15))
+    {
+      statefile = "/usr/local/var/lib/moauthd.state";
+    }
+    else
+    {
+      // Default to configfile.state...
+      char	*ptr;			// Pointer into temporary filename
+
+      cupsCopyString(statetemp, configfile, sizeof(statetemp));
+      if ((ptr = strstr(statetemp, ".conf")) != NULL)
+        *ptr = '\0';
+      cupsConcatString(statetemp, ".state", sizeof(statetemp));
+      statefile = statetemp;
+    }
+  }
+
   // Create the server object and run it...
-  return (moauthdRunServer(moauthdCreateServer(configfile, verbosity)));
+  return (moauthdRunServer(moauthdCreateServer(configfile, statefile, verbosity)));
 }
 
 
@@ -106,13 +175,14 @@ main(int  argc,				// I - Number of command-line arguments
 //
 
 static void
-usage(void)
+usage(FILE *out)			// I - Output file (stdout or stderr)
 {
-  fputs("Usage: moauthd [options]\n", stderr);
-  fputs("Options:\n", stderr);
-  fputs("-c configfile     Specify configuration file.\n", stderr);
-  fputs("-v                Be verbose (more v's increase the verbosity).\n", stderr);
-  fputs("--help            Show usage help.\n", stderr);
-  fputs("--version         Show mOAuth version.\n", stderr);
+  fputs("Usage: moauthd [options]\n", out);
+  fputs("Options:\n", out);
+  fputs("-c configfile     Specify configuration file.\n", out);
+  fputs("-s configfile     Specify state file.\n", out);
+  fputs("-v                Be verbose (more v's increase the verbosity).\n", out);
+  fputs("--help            Show usage help.\n", out);
+  fputs("--version         Show mOAuth version.\n", out);
 }
 

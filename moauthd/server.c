@@ -8,7 +8,7 @@
 //
 
 #include "moauthd.h"
-#include <cups/json.h>
+#include <cups/jwt.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -29,6 +29,8 @@ static int	compare_applications(moauthd_application_t *a, moauthd_application_t 
 static moauthd_application_t *copy_application(moauthd_application_t *a);
 static void	free_application(moauthd_application_t *a);
 static int	get_seconds(const char *value);
+static bool	load_config(moauthd_server_t *server, const char *configfile, cups_file_t *fp);
+static bool	load_state(moauthd_server_t *server);
 
 
 //
@@ -78,23 +80,20 @@ moauthdAddApplication(
 moauthd_server_t *			// O - New server object
 moauthdCreateServer(
     const char *configfile,		// I - Configuration file to load
+    const char *statefile,		// I - State file to save
     int        verbosity)		// I - Extra verbosity from command-line
 {
   moauthd_server_t *server;		// Server object
   cups_file_t	*fp = NULL;		// Opened config file
-  char		server_name[256],	// Server name
-		server_ports[8],	// Listening port (string)
-		*ptr;			// Pointer into server name
-  int		server_port = 9000 + (getuid() % 1000);
-					// Listening port (number)
   http_addrlist_t *addrlist,		// List of listener addresses
 		*addr;			// Current address
-  char		temp[1024];		// Temporary filename
+  char		temp[1024],		// Temporary string
+		*tempptr;		// Pointer into temporary string
   struct stat	tempinfo;		// Temporary information
   cups_json_t	*json,			// OpenID/RFC 8414 JSON metadata
 		*jarray;		// Array value
   moauthd_resource_t *r;		// Resource
-  struct group	*group;			// Group information
+
 
 
   // Open the configuration file if one is specified...
@@ -118,311 +117,54 @@ moauthdCreateServer(
   server->max_token_life   = 604800;	// 1 week
   server->register_group   = -1;	// none
 
-  httpGetHostname(NULL, server_name, sizeof(server_name));
-  ptr = server_name + strlen(server_name) - 1;
-  if (ptr > server_name && *ptr == '.')
-    *ptr = '\0';			// Strip trailing "." from hostname
-
   if (fp)
   {
-    // Load configuration from file...
-    char	line[2048],		// Line from config file
-		*value;			// Value from config file
-    int		linenum = 0;		// Current line number
-
-    while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
-    {
-      if (!strcasecmp(line, "Application"))
-      {
-        // Application client-id redirect-uri client-name
-        const char	*client_id,	// Client ID
-			*client_name,	// Client name
-			*redirect_uri;	// Redirection URI
-
-        if (!value)
-        {
-          fprintf(stderr, "moauthd: Missing client ID, redirect URI, and name on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-        }
-
-        client_id = ptr = value;
-        while (*ptr && !isspace(*ptr))
-          ptr ++;
-        while (*ptr && isspace(*ptr))
-          *ptr++ = '\0';
-
-	redirect_uri = ptr;
-        while (*ptr && !isspace(*ptr))
-          ptr ++;
-        while (*ptr && isspace(*ptr))
-          *ptr++ = '\0';
-
-        client_name = ptr;
-
-        if (!*client_id || !*redirect_uri)
-        {
-          fprintf(stderr, "moauthd: Missing client ID and redirect URI on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-        }
-
-        moauthdAddApplication(server, client_id, redirect_uri, client_name, NULL, NULL, NULL);
-      }
-      else if (!strcasecmp(line, "LogFile"))
-      {
-        // LogFile {filename,none,stderr,syslog}
-        if (!value || !strcasecmp(value, "stderr"))
-        {
-          server->log_file = 2;
-	}
-	else if (!strcmp(value, "none"))
-	{
-	  server->log_file = -1;
-	}
-	else if (!strcasecmp(value, "syslog"))
-	{
-	  server->log_file = 0;
-	  openlog("moauthd", LOG_CONS, LOG_AUTH);
-	}
-	else if ((server->log_file = open(value, O_WRONLY | O_CREAT | O_APPEND | O_EXCL, 0600)) < 0)
-	{
-	  fprintf(stderr, "moauthd: Unable to open log file \"%s\" on line %d of \"%s\": %s\n", value, linenum, configfile, strerror(errno));
-	  goto create_failed;
-	}
-      }
-      else if (!strcasecmp(line, "LogLevel"))
-      {
-        // LogLevel {error,info,debug}
-        if (!value)
-        {
-          fprintf(stderr, "moauthd: Missing log level on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-	}
-	else if (!strcasecmp(value, "error"))
-	  server->log_level = MOAUTHD_LOGLEVEL_ERROR;
-	else if (!strcasecmp(value, "info"))
-	  server->log_level = MOAUTHD_LOGLEVEL_INFO;
-	else if (!strcasecmp(value, "debug"))
-	  server->log_level = MOAUTHD_LOGLEVEL_DEBUG;
-	else
-	{
-	  fprintf(stderr, "moauthd: Unknown LogLevel \"%s\" on line %d of \"%s\" ignored.\n", value, linenum, configfile);
-	}
-      }
-      else if (!strcasecmp(line, "IntrospectGroup"))
-      {
-        // IntrospectGroup nnn
-        // IntrospectGroup name
-        //
-        // Required group membership (and thus required authentication for)
-        // token introspection.
-        if (!value)
-        {
-	  fprintf(stderr, "moauthd: Missing IntrospectGroup on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-        }
-        else if (isdigit(*value))
-        {
-          server->introspect_group = (gid_t)strtol(value, &ptr, 10);
-
-          if (ptr && *ptr)
-          {
-	    fprintf(stderr, "moauthd: Bad IntrospectGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
-	    goto create_failed;
-          }
-	}
-	else if ((group = getgrnam(value)) != NULL)
-	{
-	  server->introspect_group = group->gr_gid;
-	}
-	else
-	{
-	  fprintf(stderr, "moauthd: Unknown IntrospectGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
-	  goto create_failed;
-	}
-      }
-      else if (!strcasecmp(line, "RegisterGroup"))
-      {
-        // RegisterGroup nnn
-        // RegisterGroup name
-        //
-        // Required group membership (and thus required authentication for)
-        // client registration.
-        if (!value)
-        {
-	  fprintf(stderr, "moauthd: Missing RegisterGroup on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-        }
-        else if (isdigit(*value))
-        {
-          server->register_group = (gid_t)strtol(value, &ptr, 10);
-
-          if (ptr && *ptr)
-          {
-	    fprintf(stderr, "moauthd: Bad RegisterGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
-	    goto create_failed;
-          }
-	}
-	else if ((group = getgrnam(value)) != NULL)
-	{
-	  server->register_group = group->gr_gid;
-	}
-	else
-	{
-	  fprintf(stderr, "moauthd: Unknown RegisterGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
-	  goto create_failed;
-	}
-      }
-      else if (!strcasecmp(line, "MaxGrantLife"))
-      {
-        // MaxGrantLife NNN{m,h,d,w}
-        //
-        // Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
-        // and "w" is weeks.
-        int	max_grant_life;		// Maximum grant life value
-
-        if (!value)
-        {
-          fprintf(stderr, "moauthd: Missing time value on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-	}
-
-        if ((max_grant_life = get_seconds(value)) < 0)
-	{
-          fprintf(stderr, "moauthd: Unknown time value \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
-          goto create_failed;
-	}
-
-        server->max_grant_life = max_grant_life;
-      }
-      else if (!strcasecmp(line, "MaxTokenLife"))
-      {
-        // MaxTokenLife NNN{m,h,d,w}
-        //
-        // Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
-        // and "w" is weeks.
-        int	max_token_life;		// Maximum token life value
-
-        if (!value)
-        {
-          fprintf(stderr, "moauthd: Missing time value on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-	}
-
-        if ((max_token_life = get_seconds(value)) < 0)
-	{
-          fprintf(stderr, "moauthd: Unknown time value \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
-          goto create_failed;
-	}
-
-        server->max_token_life = max_token_life;
-      }
-      else if (!strcasecmp(line, "Option"))
-      {
-        // Option {[-]BasicAuth}
-        if (!value)
-        {
-	  fprintf(stderr, "moauthd: Bad Option on line %d of \"%s\".\n", linenum, configfile);
-	  goto create_failed;
-        }
-
-        if (!strcasecmp(value, "BasicAuth"))
-          server->options |= MOAUTHD_OPTION_BASIC_AUTH;
-	else
-	  fprintf(stderr, "moauthd: Unknown Option %s on line %d of \"%s\".\n", value, linenum, configfile);
-      }
-      else if (!strcasecmp(line, "Resource"))
-      {
-        // Resource {public,private,shared} /remote/path /local/path
-        char		*scope,		// Access scope
-			*remote_path,	// Remote path
-			*local_path;	// Local path
-        struct stat	local_info;	// Local file info
-
-        if (!value)
-        {
-	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
-	  goto create_failed;
-        }
-
-        scope       = strtok(value, " \t");
-        remote_path = strtok(NULL, " \t");
-        local_path  = strtok(NULL, " \t");
-
-        if (!scope || !remote_path || !local_path)
-        {
-	  fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
-	  goto create_failed;
-	}
-
-        if (stat(local_path, &local_info))
-        {
-	  fprintf(stderr, "moauthd: Unable to access Resource on line %d of \"%s\": %s\n", linenum, configfile, strerror(errno));
-	  goto create_failed;
-        }
-
-        moauthdCreateResource(server, S_ISREG(local_info.st_mode) ? MOAUTHD_RESTYPE_FILE : MOAUTHD_RESTYPE_DIR, remote_path, local_path, NULL, scope);
-      }
-      else if (!strcasecmp(line, "ServerName"))
-      {
-        // ServerName hostname[:port]
-	char	*portptr;		// Pointer to port in line
-
-        if (!value)
-        {
-          fprintf(stderr, "moauthd: Missing server name on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-	}
-
-        if ((portptr = strrchr(value, ':')) != NULL && isdigit(portptr[1] & 255))
-	{
-	  // Extract ":port" portion...
-	  *portptr++ = '\0';
-	  server_port = atoi(portptr);
-	}
-
-        cupsCopyString(server_name, value, sizeof(server_name));
-      }
-      else if (!strcasecmp(line, "TestPassword"))
-      {
-        if (value)
-        {
-          server->test_password = strdup(value);
-	}
-	else
-	{
-          fprintf(stderr, "moauthd: Missing password on line %d of \"%s\".\n", linenum, configfile);
-          goto create_failed;
-	}
-      }
-      else
-      {
-        fprintf(stderr, "moauthd: Unknown configuration directive \"%s\" on line %d of \"%s\" ignored.\n", line, linenum, configfile);
-      }
-    }
+    bool status = load_config(server, configfile, fp);
 
     cupsFileClose(fp);
+
+    if (!status)
+      goto create_failed;
   }
 
-  fprintf(stderr, "server name=\"%s\", port=%d\n", server_name, server_port);
+  if (!server->name)
+  {
+    char	name[256],		// Host name
+		*nameptr;		// Pointer into name
 
-  server->name = strdup(server_name);
-  server->port = server_port;
+    httpGetHostname(NULL, name, sizeof(name));
+    nameptr = name + strlen(name) - 1;
+    if (nameptr > name && *nameptr == '.')
+      *nameptr = '\0';			// Strip trailing "." from hostname
+
+    if ((server->name = strdup(name)) == NULL)
+    {
+      fprintf(stderr, "moauthd: Unable to allocate server name: %s\n", strerror(errno));
+      goto create_failed;
+    }
+  }
+
+  if (!server->port)
+    server->port = 9000 + (getuid() % 1000);
+
+  server->state_file = strdup(statefile);
+
+  if (!load_state(server))
+    goto create_failed;
 
   // Setup listeners...
-  snprintf(server_ports, sizeof(server_ports), "%d", server_port);
-  addrlist = httpAddrGetList(NULL, AF_UNSPEC, server_ports);
-  for (addr = addrlist; addr; addr = addr->next)
+  snprintf(temp, sizeof(temp), "%d", server->port);
+
+  for (addrlist = httpAddrGetList(NULL, AF_UNSPEC, temp), addr = addrlist; addr; addr = addr->next)
   {
-    int			sock = httpAddrListen(&(addr->addr), server_port);
+    int			sock = httpAddrListen(&(addr->addr), server->port);
 					// Listener socket
     struct pollfd	*lis = server->listeners + server->num_listeners;
 					// Pointer to polling data
 
     if (sock < 0)
     {
-      char temp[256];			// Address string
-
-      fprintf(stderr, "moauthd: Unable to listen to \"%s:%d\": %s\n", httpAddrGetString(&(addr->addr), temp, sizeof(temp)), server_port, strerror(errno));
+      fprintf(stderr, "moauthd: Unable to listen to \"%s:%d\": %s\n", httpAddrGetString(&(addr->addr), temp, sizeof(temp)), server->port, strerror(errno));
       continue;
     }
 
@@ -452,12 +194,12 @@ moauthdCreateServer(
   else if (verbosity > 1)
     server->log_level = MOAUTHD_LOGLEVEL_DEBUG;
 
-  moauthdLogs(server, MOAUTHD_LOGLEVEL_INFO, "Authorization server is \"https://%s:%d\".", server_name, server_port);
+  moauthdLogs(server, MOAUTHD_LOGLEVEL_INFO, "Authorization server is \"https://%s:%d\".", server->name, server->port);
 
   if (!server->auth_service)
     server->auth_service = strdup("login");
 
-  cupsSetServerCredentials(getenv("SNAP_DATA"), server->name, 1);
+  cupsSetServerCredentials(getenv("SNAP_DATA"), server->name, true);
 
   // Generate OpenID/RFC 8414 JSON metadata...
   json = cupsJSONNew(NULL, NULL, CUPS_JTYPE_OBJECT);
@@ -469,21 +211,106 @@ moauthdCreateServer(
   // supported (see Section 2), this value MUST be identical to the issuer value
   // returned by WebFinger. This also MUST be identical to the iss Claim value
   // in ID Tokens issued from this Issuer.
-  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/");
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server->name, server->port, "/");
   cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "issuer"), temp);
 
   // authorization_endpoint
   //
   // REQUIRED. URL of the OP's OAuth 2.0 Authorization Endpoint [RFC8414].
-  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/authorize");
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server->name, server->port, "/authorize");
   cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "authorization_endpoint"), temp);
 
   // token_endpoint
   //
   // URL of the OP's OAuth 2.0 Token Endpoint [RFC8414]. This is REQUIRED
   // unless only the Implicit Flow is used.
-  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/token");
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server->name, server->port, "/token");
   cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "token_endpoint"), temp);
+
+  // userinfo_endpoint
+  //
+  // RECOMMENDED. URL of the OP's UserInfo Endpoint [OpenID.Core]. This URL MUST
+  // use the https scheme and MAY contain port, path, and query parameter
+  // components.
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server->name, server->port, "/userinfo");
+  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "userinfo_endpoint"), temp);
+
+  // jwks_uri
+  //
+  // REQUIRED. URL of the OP's JSON Web Key Set [RFC7517] document. This
+  // contains the signing key(s) the RP uses to validate signatures from the OP.
+  // The JWK Set MAY also contain the Server's encryption key(s), which are used
+  // by RPs to encrypt requests to the Server. When both signing and encryption
+  // keys are made available, a use (Key Use) parameter value is REQUIRED for
+  // all keys in the referenced JWK Set to indicate each key's intended usage.
+  // Although some algorithms allow the same key to be used for both signatures
+  // and encryption, doing so is NOT RECOMMENDED, as it is less secure. The JWK
+  // x5c parameter MAY be used to provide X.509 representations of keys
+  // provided. When used, the bare key values MUST still be present and MUST
+  // match those in the certificate.
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server->name, server->port, "/.well-known/jwks.json");
+  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "jwks_uri"), temp);
+
+  // registration_endpoint
+  //
+  // RECOMMENDED. URL of the OP's Dynamic Client Registration Endpoint [RFC7591].
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server->name, server->port, "/register");
+  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "registration_endpoint"), temp);
+
+  // scopes_supported
+  //
+  // RECOMMENDED. JSON array containing a list of the OAuth 2.0 [RFC6749]
+  // scope values that this server supports. The server MUST support the
+  // openid scope value. Servers MAY choose not to advertise some supported
+  // scope values even when this parameter is used, although those defined in
+  // [OpenID.Core] SHOULD be listed, if supported.
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "scopes_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "openid");
+  cupsJSONNewString(jarray, NULL, "private");
+  cupsJSONNewString(jarray, NULL, "public");
+  cupsJSONNewString(jarray, NULL, "shared");
+
+  // response_types_supported
+  //
+  // REQUIRED. JSON array containing a list of the OAuth 2.0 response_type
+  // values that this OP supports. Dynamic OpenID Providers MUST support the
+  // code, id_token, and the token Response Type values.
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "response_types_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "code");
+  cupsJSONNewString(jarray, NULL, "id_token");
+  cupsJSONNewString(jarray, NULL, "token");
+
+  // subject_types_supported
+  //
+  // REQUIRED. JSON array containing a list of the Subject Identifier types that
+  // this OP supports. Valid types include pairwise and public.
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "subject_types_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "pairwise");
+  cupsJSONNewString(jarray, NULL, "public");
+
+  // id_token_signing_alg_values_supported
+  //
+  // REQUIRED. JSON array containing a list of the JWS signing algorithms
+  // (alg values) supported by the OP for the ID Token to encode the Claims
+  // in a JWT [JWT]. The algorithm RS256 MUST be included. The value none MAY
+  // be supported but MUST NOT be used unless the Response Type used returns
+  // no ID Token from the Authorization Endpoint (such as when using the
+  // Authorization Code Flow).
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "id_token_signing_alg_values_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "RS256");
+
+  // claims_supported
+  //
+  // RECOMMENDED. JSON array containing a list of the Claim Names of the Claims
+  // that the OpenID Provider MAY be able to supply values for. Note that for
+  // privacy or other reasons, this might not be an exhaustive list.
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "claims_supported"), CUPS_JTYPE_ARRAY);
+  cupsJSONNewString(jarray, NULL, "email");
+  cupsJSONNewString(jarray, NULL, "name");
+  cupsJSONNewString(jarray, NULL, "phone_number");
+  cupsJSONNewString(jarray, NULL, "preferred_username");
+  cupsJSONNewString(jarray, NULL, "sub");
+  cupsJSONNewString(jarray, NULL, "updated_at");
 
   // token_endpoint_auth_methods_supported
   //
@@ -495,7 +322,7 @@ moauthdCreateServer(
   // introspection_endpoint
   //
   // URL of the OP's OAuth 2.0 Introspection Endpoint [RFC8414] [RFC7662].
-  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/introspect");
+  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server->name, server->port, "/introspect");
   cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "introspection_endpoint"), temp);
 
   // grant_types_supported
@@ -510,71 +337,16 @@ moauthdCreateServer(
   cupsJSONNewString(jarray, NULL, "password");
   cupsJSONNewString(jarray, NULL, "refresh_token");
 
-  // scopes_supported
-  //
-  // RECOMMENDED. JSON array containing a list of the OAuth 2.0 [RFC6749]
-  // scope values that this server supports. The server MUST support the
-  // openid scope value. Servers MAY choose not to advertise some supported
-  // scope values even when this parameter is used, although those defined in
-  // [OpenID.Core] SHOULD be listed, if supported.
-  // TODO: Add "openid" scope once Issue #7 is resolved
-  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "scopes_supported"), CUPS_JTYPE_ARRAY);
-  cupsJSONNewString(jarray, NULL, "private");
-  cupsJSONNewString(jarray, NULL, "public");
-  cupsJSONNewString(jarray, NULL, "shared");
-
-  // response_types_supported
-  //
-  // REQUIRED. JSON array containing a list of the OAuth 2.0 response_type
-  // values that this OP supports. Dynamic OpenID Providers MUST support the
-  // code, id_token, and the token Response Type values.
-  // TODO: Add "id_token" scope once Issue #7 is resolved
-  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "token_endpoint_auth_methods_supported"), CUPS_JTYPE_ARRAY);
-  cupsJSONNewString(jarray, NULL, "code");
-  cupsJSONNewString(jarray, NULL, "token");
-
-#if 0 // Issue #7: Implement JSON Web Key Set
-  // jwks_uri
-  //
-  // REQUIRED. URL of the OP's JSON Web Key Set [RFC7517] document. This
-  // contains the signing key(s) the RP uses to validate signatures from the OP.
-  // The JWK Set MAY also contain the Server's encryption key(s), which are used
-  // by RPs to encrypt requests to the Server. When both signing and encryption
-  // keys are made available, a use (Key Use) parameter value is REQUIRED for
-  // all keys in the referenced JWK Set to indicate each key's intended usage.
-  // Although some algorithms allow the same key to be used for both signatures
-  // and encryption, doing so is NOT RECOMMENDED, as it is less secure. The JWK
-  // x5c parameter MAY be used to provide X.509 representations of keys
-  // provided. When used, the bare key values MUST still be present and MUST
-  // match those in the certificate.
-  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/jwks");
-  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "token_endpoint"), temp);
-
-  // subject_types_supported
-  //
-  // REQUIRED. JSON array containing a list of the Subject Identifier types
-  // that this OP supports. Valid types include pairwise and public.
-
-  // id_token_signing_alg_values_supported
-  //
-  // REQUIRED. JSON array containing a list of the JWS signing algorithms (alg
-  // values) supported by the OP for the ID Token to encode the Claims in a
-  // JWT [JWT]. The algorithm RS256 MUST be included. The value none MAY be
-  // supported, but MUST NOT be used unless the Response Type used returns no
-  // ID Token from the Authorization Endpoint (such as when using the
-  // Authorization Code Flow).
-  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "token_endpoint_auth_methods_supported"), CUPS_JTYPE_ARRAY);
-  cupsJSONNewString(jarray, NULL, "");
-#endif // 0
-
-  // registration_endpoint
-  //
-  // RECOMMENDED. URL of the OP's Dynamic Client Registration Endpoint [RFC7591].
-  httpAssembleURI(HTTP_URI_CODING_ALL, temp, sizeof(temp), "https", /*userpass*/NULL, server_name, server_port, "/register");
-  cupsJSONNewString(json, cupsJSONNewKey(json, NULL, "registration_endpoint"), temp);
-
   // Encode the metadata for later delivery to clients...
   server->metadata = cupsJSONExportString(json);
+  cupsJSONDelete(json);
+
+  // Make the JSON Web Key Set from our private key...
+  json = cupsJSONNew(NULL, NULL, CUPS_JTYPE_OBJECT);
+  jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "keys"), CUPS_JTYPE_ARRAY);
+  cupsJSONAdd(jarray, NULL, cupsJWTMakePublicKey(server->private_key));
+
+  server->public_key = cupsJSONExportString(json);
   cupsJSONDelete(json);
 
   // Final setup...
@@ -584,9 +356,9 @@ moauthdCreateServer(
   {
     // Generate a random secret string that is used when creating token UUIDs.
     _moauthGetRandomBytes(temp, sizeof(temp) - 1);
-    for (ptr = temp; ptr < (temp + sizeof(temp) - 1); ptr ++)
-      *ptr = (*ptr % 95) + ' ';
-    *ptr = '\0';
+    for (tempptr = temp; tempptr < (temp + sizeof(temp) - 1); tempptr ++)
+      *tempptr = (*tempptr % 95) + ' ';
+    *tempptr = '\0';
     server->secret = strdup(temp);
   }
 
@@ -599,6 +371,11 @@ moauthdCreateServer(
   r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/.well-known/openid-configuration", NULL, "text/json", "public");
   r->data   = server->metadata;
   r->length = strlen(server->metadata);
+
+  // Add JWKS file.
+  r = moauthdCreateResource(server, MOAUTHD_RESTYPE_STATIC_FILE, "/.well-known/jwks.json", NULL, "text/json", "public");
+  r->data   = server->public_key;
+  r->length = strlen(server->public_key);
 
   // Add other standard resources...
   if (!moauthdFindResource(server, "/index.html", temp, sizeof(temp), &tempinfo) && !moauthdFindResource(server, "/index.md", temp, sizeof(temp), &tempinfo))
@@ -649,11 +426,9 @@ moauthdDeleteServer(
   int	i;				// Looping var
 
 
-  if (server->name)
-    free(server->name);
-
-  if (server->auth_service)
-    free(server->auth_service);
+  free(server->name);
+  free(server->state_file);
+  free(server->auth_service);
 
   for (i = 0; i < server->num_listeners; i ++)
     httpAddrClose(NULL, server->listeners[i].fd);
@@ -666,11 +441,11 @@ moauthdDeleteServer(
   cupsRWDestroy(&server->resources_lock);
   cupsRWDestroy(&server->tokens_lock);
 
-  if (server->test_password)
-    free(server->test_password);
+  cupsJSONDelete(server->private_key);
 
-  if (server->metadata)
-    free(server->metadata);
+  free(server->public_key);
+  free(server->test_password);
+  free(server->metadata);
 
   free(server);
 }
@@ -780,6 +555,60 @@ moauthdRunServer(
 
 
 //
+// 'moauthdSaveServer()' - Save the server state.
+//
+
+bool					// O - `true` on success, `false` on error
+moauthdSaveServer(
+    moauthd_server_t *server)		// I - Server
+{
+  cups_file_t	*fp;			// State file
+  char		oldfile[1024],		// Old state file
+		newfile[1024],		// New state file
+		*temp;			// Temporary string
+
+
+  // Write the new state then rename the old...
+  snprintf(oldfile, sizeof(oldfile), "%s.O", server->state_file);
+  snprintf(newfile, sizeof(newfile), "%s.N", server->state_file);
+
+  if ((fp = cupsFileOpen(newfile, "w")) == NULL)
+  {
+    fprintf(stderr, "moauthd: Unable to write state file \"%s\": %s\n", newfile, strerror(errno));
+    return (false);
+  }
+
+  // State files are only readable by the owner...
+  fchmod(cupsFileNumber(fp), 0600);
+
+  // Write state...
+  if ((temp = cupsJSONExportString(server->private_key)) != NULL)
+  {
+    cupsFilePutConf(fp, "PrivateKey", temp);
+    free(temp);
+  }
+
+  // Close file and rename...
+  cupsFileClose(fp);
+  if (rename(server->state_file, oldfile) && errno != ENOENT)
+  {
+    // Can't rename old state, try removing...
+    fprintf(stderr, "moauthd: Unable to rename state file \"%s\": %s\n", server->state_file, strerror(errno));
+    if (unlink(server->state_file))
+      return (false);
+  }
+
+  if (rename(newfile, server->state_file))
+  {
+    fprintf(stderr, "moauthd: Unable to rename state file \"%s\": %s\n", newfile, strerror(errno));
+    return (false);
+  }
+
+  return (true);
+}
+
+
+//
 // 'compare_applications()' - Compare two application registrations.
 //
 
@@ -863,4 +692,342 @@ get_seconds(const char *value)		// I - Value string
     tval = -1;
 
   return (tval);
+}
+
+
+//
+// 'load_config()' - Load the server configuration.
+//
+
+static bool				// O - `true` on success, `false` on failure
+load_config(
+    moauthd_server_t *server,		// I - Server
+    const char       *configfile,	// I - Config filename
+    cups_file_t      *fp)		// I - Config file
+{
+  char		line[2048],		// Line from config file
+		*value,			// Value from config file
+		*ptr;			// Pointer into value
+  int		linenum = 0;		// Current line number
+  struct group	*group;			// Group information
+
+
+  // Load configuration from file...
+  while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
+  {
+    if (!strcasecmp(line, "Application"))
+    {
+      // Application client-id redirect-uri client-name
+      const char	*client_id,	// Client ID
+		      *client_name,	// Client name
+		      *redirect_uri;	// Redirection URI
+
+      if (!value)
+      {
+	fprintf(stderr, "moauthd: Missing client ID, redirect URI, and name on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+
+      client_id = ptr = value;
+      while (*ptr && !isspace(*ptr))
+	ptr ++;
+      while (*ptr && isspace(*ptr))
+	*ptr++ = '\0';
+
+      redirect_uri = ptr;
+      while (*ptr && !isspace(*ptr))
+	ptr ++;
+      while (*ptr && isspace(*ptr))
+	*ptr++ = '\0';
+
+      client_name = ptr;
+
+      if (!*client_id || !*redirect_uri)
+      {
+	fprintf(stderr, "moauthd: Missing client ID and redirect URI on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+
+      moauthdAddApplication(server, client_id, redirect_uri, client_name, NULL, NULL, NULL);
+    }
+    else if (!strcasecmp(line, "LogFile"))
+    {
+      // LogFile {filename,none,stderr,syslog}
+      if (!value || !strcasecmp(value, "stderr"))
+      {
+	server->log_file = 2;
+      }
+      else if (!strcmp(value, "none"))
+      {
+	server->log_file = -1;
+      }
+      else if (!strcasecmp(value, "syslog"))
+      {
+	server->log_file = 0;
+	openlog("moauthd", LOG_CONS, LOG_AUTH);
+      }
+      else if ((server->log_file = open(value, O_WRONLY | O_CREAT | O_APPEND | O_EXCL, 0600)) < 0)
+      {
+	fprintf(stderr, "moauthd: Unable to open log file \"%s\" on line %d of \"%s\": %s\n", value, linenum, configfile, strerror(errno));
+	return (false);
+      }
+    }
+    else if (!strcasecmp(line, "LogLevel"))
+    {
+      // LogLevel {error,info,debug}
+      if (!value)
+      {
+	fprintf(stderr, "moauthd: Missing log level on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+      else if (!strcasecmp(value, "error"))
+	server->log_level = MOAUTHD_LOGLEVEL_ERROR;
+      else if (!strcasecmp(value, "info"))
+	server->log_level = MOAUTHD_LOGLEVEL_INFO;
+      else if (!strcasecmp(value, "debug"))
+	server->log_level = MOAUTHD_LOGLEVEL_DEBUG;
+      else
+      {
+	fprintf(stderr, "moauthd: Unknown LogLevel \"%s\" on line %d of \"%s\" ignored.\n", value, linenum, configfile);
+      }
+    }
+    else if (!strcasecmp(line, "IntrospectGroup"))
+    {
+      // IntrospectGroup nnn
+      // IntrospectGroup name
+      //
+      // Required group membership (and thus required authentication for)
+      // token introspection.
+      if (!value)
+      {
+	fprintf(stderr, "moauthd: Missing IntrospectGroup on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+      else if (isdigit(*value))
+      {
+	server->introspect_group = (gid_t)strtol(value, &ptr, 10);
+
+	if (ptr && *ptr)
+	{
+	  fprintf(stderr, "moauthd: Bad IntrospectGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	  return (false);
+	}
+      }
+      else if ((group = getgrnam(value)) != NULL)
+      {
+	server->introspect_group = group->gr_gid;
+      }
+      else
+      {
+	fprintf(stderr, "moauthd: Unknown IntrospectGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	return (false);
+      }
+    }
+    else if (!strcasecmp(line, "RegisterGroup"))
+    {
+      // RegisterGroup nnn
+      // RegisterGroup name
+      //
+      // Required group membership (and thus required authentication for)
+      // client registration.
+      if (!value)
+      {
+	fprintf(stderr, "moauthd: Missing RegisterGroup on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+      else if (isdigit(*value))
+      {
+	server->register_group = (gid_t)strtol(value, &ptr, 10);
+
+	if (ptr && *ptr)
+	{
+	  fprintf(stderr, "moauthd: Bad RegisterGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	  return (false);
+	}
+      }
+      else if ((group = getgrnam(value)) != NULL)
+      {
+	server->register_group = group->gr_gid;
+      }
+      else
+      {
+	fprintf(stderr, "moauthd: Unknown RegisterGroup \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	return (false);
+      }
+    }
+    else if (!strcasecmp(line, "MaxGrantLife"))
+    {
+      // MaxGrantLife NNN{m,h,d,w}
+      //
+      // Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
+      // and "w" is weeks.
+      int	max_grant_life;		// Maximum grant life value
+
+      if (!value)
+      {
+	fprintf(stderr, "moauthd: Missing time value on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+
+      if ((max_grant_life = get_seconds(value)) < 0)
+      {
+	fprintf(stderr, "moauthd: Unknown time value \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	return (false);
+      }
+
+      server->max_grant_life = max_grant_life;
+    }
+    else if (!strcasecmp(line, "MaxTokenLife"))
+    {
+      // MaxTokenLife NNN{m,h,d,w}
+      //
+      // Default units are seconds.  "m" is minutes, "h" is hours, "d" is days,
+      // and "w" is weeks.
+      int	max_token_life;		// Maximum token life value
+
+      if (!value)
+      {
+	fprintf(stderr, "moauthd: Missing time value on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+
+      if ((max_token_life = get_seconds(value)) < 0)
+      {
+	fprintf(stderr, "moauthd: Unknown time value \"%s\" on line %d of \"%s\".\n", value, linenum, configfile);
+	return (false);
+      }
+
+      server->max_token_life = max_token_life;
+    }
+    else if (!strcasecmp(line, "Option"))
+    {
+      // Option {[-]BasicAuth}
+      if (!value)
+      {
+	fprintf(stderr, "moauthd: Bad Option on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+
+      if (!strcasecmp(value, "BasicAuth"))
+	server->options |= MOAUTHD_OPTION_BASIC_AUTH;
+      else
+	fprintf(stderr, "moauthd: Unknown Option %s on line %d of \"%s\".\n", value, linenum, configfile);
+    }
+    else if (!strcasecmp(line, "Resource"))
+    {
+      // Resource {public,private,shared} /remote/path /local/path
+      char		*scope,		// Access scope
+			*remote_path,	// Remote path
+			*local_path;	// Local path
+      struct stat	local_info;	// Local file info
+
+      if (!value)
+      {
+	fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+
+      scope       = strtok(value, " \t");
+      remote_path = strtok(NULL, " \t");
+      local_path  = strtok(NULL, " \t");
+
+      if (!scope || !remote_path || !local_path)
+      {
+	fprintf(stderr, "moauthd: Bad Resource on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+
+      if (stat(local_path, &local_info))
+      {
+	fprintf(stderr, "moauthd: Unable to access Resource on line %d of \"%s\": %s\n", linenum, configfile, strerror(errno));
+	return (false);
+      }
+
+      moauthdCreateResource(server, S_ISREG(local_info.st_mode) ? MOAUTHD_RESTYPE_FILE : MOAUTHD_RESTYPE_DIR, remote_path, local_path, NULL, scope);
+    }
+    else if (!strcasecmp(line, "ServerName"))
+    {
+      // ServerName hostname[:port]
+      char	*portptr;		// Pointer to port in line
+
+      if (!value)
+      {
+	fprintf(stderr, "moauthd: Missing server name on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+
+      if ((portptr = strrchr(value, ':')) != NULL && isdigit(portptr[1] & 255))
+      {
+	// Extract ":port" portion...
+	*portptr++   = '\0';
+	server->port = atoi(portptr);
+      }
+
+      if ((server->name = strdup(value)) == NULL)
+      {
+        fprintf(stderr, "moauthd: Unable to allocate memory for server name on line %d of \"%s\".\n", linenum, configfile);
+        return (false);
+      }
+    }
+    else if (!strcasecmp(line, "TestPassword"))
+    {
+      if (value)
+      {
+	server->test_password = strdup(value);
+      }
+      else
+      {
+	fprintf(stderr, "moauthd: Missing password on line %d of \"%s\".\n", linenum, configfile);
+	return (false);
+      }
+    }
+    else
+    {
+      fprintf(stderr, "moauthd: Unknown configuration directive \"%s\" on line %d of \"%s\" ignored.\n", line, linenum, configfile);
+    }
+  }
+
+  return (true);
+}
+
+
+//
+// 'load_state()' - Load the server state.
+//
+
+static bool				// O - `true` on success, `false` on failure
+load_state(moauthd_server_t *server)	// I - Server
+{
+  cups_file_t	*fp;			// State file
+  char		line[16384],		// Line from config/state file
+		*value;			// Value from config/state file
+  int		linenum;		// Current line number
+
+
+  if ((fp = cupsFileOpen(server->state_file, "r")) == NULL)
+  {
+    if (errno != ENOENT)
+    {
+      // Something other than the state file doesn't exist...
+      fprintf(stderr, "moauthd: Unable to open state file \"%s\": %s\n", server->state_file, strerror(errno));
+      return (false);
+    }
+
+    // No file means we need to generate the private key...
+    server->private_key = cupsJWTMakePrivateKey(CUPS_JWA_RS256);
+    return (server->private_key != NULL && moauthdSaveServer(server));
+  }
+
+  // Read lines from the state file...
+  while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
+  {
+    if (!strcmp(line, "PrivateKey") && value)
+      server->private_key = cupsJSONImportString(value);
+    else
+      fprintf(stderr, "moauthd: Unknown state directive \"%s\" on line %d of \"%s\".\n", line, linenum, server->state_file);
+  }
+
+  cupsFileClose(fp);
+
+  return (server->private_key != NULL);
 }
