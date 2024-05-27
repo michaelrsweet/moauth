@@ -21,6 +21,7 @@ static bool	do_authorize(moauthd_client_t *client);
 static bool	do_introspect(moauthd_client_t *client);
 static bool	do_register(moauthd_client_t *client);
 static bool	do_token(moauthd_client_t *client);
+static bool	do_userinfo(moauthd_client_t *client);
 static bool	validate_uri(const char *uri, const char *urischeme);
 
 
@@ -378,6 +379,8 @@ moauthdRunClient(
       case HTTP_STATE_GET :
 	  if (!strcmp(client->path_info, "/authorize"))
 	    done = !do_authorize(client);
+	  else if (!strcmp(client->path_info, "/userinfo"))
+	    done = !do_userinfo(client);
 	  else if (moauthdGetFile(client) >= HTTP_STATUS_BAD_REQUEST)
 	    done = true;
 	  break;
@@ -398,6 +401,10 @@ moauthdRunClient(
 	  else if (!strcmp(client->path_info, "/token"))
 	  {
 	    done = !do_token(client);
+	  }
+	  else if (!strcmp(client->path_info, "/userinfo"))
+	  {
+	    done = !do_userinfo(client);
 	  }
 	  else
 	  {
@@ -1152,6 +1159,83 @@ do_token(moauthd_client_t *client)	// I - Client object
   cupsFreeOptions(num_vars, vars);
 
   return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+}
+
+
+//
+// 'do_userinfo()' - Process a request for the /userinfo endpoint.
+//
+
+static bool				// O - `true` on success, `false` on error
+do_userinfo(moauthd_client_t *client)	// I - Client
+{
+  bool		ret = false;		// Return value
+  int		error;			// Error value
+  const char	*authorization;		// Authorization header
+  moauthd_token_t *token;		// Token
+  struct passwd	pw,			// User info
+		*pwresult = NULL;	// Matching result
+  char		pwbuffer[16384];	// User info buffer
+  cups_json_t	*json;			// JSON response
+  char		*data;			// Form data
+  size_t	datalen;		// Length of JSON data
+
+
+  // Discard any POST data...
+  if (httpGetState(client->http) == HTTP_STATE_POST_RECV)
+    free(_moauthCopyMessageBody(client->http));
+
+  // Get the Bearer token from the request...
+  if ((authorization = httpGetField(client->http, HTTP_FIELD_AUTHORIZATION)) == NULL || strncmp(authorization, "Bearer ", 7))
+    return (moauthdRespondClient(client, HTTP_STATUS_UNAUTHORIZED, NULL, NULL, 0, 0));
+
+  authorization += 7;
+  while (*authorization && isspace(*authorization & 255))
+    authorization ++;
+
+  if ((token = moauthdFindToken(client->server, authorization)) == NULL)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Bad token in userinfo request.");
+
+    return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+  }
+
+  if ((error = getpwnam_r(token->user, &pw, pwbuffer, sizeof(pwbuffer), &pwresult)) != 0)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup user '%s' information: %s", token->user, strerror(error));
+    return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+  }
+  else if (!pwresult)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup user '%s' information: NULL result", token->user);
+    return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+  }
+
+  // Return
+  json = cupsJSONNew(/*parent*/NULL, /*after*/NULL, CUPS_JTYPE_OBJECT);
+  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "sub"), token->user);
+  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "name"), pwresult->pw_gecos);
+
+  data = cupsJSONExportString(json);
+  cupsJSONDelete(json);
+
+  if (!data)
+  {
+    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to create JSON response.");
+    return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+  }
+
+  datalen = strlen(data);
+
+  if (moauthdRespondClient(client, HTTP_STATUS_OK, "application/json", NULL, 0, datalen))
+  {
+    if (httpWrite(client->http, data, datalen) == datalen)
+      ret = true;
+  }
+
+  free(data);
+
+  return (ret);
 }
 
 
