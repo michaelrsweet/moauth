@@ -632,6 +632,8 @@ start_moauthd(int verbosity)		// I - Verbosity
   if (chdir(".."))
     abort();
 
+  unlink("test.state");
+
   if (verbosity)
     posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, verbose_argv, environ);
   else
