@@ -24,7 +24,7 @@ the files "LICENSE" and "NOTICE" for more information.
 > Note: Please use the Github issue tracker to report issues or request
 > features/improvements in mOAuth and/or this documentation:
 >
-> https://github.com/michaelrsweet/moauth/issues
+> <https://github.com/michaelrsweet/moauth/issues>
 
 
 Using libmoauth
