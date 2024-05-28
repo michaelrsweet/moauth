@@ -77,6 +77,8 @@ moauthdCreateToken(
   token->token = cupsJWTExportString(jwt, CUPS_JWS_FORMAT_COMPACT);
   cupsJWTDelete(jwt);
 
+  moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "token->user=\"%s\", ->scopes=\"%s\", uid=%d, gid=%d, created=%ld, expires=%ld, token=\"%s\"", token->user, token->scopes, (int)token->uid, (int)token->gid, (long)token->created, (long)token->expires, token->token);
+
   cupsRWLockWrite(&server->tokens_lock);
 
   if (!server->tokens)

@@ -452,7 +452,7 @@ do_authorize(moauthd_client_t *client)	// I - Client object
   const char	*prefix;		// Prefix string
 
 
-  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "httpGetState=%s", httpStateString(httpGetState(client->http)));
+  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "state=%s", httpStateString(httpGetState(client->http)));
 
   switch (client->request_method)
   {
@@ -461,6 +461,8 @@ do_authorize(moauthd_client_t *client)	// I - Client object
 
     case HTTP_STATE_GET :
         // Get form variable on the request line...
+        moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "query_string=\"%s\"", client->query_string);
+
         num_vars      = cupsFormDecode(client->query_string, &vars);
         client_id     = cupsGetOption("client_id", num_vars, vars);
         redirect_uri  = cupsGetOption("redirect_uri", num_vars, vars);
@@ -571,6 +573,8 @@ do_authorize(moauthd_client_t *client)	// I - Client object
     case HTTP_STATE_POST :
         if ((data = _moauthCopyMessageBody(client->http)) == NULL)
           return (moauthdRespondClient(client, HTTP_STATUS_BAD_REQUEST, NULL, NULL, 0, 0));
+
+        moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "body=\"%s\"", data);
 
         num_vars      = cupsFormDecode(data, &vars);
         client_id     = cupsGetOption("client_id", num_vars, vars);

@@ -53,7 +53,7 @@ install:	all
 
 # Test everything...
 test:	$(TARGETS)
-	./testmoauthd
+	./testmoauthd -v
 
 
 # Daemon program...

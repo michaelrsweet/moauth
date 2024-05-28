@@ -17,11 +17,11 @@
 #include <signal.h>
 #include <sys/poll.h>
 #include <moauth/moauth-private.h>
+#include <moauth/test.h>
 #ifdef __APPLE__
 #  include <CoreFoundation/CoreFoundation.h>
 #  include <CoreServices/CoreServices.h>
 #endif // __APPLE__
-
 extern char **environ;
 
 
@@ -72,8 +72,8 @@ main(int  argc,				// I - Number of command-line arguments
      char *argv[])			// I - Command-line arguments
 {
   int			i,		// Looping var
+			status = 0,	// Exit status
 			verbosity = 0;	// Verbosity for server
-  int			status = 0;	// Exit status
   pid_t			moauthd_pid;	// moauthd Process ID
   _moauth_redirect_t	redirect_data;	// Redirect server data
   cups_thread_t		redirect_tid;	// Thread ID
@@ -155,58 +155,60 @@ main(int  argc,				// I - Number of command-line arguments
 
   if (redirect_data.grant)
   {
-    printf("PASS (grant code is \"%s\")\n", redirect_data.grant);
+    testEndMessage(true, "grant code is '%s'", redirect_data.grant);
   }
   else if (!stop_tests)
   {
-    puts("FAIL (no authorization response within 5 minutes)");
+    testEndMessage(false, "no authorization response within 5 minutes");
     status = 1;
   }
   else
-    puts("FAIL (stopped)");
+  {
+    testEndMessage(false, "stopped");
+  }
 
   if (stop_tests || status)
     goto finish_up;
 
   // Try to get an access token...
-  fputs("moauthGetToken: ", stdout);
+  testBegin("moauthGetToken");
   if (moauthGetToken(server, "https://localhost:10000", "testmoauthd", redirect_data.grant, redirect_data.verifier, token, sizeof(token), refresh, sizeof(refresh), &expires))
   {
     char expdate[256];			// Expiration date
 
-    printf("PASS (access token=\"%s\", refresh token=\"%s\", expires %s)\n", token, refresh, httpGetDateString(expires, expdate, sizeof(expdate)));
+    testEndMessage(true, "access token=\"%s\", refresh token=\"%s\", expires %s", token, refresh, httpGetDateString(expires, expdate, sizeof(expdate)));
   }
   else
   {
-    puts("FAIL");
+    testEnd(false);
     status = 1;
     goto finish_up;
   }
 
   // Access a protected file using the token...
   httpAssembleURI(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, 9000 + (getuid() % 1000), "/shared/shared.pdf");
-  printf("GET %s: ", url);
+  testBegin("GET %s", url);
   if (get_url(url, token, filename, sizeof(filename)))
   {
-    printf("PASS (filename=\"%s\")\n", filename);
+    testEndMessage(true, "filename=\"%s\"", filename);
     unlink(filename);
   }
   else
   {
-    printf("FAIL (%s)\n", filename);
+    testEndMessage(false, "%s", filename);
     status = 1;
     goto finish_up;
   }
 
   // Register a new client...
-  fputs("moauthRegisterClient: ", stdout);
+  testBegin("moauthRegisterClient");
   if (moauthRegisterClient(server, "https://localhost:10000/newclient", "Dynamic Test Client", NULL, NULL, NULL, client_id, sizeof(client_id)))
   {
-    printf("PASS (client_id=\"%s\")\n", client_id);
+    testEndMessage(true, "client_id=\"%s\"", client_id);
   }
   else
   {
-    puts("FAIL");
+    testEnd(false);
     status = 1;
     goto finish_up;
   }
@@ -222,25 +224,25 @@ main(int  argc,				// I - Number of command-line arguments
   {
     char expdate[256];			// Expiration date
 
-    printf("PASS (access token=\"%s\", refresh token=\"%s\", expires %s)\n", token, refresh, httpGetDateString(expires, expdate, sizeof(expdate)));
+    testEndMessage(true, "access token=\"%s\", refresh token=\"%s\", expires %s)", token, refresh, httpGetDateString(expires, expdate, sizeof(expdate)));
   }
   else
   {
-    puts("FAIL");
+    testEnd(false);
     status = 1;
     goto finish_up;
   }
 
   httpAssembleURI(HTTP_URI_CODING_ALL, url, sizeof(url), "https", NULL, host, 9000 + (getuid() % 1000), "/private/private.pdf");
-  printf("GET %s: ", url);
+  testBegin("GET %s", url);
   if (get_url(url, token, filename, sizeof(filename)))
   {
-    printf("PASS (filename=\"%s\")\n", filename);
+    testEndMessage(true, "filename=\"%s\"", filename);
     unlink(filename);
   }
   else
   {
-    printf("FAIL (%s)\n", filename);
+    testEndMessage(false, "%s", filename);
     status = 1;
     goto finish_up;
   }
@@ -363,27 +365,36 @@ open_auth_url(const char *url,		// I - OAuth server URL
               const char *state,	// I - Client state string
               const char *verifier)	// I - Verifier string
 {
-  moauth_t	*server;		// Connection to OAuth server
+  int		i;			// Looping var
+  moauth_t	*server = NULL;		// Connection to OAuth server
 
 
-  printf("moauthConnect(\"%s\", ...): ", url);
+  testBegin("moauthConnect(\"%s\", ...)", url);
 
-  if ((server = moauthConnect(url)) != NULL)
+  for (i = 0; i < 10; i ++)
   {
-    puts("PASS");
+    if ((server = moauthConnect(url)) != NULL)
+      break;
+
+    sleep(1);
+  }
+
+  if (server)
+  {
+    testEnd(true);
 
     fputs("moauthAuthorize: ", stdout);
 
     if (!moauthAuthorize(server, "https://localhost:10000", "testmoauthd", state, verifier, NULL))
     {
-      puts("FAIL (unable to open authorization page)");
+      testEndMessage(true, "unable to open authorization page");
       moauthClose(server);
       server = NULL;
     }
   }
   else
   {
-    puts("FAIL (unable to connect to OAuth server)");
+    testEndMessage(true, "unable to connect to OAuth server");
   }
 
   return (server);
