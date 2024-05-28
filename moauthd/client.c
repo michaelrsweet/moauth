@@ -452,6 +452,8 @@ do_authorize(moauthd_client_t *client)	// I - Client object
   const char	*prefix;		// Prefix string
 
 
+  moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "httpGetState=%s", httpStateString(httpGetState(client->http)));
+
   switch (client->request_method)
   {
     case HTTP_STATE_HEAD :
@@ -467,6 +469,13 @@ do_authorize(moauthd_client_t *client)	// I - Client object
         state         = cupsGetOption("state", num_vars, vars);
         challenge     = cupsGetOption("code_challenge", num_vars, vars);
         method        = cupsGetOption("code_challenge_method", num_vars, vars);
+
+        {
+          size_t i;
+          moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "num_vars=%u", (unsigned)num_vars);
+          for (i = 0; i < num_vars; i ++)
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "vars[%u].name=\"%s\", .value=\"%s\"", (unsigned)i, vars[i].name, vars[i].value);
+        }
 
         if (!client_id || !response_type || strcmp(response_type, "code") || (method && strcmp(method, "S256")))
         {
@@ -572,6 +581,13 @@ do_authorize(moauthd_client_t *client)	// I - Client object
         username      = cupsGetOption("username", num_vars, vars);
         password      = cupsGetOption("password", num_vars, vars);
         challenge     = cupsGetOption("code_challenge", num_vars, vars);
+
+        {
+          size_t i;
+          moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "num_vars=%u", (unsigned)num_vars);
+          for (i = 0; i < num_vars; i ++)
+            moauthdLogc(client, MOAUTHD_LOGLEVEL_DEBUG, "vars[%u].name=\"%s\", .value=\"%s\"", (unsigned)i, vars[i].name, vars[i].value);
+        }
 
 	free(data);
 

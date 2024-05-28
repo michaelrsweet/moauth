@@ -7,6 +7,7 @@
 //
 
 #include "moauthd.h"
+#include <cups/jwt.h>
 #include <pwd.h>
 
 
@@ -32,7 +33,7 @@ moauthdCreateToken(
 {
   moauthd_token_t	*token;		// New token
   struct passwd		*passwd;	// User info
-  char			temp[1024];	// Temporary string
+  cups_jwt_t		*jwt;		// JWT
 
 
   if (!scopes || !*scopes)
@@ -64,11 +65,17 @@ moauthdCreateToken(
   else
     token->expires = token->created + server->max_token_life;
 
-  // Generate the token as a UUID using the server name, port, secret, and number
-  // of tokens issued.
-  httpAssembleUUID(server->name, server->port, server->secret, server->num_tokens ++, temp, sizeof(temp));
+  // Generate the JWT for the token...
+  jwt = cupsJWTNew("JWT");
+  cupsJWTSetClaimString(jwt, "iss", token->user);
+  cupsJWTSetClaimString(jwt, "scope", token->scopes);
+  cupsJWTSetClaimNumber(jwt, "iat", (double)token->created);
+  cupsJWTSetClaimNumber(jwt, "exp", (double)token->expires);
 
-  token->token = strdup(temp + 9);	// Skip "urn:uuid:" prefix
+  cupsJWTSign(jwt, CUPS_JWA_RS256, server->private_key);
+
+  token->token = cupsJWTExportString(jwt, CUPS_JWS_FORMAT_COMPACT);
+  cupsJWTDelete(jwt);
 
   cupsRWLockWrite(&server->tokens_lock);
 
