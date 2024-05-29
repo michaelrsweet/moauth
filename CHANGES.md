@@ -5,7 +5,7 @@ Changes in mOAuth
 Changes in v2.0.0
 -----------------
 
-- TBD
+- Authorization tokens now use JWT/JWS/JWKS (Issue #7)
 
 
 Changes in v1.1

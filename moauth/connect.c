@@ -43,10 +43,17 @@ _moauthConnect(const char *uri,		// I - URI to connect to
   char		*peercreds;		// Peer credentials
 
 
+//  fprintf(stderr, "_moauthConect(uri=\"%s\", resource=%p, resourcelen=%lu)\n", uri, (void *)resource, (unsigned long)resourcelen);
+
   if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, (int)resourcelen) < HTTP_URI_STATUS_OK || strcmp(scheme, "https"))
+  {
+//    fputs("_moauthConnect: Bad URI\n", stderr);
     return (NULL);			// Bad URI
+  }
 
   http = httpConnect(host, port, NULL, AF_UNSPEC, HTTP_ENCRYPTION_ALWAYS, true, 30000, NULL);
+//  if (!http)
+//    fprintf(stderr, "_moauthConnect: Unable to connect to %s:%d: %s\n", host, port, cupsGetErrorString());
 
   if ((peercreds = httpCopyPeerCredentials(http)) == NULL)
   {
@@ -64,6 +71,7 @@ _moauthConnect(const char *uri,		// I - URI to connect to
     case HTTP_TRUST_INVALID : // Credentials are invalid
     case HTTP_TRUST_CHANGED : // Credentials have changed
     case HTTP_TRUST_EXPIRED : // Credentials are expired
+//        fputs("_moauthConnect: Unable to trust.\n", stderr);
         httpClose(http);
         free(peercreds);
         return (NULL);

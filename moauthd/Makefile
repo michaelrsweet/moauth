@@ -53,6 +53,8 @@ install:	all
 
 # Test everything...
 test:	$(TARGETS)
+	echo Running moauthd tests...
+	$(RM) ../test.log ../test-cups.log
 	./testmoauthd -v
 
 

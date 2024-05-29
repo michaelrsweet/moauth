@@ -81,8 +81,8 @@ main(int  argc,				// I - Number of command-line arguments
   char			host[256],	// Hostname
 			url[1024],	// Authentication URL
 			client_id[256],	// Client ID
-			token[256],	// Access token
-			refresh[256],	// Refresh token
+			token[2048],	// Access token
+			refresh[2048],	// Refresh token
 			filename[256];	// Temporary filename
   const char		*password;	// Password to use for password auth test
   time_t		expires;	// Expiration date/time
@@ -109,8 +109,9 @@ main(int  argc,				// I - Number of command-line arguments
   signal(SIGTERM, sig_handler);
 
   // Start daemon...
+  testBegin("moauthd");
   moauthd_pid = start_moauthd(verbosity);
-  sleep(1);
+  testEndMessage(moauthd_pid > 0, "%d", (int)moauthd_pid);
 
   // Start redirect server thread...
   _moauthGetRandomBytes(data, sizeof(data));
@@ -202,7 +203,7 @@ main(int  argc,				// I - Number of command-line arguments
 
   // Register a new client...
   testBegin("moauthRegisterClient");
-  if (moauthRegisterClient(server, "https://localhost:10000/newclient", "Dynamic Test Client", NULL, NULL, NULL, client_id, sizeof(client_id)))
+  if (moauthRegisterClient(server, /*redirect_uri*/"https://localhost:10000/newclient", /*client_name*/"Dynamic Test Client", /*client_uri*/NULL, /*logo_uri*/NULL, /*tos_uri*/NULL, client_id, sizeof(client_id)))
   {
     testEndMessage(true, "client_id=\"%s\"", client_id);
   }
@@ -365,14 +366,16 @@ open_auth_url(const char *url,		// I - OAuth server URL
               const char *state,	// I - Client state string
               const char *verifier)	// I - Verifier string
 {
-  int		i;			// Looping var
   moauth_t	*server = NULL;		// Connection to OAuth server
+  time_t	end = time(NULL) + 300;	// Timeout
 
 
   testBegin("moauthConnect(\"%s\", ...)", url);
 
-  for (i = 0; i < 10; i ++)
+  while (time(NULL) < end)
   {
+    testProgress();
+
     if ((server = moauthConnect(url)) != NULL)
       break;
 
@@ -443,7 +446,7 @@ redirect_server(
 
   httpAddrFreeList(addrlist);
 
-  cupsSetServerCredentials(NULL, "localhost", 1);
+  cupsSetServerCredentials(NULL, "localhost", true);
 
   // Listen for an incoming connection...
   while (!stop_tests && !data->grant)
@@ -646,9 +649,26 @@ start_moauthd(int verbosity)		// I - Verbosity
   unlink("test.state");
 
   if (verbosity)
-    posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, verbose_argv, environ);
+  {
+    int		i, j;			// Looping vars
+    const char	*verbose_environ[200];	// Verbose CUPS logging
+
+    verbose_environ[0] = "CUPS_DEBUG_LOG=test-cups.log";
+    verbose_environ[1] = "CUPS_DEBUG_LEVEL=4";
+
+    for (i = 0, j = 2; environ[i] && j < 199; i ++)
+    {
+      if (strncmp(environ[i], "CUPS_DEBUG_", 11))
+        verbose_environ[j ++] = environ[i];
+    }
+    verbose_environ[j] = NULL;
+
+    posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, verbose_argv, (char * const *)verbose_environ);
+  }
   else
+  {
     posix_spawn(&pid, "moauthd/moauthd", NULL, NULL, normal_argv, environ);
+  }
 
   return (pid);
 }

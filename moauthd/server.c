@@ -147,6 +147,13 @@ moauthdCreateServer(
   if (!server->port)
     server->port = 9000 + (getuid() % 1000);
 
+  // Update logging and log our authorization server's URL...
+  if (verbosity == 1 && server->log_level < MOAUTHD_LOGLEVEL_DEBUG)
+    server->log_level ++;
+  else if (verbosity > 1)
+    server->log_level = MOAUTHD_LOGLEVEL_DEBUG;
+
+  // Save state file...
   server->state_file = strdup(statefile);
 
   if (!load_state(server))
@@ -184,15 +191,9 @@ moauthdCreateServer(
 
   if (server->num_listeners == 0)
   {
-    fputs("moauthd: No working listener sockets.\n", stderr);
+    moauthdLogs(server, MOAUTHD_LOGLEVEL_ERROR, "No working listener sockets.");
     goto create_failed;
   }
-
-  // Update logging and log our authorization server's URL...
-  if (verbosity == 1 && server->log_level < MOAUTHD_LOGLEVEL_DEBUG)
-    server->log_level ++;
-  else if (verbosity > 1)
-    server->log_level = MOAUTHD_LOGLEVEL_DEBUG;
 
   moauthdLogs(server, MOAUTHD_LOGLEVEL_INFO, "Authorization server is \"https://%s:%d\".", server->name, server->port);
 
@@ -766,7 +767,7 @@ load_config(
 	server->log_file = 0;
 	openlog("moauthd", LOG_CONS, LOG_AUTH);
       }
-      else if ((server->log_file = open(value, O_WRONLY | O_CREAT | O_APPEND | O_EXCL, 0600)) < 0)
+      else if ((server->log_file = open(value, O_WRONLY | O_CREAT | O_APPEND, 0600)) < 0)
       {
 	fprintf(stderr, "moauthd: Unable to open log file \"%s\" on line %d of \"%s\": %s\n", value, linenum, configfile, strerror(errno));
 	return (false);

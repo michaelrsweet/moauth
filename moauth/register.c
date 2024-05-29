@@ -59,11 +59,14 @@ moauthRegisterClient(
   // Prepare JSON data to register the client application...
   json = cupsJSONNew(/*parent*/NULL, /*after*/NULL, CUPS_JTYPE_OBJECT);
   cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "client_name"), client_name);
-  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "client_uri"), client_uri);
-  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "logo_uri"), logo_uri);
+  if (client_uri)
+    cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "client_uri"), client_uri);
+  if (logo_uri)
+    cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "logo_uri"), logo_uri);
   jarray = cupsJSONNew(json, cupsJSONNewKey(json, /*after*/NULL, "redirect_uris"), CUPS_JTYPE_ARRAY);
   cupsJSONNewString(jarray, /*after*/NULL, redirect_uri);
-  cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "tos_uri"), tos_uri);
+  if (tos_uri)
+    cupsJSONNewString(json, cupsJSONNewKey(json, /*after*/NULL, "tos_uri"), tos_uri);
 
   json_data = cupsJSONExportString(json);
   cupsJSONDelete(json);

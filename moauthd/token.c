@@ -1,7 +1,7 @@
 //
 // Token handling for moauth daemon
 //
-// Copyright © 2017-2022 by Michael R Sweet
+// Copyright © 2017-2024 by Michael R Sweet
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
 //
@@ -15,8 +15,8 @@
 // Local functions...
 //
 
-static int	compare_tokens(moauthd_token_t *a, moauthd_token_t *b);
-static void	free_token(moauthd_token_t *token);
+static int	compare_tokens(moauthd_token_t *a, moauthd_token_t *b, void *data);
+static void	free_token(moauthd_token_t *token, void *data);
 
 
 //
@@ -77,7 +77,7 @@ moauthdCreateToken(
   token->token = cupsJWTExportString(jwt, CUPS_JWS_FORMAT_COMPACT);
   cupsJWTDelete(jwt);
 
-  moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "token->user=\"%s\", ->scopes=\"%s\", uid=%d, gid=%d, created=%ld, expires=%ld, token=\"%s\"", token->user, token->scopes, (int)token->uid, (int)token->gid, (long)token->created, (long)token->expires, token->token);
+//  moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "token->user=\"%s\", ->scopes=\"%s\", uid=%d, gid=%d, created=%ld, expires=%ld, token=\"%s\"", token->user, token->scopes, (int)token->uid, (int)token->gid, (long)token->created, (long)token->expires, token->token);
 
   cupsRWLockWrite(&server->tokens_lock);
 
@@ -122,6 +122,8 @@ moauthdFindToken(
 			key;		// Search key
 
 
+//  moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "FindToken(\"%s\")", token_id);
+
   key.token = (char *)token_id;
 
   cupsRWLockRead(&server->tokens_lock);
@@ -129,6 +131,8 @@ moauthdFindToken(
   match = cupsArrayFind(server->tokens, &key);
 
   cupsRWUnlock(&server->tokens_lock);
+
+//  moauthdLogs(server, MOAUTHD_LOGLEVEL_DEBUG, "FindToken: match=%p(%s)", (void *)match, match ? match->user : "???");
 
   return (match);
 }
@@ -140,8 +144,11 @@ moauthdFindToken(
 
 static int				// O - Result of comparison
 compare_tokens(moauthd_token_t *a,	// I - First token
-               moauthd_token_t *b)	// I - Second token
+               moauthd_token_t *b,	// I - Second token
+               void            *data)	// I - Callback data (unused)
 {
+  (void)data;
+
   return (strcmp(a->token, b->token));
 }
 
@@ -151,8 +158,11 @@ compare_tokens(moauthd_token_t *a,	// I - First token
 //
 
 static void
-free_token(moauthd_token_t *token)	// I - Token to free
+free_token(moauthd_token_t *token,	// I - Token to free
+           void            *data)	// I - Callback data (unused)
 {
+  (void)data;
+
   if (token->challenge)
     free(token->challenge);
   free(token->token);
