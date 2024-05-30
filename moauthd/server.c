@@ -93,7 +93,8 @@ moauthdCreateServer(
   cups_json_t	*json,			// OpenID/RFC 8414 JSON metadata
 		*jarray;		// Array value
   moauthd_resource_t *r;		// Resource
-
+  cups_array_t	*scopes;		// List of scopes
+  const char	*scope;			// Current scope
 
 
   // Open the configuration file if one is specified...
@@ -267,9 +268,20 @@ moauthdCreateServer(
   // [OpenID.Core] SHOULD be listed, if supported.
   jarray = cupsJSONNew(json, cupsJSONNewKey(json, NULL, "scopes_supported"), CUPS_JTYPE_ARRAY);
   cupsJSONNewString(jarray, NULL, "openid");
-  cupsJSONNewString(jarray, NULL, "private");
-  cupsJSONNewString(jarray, NULL, "public");
-  cupsJSONNewString(jarray, NULL, "shared");
+
+  // Loop through resources and collect the list of scope names...
+  scopes = cupsArrayNewStrings(NULL, '\0');
+
+  for (r = (moauthd_resource_t *)cupsArrayGetFirst(server->resources); r; r = (moauthd_resource_t *)cupsArrayGetNext(server->resources))
+  {
+    if (!cupsArrayFind(scopes, r->scope))
+      cupsArrayAdd(scopes, r->scope);
+  }
+
+  for (scope = (const char *)cupsArrayGetFirst(scopes); scope; scope = (const char *)cupsArrayGetNext(scopes))
+    cupsJSONNewString(jarray, NULL, scope);
+
+  cupsArrayDelete(scopes);
 
   // response_types_supported
   //

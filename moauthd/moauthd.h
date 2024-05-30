@@ -60,6 +60,7 @@ typedef struct moauthd_resource_s	// Resource
 			*local_path,	// Local path
 			*content_type,	// MIME media type, if any
 			*scope;		// Access scope
+  gid_t			scope_gid;	// Scope group ID
   size_t		remote_len;	// Length of remote path
   const void		*data;		// Data (static files)
   size_t		length;		// Length (static files)
@@ -148,11 +149,11 @@ typedef struct moauthd_client_s		// Client Information
   char		remote_host[256],	// Remote hostname
 		remote_user[256];	// Authenticated username, if any
   uid_t		remote_uid;		// Authenticated UID, if any
-  int		num_remote_groups;	// Number of remote groups, if any
+  int		num_remote_gids;	// Number of remote groups, if any
 #ifdef __APPLE__
-  int		remote_groups[32];	// Authenticated groups, if any
+  int		remote_gids[100];	// Authenticated groups, if any
 #else
-  gid_t		remote_groups[32];	// Authenticated groups, if any
+  gid_t		remote_gids[100];	// Authenticated groups, if any
 #endif // __APPLE__
   moauthd_token_t *remote_token;	// Access token used, if any
 } moauthd_client_t;

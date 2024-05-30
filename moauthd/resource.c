@@ -11,6 +11,7 @@
 #include "mmd.h"
 #include <unistd.h>
 #include <sys/fcntl.h>
+#include <grp.h>
 
 
 //
@@ -39,6 +40,10 @@ moauthdCreateResource(
     const char        *scope)		// I - Scope string
 {
   moauthd_resource_t	*resource;	// Resource object
+  struct group		grp,		// Group record
+			*grpresult = NULL;
+					// Found group
+  char			grpbuffer[8192];// Group buffer
   static const char * const types[] =	// Resource types
   {
     "Directory",
@@ -59,6 +64,13 @@ moauthdCreateResource(
   resource->local_path   = local_path ? strdup(local_path) : NULL;
   resource->content_type = content_type ? strdup(content_type) : NULL;
   resource->scope        = strdup(scope);
+
+  if (strcmp(scope, "private") && strcmp(scope, "public") && strcmp(scope, "shared"))
+  {
+    // Get the group ID for the named group...
+    if (!getgrnam_r(scope, &grp, grpbuffer, sizeof(grpbuffer), &grpresult))
+      resource->scope_gid = grpresult->gr_gid;
+  }
 
   cupsRWLockWrite(&server->resources_lock);
 
@@ -203,6 +215,23 @@ moauthdGetFile(moauthd_client_t *client)// I - Client object
       moauthdRespondClient(client, status, NULL, NULL, 0, 0);
 
       return (status);
+    }
+
+    if (strcmp(best->scope, "private") && strcmp(best->scope, "shared"))
+    {
+      size_t	i;			// Looping var
+
+      for (i = 0; i < client->num_remote_gids; i ++)
+      {
+        if (client->remote_gids[i] == best->scope_gid)
+          break;
+      }
+
+      if (i >= client->num_remote_gids)
+      {
+	moauthdRespondClient(client, HTTP_STATUS_FORBIDDEN, NULL, NULL, 0, 0);
+	return (HTTP_STATUS_FORBIDDEN);
+      }
     }
   }
 

@@ -151,8 +151,9 @@ Resource scope /remote/path /local/path
 
 The *scope* is "public" for resources that require no authentication, "private"
 for resources that can only be accessed by the resource owner or group (as
-defined by the local path permissions), or "shared" for resources that can be
-accessed by any valid user.
+defined by the local path permissions), "shared" for resources that can be
+accessed by any valid user, or a named Unix group to limit access to members of
+that group.
 
 The */remote/path* is the URL path that matches the resource, while the
 */local/path* is the local path corresponding to it.

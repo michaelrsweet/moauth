@@ -251,16 +251,16 @@ moauthdRunClient(
 	      cupsCopyString(client->remote_user, username, sizeof(client->remote_user));
 	      client->remote_uid = user->pw_uid;
 
-              client->num_remote_groups = (int)(sizeof(client->remote_groups) / sizeof(client->remote_groups[0]));
+              client->num_remote_gids = (int)(sizeof(client->remote_gids) / sizeof(client->remote_gids[0]));
 
 #ifdef __APPLE__
-              if (getgrouplist(client->remote_user, (int)user->pw_gid, client->remote_groups, &client->num_remote_groups))
+              if (getgrouplist(client->remote_user, (int)user->pw_gid, client->remote_gids, &client->num_remote_gids))
 #else
-              if (getgrouplist(client->remote_user, user->pw_gid, client->remote_groups, &client->num_remote_groups))
+              if (getgrouplist(client->remote_user, user->pw_gid, client->remote_gids, &client->num_remote_gids))
 #endif // __APPLE__
               {
                 moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup groups for user \"%s\": %s", username, strerror(errno));
-                client->num_remote_groups = 0;
+                client->num_remote_gids = 0;
 	      }
 	    }
 	    else
@@ -314,16 +314,16 @@ moauthdRunClient(
           client->remote_uid   = token->uid;
           cupsCopyString(client->remote_user, token->user, sizeof(client->remote_user));
 
-	  client->num_remote_groups = (int)(sizeof(client->remote_groups) / sizeof(client->remote_groups[0]));
+	  client->num_remote_gids = (int)(sizeof(client->remote_gids) / sizeof(client->remote_gids[0]));
 
 #ifdef __APPLE__
-	  if (getgrouplist(token->user, (int)token->gid, client->remote_groups, &client->num_remote_groups))
+	  if (getgrouplist(token->user, (int)token->gid, client->remote_gids, &client->num_remote_gids))
 #else
-	  if (getgrouplist(token->user, token->gid, client->remote_groups, &client->num_remote_groups))
+	  if (getgrouplist(token->user, token->gid, client->remote_gids, &client->num_remote_gids))
 #endif // __APPLE__
 	  {
 	    moauthdLogc(client, MOAUTHD_LOGLEVEL_ERROR, "Unable to lookup groups for user \"%s\": %s", token->user, strerror(errno));
-	    client->num_remote_groups = 0;
+	    client->num_remote_gids = 0;
 	  }
         }
       }
@@ -677,11 +677,11 @@ do_introspect(moauthd_client_t *client)	// I - Client object
     {
       int i;				// Looping var
 
-      for (i = 0; i < client->num_remote_groups; i ++)
-	if (client->remote_groups[i] == client->server->introspect_group)
+      for (i = 0; i < client->num_remote_gids; i ++)
+	if (client->remote_gids[i] == client->server->introspect_group)
 	  break;
 
-      if (i >= client->num_remote_groups)
+      if (i >= client->num_remote_gids)
 	status = HTTP_STATUS_FORBIDDEN;
     }
   }
@@ -798,11 +798,13 @@ do_register(moauthd_client_t *client)	// I - Client object
     {
       int i;				// Looping var
 
-      for (i = 0; i < client->num_remote_groups; i ++)
-	if (client->remote_groups[i] == client->server->register_group)
+      for (i = 0; i < client->num_remote_gids; i ++)
+      {
+	if (client->remote_gids[i] == client->server->register_group)
 	  break;
+      }
 
-      if (i >= client->num_remote_groups)
+      if (i >= client->num_remote_gids)
 	status = HTTP_STATUS_FORBIDDEN;
     }
   }

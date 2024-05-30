@@ -6,6 +6,7 @@ Changes in v2.0.0
 -----------------
 
 - Authorization tokens now use JWT/JWS/JWKS (Issue #7)
+- Added support for Unix group names as scopes for resources (Issue #12)
 
 
 Changes in v1.1
