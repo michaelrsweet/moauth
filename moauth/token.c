@@ -95,7 +95,7 @@ moauthGetToken(
 
   if (!httpWriteRequest(http, "POST", resource))
   {
-    if (!httpReconnect(http, 30000, NULL))
+    if (!httpConnectAgain(http, 30000, NULL))
     {
       snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsGetErrorString());
       goto done;
@@ -227,7 +227,7 @@ moauthIntrospectToken(
 
   if (!httpWriteRequest(http, "POST", resource))
   {
-    if (!httpReconnect(http, 30000, NULL))
+    if (!httpConnectAgain(http, 30000, NULL))
     {
       snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsGetErrorString());
       goto done;
@@ -365,7 +365,7 @@ moauthPasswordToken(
 
   if (!httpWriteRequest(http, "POST", resource))
   {
-    if (!httpReconnect(http, 30000, NULL))
+    if (!httpConnectAgain(http, 30000, NULL))
     {
       snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsGetErrorString());
       goto done;
@@ -495,7 +495,7 @@ moauthRefreshToken(
 
   if (!httpWriteRequest(http, "POST", resource))
   {
-    if (!httpReconnect(http, 30000, NULL))
+    if (!httpConnectAgain(http, 30000, NULL))
     {
       snprintf(server->error, sizeof(server->error), "Reconnect to token endpoint failed: %s", cupsGetErrorString());
       goto done;

@@ -61,7 +61,7 @@ _moauthConnect(const char *uri,		// I - URI to connect to
     return (NULL);
   }
 
-  switch (cupsGetCredentialsTrust(/*path*/NULL, host, peercreds))
+  switch (cupsGetCredentialsTrust(/*path*/NULL, host, peercreds, /*require_ca*/true))
   {
     case HTTP_TRUST_OK :      // Credentials are OK/trusted
     case HTTP_TRUST_RENEWED : // Credentials have been renewed

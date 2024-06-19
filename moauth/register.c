@@ -94,7 +94,7 @@ moauthRegisterClient(
 
   if (!httpWriteRequest(http, "POST", resource))
   {
-    if (httpReconnect(http, 30000, NULL))
+    if (!httpConnectAgain(http, 30000, NULL))
     {
       snprintf(server->error, sizeof(server->error), "Reconnect failed: %s", cupsGetErrorString());
       goto done;
