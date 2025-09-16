@@ -1,7 +1,7 @@
 //
 // Token handling for moauth daemon
 //
-// Copyright © 2017-2024 by Michael R Sweet
+// Copyright © 2017-2025 by Michael R Sweet
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
 //
@@ -66,7 +66,7 @@ moauthdCreateToken(
     token->expires = token->created + server->max_token_life;
 
   // Generate the JWT for the token...
-  jwt = cupsJWTNew("JWT");
+  jwt = cupsJWTNew("JWT", /*claims*/NULL);
   cupsJWTSetClaimString(jwt, "iss", token->user);
   cupsJWTSetClaimString(jwt, "scope", token->scopes);
   cupsJWTSetClaimNumber(jwt, "iat", (double)token->created);
