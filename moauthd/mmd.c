@@ -3,7 +3,7 @@
 //
 //     https://www.msweet.org/mmd
 //
-// Copyright © 2017-2024 by Michael R Sweet.
+// Copyright © 2017-2025 by Michael R Sweet.
 //
 // Licensed under Apache License v2.0.	See the file "LICENSE" for more
 // information.
@@ -13,7 +13,7 @@
 // Define DEBUG to get debug printf messages to stderr.
 //
 
-//#define DEBUG 0
+#define DEBUG 0
 #if DEBUG > 0
 #  define DEBUG_printf(...)	fprintf(stderr, __VA_ARGS__)
 #  define DEBUG_puts(s)		fputs(s, stderr);
@@ -92,7 +92,7 @@ typedef struct _mmd_filebuf_s		// Buffered file
 {
   mmd_iocb_t	cb;			// Read callback function
   void		*cbdata;		// Read callback data
-  char		buffer[65536],		// Buffer
+  char		buffer[8192],		// Buffer
 		*bufptr,		// Pointer into buffer
 		*bufend;		// End of buffer
 } _mmd_filebuf_t;
@@ -179,6 +179,8 @@ mmdCopyAllText(mmd_t *node)		// I - Parent node
     if (current->text)
     {
       // Append this node's text to the string...
+      long alloff = allptr - all;	// Offset within current buffer
+
       textlen = strlen(current->text);
       allsize += textlen + (size_t)current->whitespace;
       temp    = realloc(all, allsize);
@@ -189,8 +191,8 @@ mmdCopyAllText(mmd_t *node)		// I - Parent node
 	return (NULL);
       }
 
-      allptr = temp + (allptr - all);
       all    = temp;
+      allptr = all + alloff;
 
       if (current->whitespace)
 	*allptr++ = ' ';
@@ -544,7 +546,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
       block = NULL;
       continue;
     }
-    else if (*lineptr == '>' && (lineptr - linestart) < 4)
+    else if (stackptr->parent->type != MMD_TYPE_CODE_BLOCK && *lineptr == '>' && (lineptr - linestart) < 4)
     {
       // Block quote.  See if there is an existing blockquote...
       DEBUG_printf("	 BLOCKQUOTE (stackptr=%ld)\n", stackptr - stack);
@@ -601,7 +603,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
 
 	block		     = NULL;
 	stackptr[1].parent   = mmd_add(stackptr->parent, MMD_TYPE_CODE_BLOCK, 0, NULL, NULL);
-	stackptr[1].indent   = (int)(lineptr - line);
+	stackptr[1].indent   = lineptr - line;
 	stackptr[1].fence    = *lineptr;
 	stackptr[1].fencelen = mmd_is_codefence(lineptr, '\0', 0, &language);
 	stackptr ++;
@@ -720,7 +722,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
 
       lineptr	+= 2;
       linestart = lineptr;
-      newindent = (int)(linestart - line);
+      newindent = linestart - line;
 
       while (isspace(*lineptr & 255))
 	lineptr ++;
@@ -740,7 +742,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
       if (stackptr->parent->type != MMD_TYPE_UNORDERED_LIST && stackptr < (stack + sizeof(stack) / sizeof(stack[0]) - 1))
       {
 	stackptr[1].parent = mmd_add(stackptr->parent, MMD_TYPE_UNORDERED_LIST, 0, NULL, NULL);
-	stackptr[1].indent = (int)(linestart - line);
+	stackptr[1].indent = linestart - line;
 	stackptr[1].fence  = '\0';
 	stackptr ++;
       }
@@ -748,7 +750,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
       if (stackptr < (stack + sizeof(stack) / sizeof(stack[0]) - 1))
       {
 	stackptr[1].parent = mmd_add(stackptr->parent, MMD_TYPE_LIST_ITEM, 0, NULL, NULL);
-	stackptr[1].indent = (int)(linestart - line);
+	stackptr[1].indent = linestart - line;
 	stackptr[1].fence  = '\0';
 	stackptr ++;
       }
@@ -777,7 +779,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
         // Yes, ordered list.
 	lineptr	  = temp + 2;
 	linestart = lineptr;
-	newindent = (int)(linestart - line);
+	newindent = linestart - line;
 
 	while (isspace(*lineptr & 255))
 	  lineptr ++;
@@ -797,7 +799,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
 	if (stackptr->parent->type != MMD_TYPE_ORDERED_LIST && stackptr < (stack + sizeof(stack) / sizeof(stack[0]) - 1))
 	{
 	  stackptr[1].parent = mmd_add(stackptr->parent, MMD_TYPE_ORDERED_LIST, 0, NULL, NULL);
-	  stackptr[1].indent = (int)(linestart - line);
+	  stackptr[1].indent = linestart - line;
 	  stackptr[1].fence  = '\0';
 	  stackptr ++;
 	}
@@ -805,7 +807,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
 	if (stackptr < (stack + sizeof(stack) / sizeof(stack[0]) - 1))
 	{
 	  stackptr[1].parent = mmd_add(stackptr->parent, MMD_TYPE_LIST_ITEM, 0, NULL, NULL);
-	  stackptr[1].indent = (int)(linestart - line);
+	  stackptr[1].indent = linestart - line;
 	  stackptr[1].fence  = '\0';
 	  stackptr ++;
 	}
@@ -824,7 +826,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
       // Heading, count the number of '#' for the heading level...
       DEBUG_puts("     HEADING?\n");
 
-      newindent = (int)(lineptr - line);
+      newindent = lineptr - line;
       temp	= lineptr + 1;
 
       while (*temp == '#')
@@ -833,7 +835,7 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
       if ((temp - lineptr) <= 6 && isspace(*temp & 255))
       {
         // Heading 1-6...
-	type  = MMD_TYPE_HEADING_1 + (int)(temp - lineptr - 1);
+	type  = MMD_TYPE_HEADING_1 + (temp - lineptr - 1);
 	block = NULL;
 
         // Skip whitespace after "#"...
@@ -1059,6 +1061,8 @@ mmdLoadIO(mmd_t      *root,		// I - Root node for document or `NULL` for a new d
 	break;
       else if (line[0] == '>' && *ptr == '>')
 	memmove(ptr, ptr + 1, strlen(ptr));
+
+      DEBUG2_printf("        line=\"%s\"\n", line);
     }
 
     mmd_parse_inline(&doc, block, lineptr);
@@ -1493,7 +1497,7 @@ mmd_parse_inline(_mmd_doc_t *doc,	// I - Document
 
   for (text = NULL, type = MMD_TYPE_NORMAL_TEXT; *lineptr; lineptr ++)
   {
-    DEBUG2_printf("mmd_parse_inline: lineptr=%p(\"%32.32s...\"), type=%d, text=%p, whitespace=%d\n", lineptr, lineptr, type, text, whitespace);
+    DEBUG2_printf("mmd_parse_inline: lineptr=%p(\"%s\"), type=%d, text=%p, whitespace=%d\n", lineptr, lineptr, type, text, whitespace);
 
     if (isspace(*lineptr & 255) && type != MMD_TYPE_CODE_TEXT)
     {
@@ -2090,6 +2094,8 @@ mmd_read_buffer(_mmd_filebuf_t *file)	// I - File buffer
   if (file->bufptr && file->bufptr > file->buffer)
   {
     // Discard previous characters in the buffer.
+    DEBUG2_printf("mmd_read_buffer: before buffer=\"%s\"\n", file->bufptr);
+
     memmove(file->buffer, file->bufptr, file->bufend - file->bufptr);
     file->bufend -= (file->bufptr - file->buffer);
   }
@@ -2099,11 +2105,13 @@ mmd_read_buffer(_mmd_filebuf_t *file)	// I - File buffer
     file->bufend = file->buffer;
   }
 
-  if ((bytes = (file->cb)(file->cbdata, file->bufend, sizeof(file->buffer) - (size_t)(file->bufend - file->buffer - 1))) > 0)
+  if ((bytes = (file->cb)(file->cbdata, file->bufend, sizeof(file->buffer) - (size_t)(file->bufend - file->buffer) - 1)) > 0)
     file->bufend += bytes;
 
   *(file->bufend) = '\0';
   file->bufptr    = file->buffer;
+
+  DEBUG2_printf("mmd_read_buffer: after buffer=\"%s\"\n", file->buffer);
 }
 
 
@@ -2147,7 +2155,7 @@ mmd_read_line(_mmd_filebuf_t *file,	// I - File buffer
     else if (ch != '\r' && lineptr < lineend)
     {
       column ++;
-      *lineptr++ = (char)ch;
+      *lineptr++ = ch;
     }
 
     if (ch == '\n')
@@ -2160,6 +2168,8 @@ mmd_read_line(_mmd_filebuf_t *file,	// I - File buffer
     return (NULL);
   else if (!strchr(file->bufptr, '\n'))
     mmd_read_buffer(file);
+
+  DEBUG2_printf("mmd_read_line: Returning \"%s\"\n", line);
 
   return (line);
 }
