@@ -1,7 +1,7 @@
 #
 # moauth top-level makefile
 #
-# Copyright © 2017-2022 by Michael R Sweet
+# Copyright © 2017-2026 by Michael R Sweet
 #
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more
 # information.

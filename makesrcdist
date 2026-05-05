@@ -10,10 +10,41 @@ fi
 
 version=$1
 
+
+# Check that version number has been updated everywhere...
+status=0
+
+if test $(grep AC_INIT configure.ac | awk '{print $2}') != "[$version],"; then
+    echo "Still need to update AC_INIT version in 'configure.ac'."
+    status=1
+fi
+
+if test $(head -5 CHANGES.md | tail -1 | awk '{print $1}') != "v$version"; then
+    echo "Still need to update CHANGES.md version number."
+    status=1
+fi
+if test $(head -5 CHANGES.md | tail -1 | awk '{print $3}') = "YYYY-MM-DD"; then
+    echo "Still need to update CHANGES.md release date."
+    status=1
+fi
+
+if test $(grep MOAUTH_VERSION= configure | awk -F \" '{print $2}') != "$version"; then
+    echo "Still need to run 'autoconf -f'."
+    status=1
+fi
+
+if test $status = 1; then
+    exit 1
+fi
+
+
+# Tag release...
 echo Creating tag for release...
 git tag -s -m "Tag $version" v$version
 git push origin v$version
 
+
+# Create PGP-signed source archive...
 echo Creating moauth-$version.tar.gz...
 git archive --format tar --prefix=moauth-$version/ HEAD | gzip -v9 >moauth-$version.tar.gz
 gpg --detach-sign moauth-$version.tar.gz

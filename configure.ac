@@ -1,7 +1,7 @@
 dnl
 dnl moauth configuration script
 dnl
-dnl Copyright © 2017-2022 by Michael R Sweet
+dnl Copyright © 2017-2026 by Michael R Sweet
 dnl
 dnl Licensed under Apache License v2.0.  See the file "LICENSE" for more
 dnl information.

@@ -74,7 +74,7 @@ for example:
 Legal Stuff
 -----------
 
-Copyright © 2017-2024 by Michael R Sweet.
+Copyright © 2017-2026 by Michael R Sweet.
 
 mOAuth is licensed under the Apache License Version 2.0 with an exception to
 allow linking against GPL2/LGPL2 software (like older versions of CUPS).  See
