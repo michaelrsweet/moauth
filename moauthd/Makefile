@@ -1,7 +1,7 @@
 #
 # mOAuth daemon makefile
 #
-# Copyright © 2017-2024 by Michael R Sweet
+# Copyright © 2017-2026 by Michael R Sweet
 #
 # Licensed under Apache License v2.0.  See the file "LICENSE" for more
 # information.
@@ -36,24 +36,29 @@ all:	$(TARGETS)
 
 # Clean everything...
 clean:
+	echo "Cleaning targets and object files..."
 	$(RM) $(TARGETS) $(OBJS)
 
 
 # Install everything...
 install:	all
+	echo "Installing moauthd to $(BUILDROOT)$(sbindir)..."
 	$(INSTALL_DIR) $(BUILDROOT)$(sbindir)
 	$(INSTALL_BIN) moauthd $(BUILDROOT)$(sbindir)
+	echo "Installing man pages to $(BUILDROOT)$(mandir)/man5..."
 	$(INSTALL_DIR) $(BUILDROOT)$(mandir)/man5
 	$(INSTALL_MAN) moauthd.conf.5 $(BUILDROOT)$(mandir)/man5
+	echo "Installing man pages to $(BUILDROOT)$(mandir)/man8..."
 	$(INSTALL_DIR) $(BUILDROOT)$(mandir)/man8
 	$(INSTALL_MAN) moauthd.8 $(BUILDROOT)$(mandir)/man8
+	echo "Installing default config file to $(BUILDROOT)$(sysconfdir)..."
 	$(INSTALL_DIR) $(BUILDROOT)$(sysconfdir)
 	$(INSTALL_DATA) moauthd.conf.default $(BUILDROOT)$(sysconfdir)
 
 
 # Test everything...
 test:	$(TARGETS)
-	echo Running moauthd tests...
+	echo "Running moauthd tests..."
 	$(RM) ../test.log ../test-cups.log
 	./testmoauthd -v
 

@@ -20,6 +20,7 @@ all:
 	echo "CC=$(CC)"
 	echo "CFLAGS=$(CFLAGS)"
 	echo "CODESIGN_IDENTITY=$(CODESIGN_IDENTITY)"
+	echo "CPPFLAGS=$(CPPFLAGS)"
 	echo "LDFLAGS=$(LDFLAGS)"
 	echo "LIBS=$(LIBS)"
 	for dir in $(SUBDIRS); do \
