@@ -12,9 +12,8 @@ AC_PREREQ([2.70])
 
 
 dnl Package name and version...
-AC_INIT([mOAuth], [2.0.0], [https://github.com/michaelrsweet/moauth/issues], [moauth], [https://www.msweet.org/moauth])
+AC_INIT([mOAuth], [2.0.0], [https://github.com/michaelrsweet/moauth/issues], [moauth], [https://www.msweet.org/moauth/])
 AC_CONFIG_HEADERS(config.h)
-AC_CONFIG_SUBDIRS([libcups])
 
 MOAUTH_VERSION="AC_PACKAGE_VERSION"
 AC_SUBST(MOAUTH_VERSION)
@@ -70,6 +69,29 @@ else
     ARFLAGS="cr"
 fi
 AC_SUBST([ARFLAGS])
+
+
+dnl CUPS
+LIBCUPS=""
+AC_SUBST([LIBCUPS])
+
+AC_MSG_CHECKING([for CUPS library v3.0 or higher])
+AS_IF([$PKGCONFIG --exists cups3], [
+    # Use system libcups...
+    cups_version="$($PKGCONFIG --modversion cups3)"
+    AC_MSG_RESULT([yes, v$cups_version])
+
+    CPPFLAGS="$($PKGCONFIG --cflags cups3) $CPPFLAGS"
+    LIBS="$($PKGCONFIG --libs cups3) $LIBS"
+], [
+    # Use bundled libcups...
+    AC_MSG_RESULT([no, using bundled libcups])
+    AC_CONFIG_SUBDIRS([libcups])
+
+    LIBCUPS="libcups/cups"
+    CPPFLAGS="-I../libcups $CPPFLAGS"
+    LIBS="-L../libcups/cups \$\$(PKG_CONFIG_PATH=../libcups pkg-config --libs cups3) $LIBS"
+])
 
 
 dnl PAM support...

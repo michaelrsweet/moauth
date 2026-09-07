@@ -613,7 +613,7 @@ PACKAGE_TARNAME='moauth'
 PACKAGE_VERSION='2.0.0'
 PACKAGE_STRING='mOAuth 2.0.0'
 PACKAGE_BUGREPORT='https://github.com/michaelrsweet/moauth/issues'
-PACKAGE_URL='https://www.msweet.org/moauth'
+PACKAGE_URL='https://www.msweet.org/moauth/'
 
 enable_option_checking=no
 # Factoring default headers for most tests.
@@ -653,6 +653,8 @@ LIBOBJS
 WARNINGS
 OPTIONS
 CSFLAGS
+subdirs
+LIBCUPS
 ARFLAGS
 PKGCONFIG
 RM
@@ -678,7 +680,6 @@ build_vendor
 build_cpu
 build
 MOAUTH_VERSION
-subdirs
 target_alias
 host_alias
 build_alias
@@ -1381,7 +1382,7 @@ Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
 
 Report bugs to <https://github.com/michaelrsweet/moauth/issues>.
-mOAuth home page: <https://www.msweet.org/moauth>.
+mOAuth home page: <https://www.msweet.org/moauth/>.
 _ACEOF
 ac_status=$?
 fi
@@ -2357,10 +2358,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 ac_config_headers="$ac_config_headers config.h"
-
-
-
-subdirs="$subdirs libcups"
 
 
 MOAUTH_VERSION="2.0.0"
@@ -3875,6 +3872,39 @@ fi
 
 
 
+LIBCUPS=""
+
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for CUPS library v3.0 or higher" >&5
+printf %s "checking for CUPS library v3.0 or higher... " >&6; }
+
+
+if $PKGCONFIG --exists cups3
+then :
+
+    # Use system libcups...
+    cups_version="$($PKGCONFIG --modversion cups3)"
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes, v$cups_version" >&5
+printf "%s\n" "yes, v$cups_version" >&6; }
+
+    CPPFLAGS="$($PKGCONFIG --cflags cups3) $CPPFLAGS"
+    LIBS="$($PKGCONFIG --libs cups3) $LIBS"
+
+else $as_nop
+
+    # Use bundled libcups...
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no, using bundled libcups" >&5
+printf "%s\n" "no, using bundled libcups" >&6; }
+    subdirs="$subdirs libcups"
+
+
+    LIBCUPS="libcups/cups"
+    CPPFLAGS="-I../libcups $CPPFLAGS"
+    LIBS="-L../libcups/cups \$\$(PKG_CONFIG_PATH=../libcups pkg-config --libs cups3) $LIBS"
+
+fi
+
+
 # Check whether --enable-pam was given.
 if test ${enable_pam+y}
 then :
@@ -4852,7 +4882,7 @@ Configuration headers:
 $config_headers
 
 Report bugs to <https://github.com/michaelrsweet/moauth/issues>.
-mOAuth home page: <https://www.msweet.org/moauth>."
+mOAuth home page: <https://www.msweet.org/moauth/>."
 
 _ACEOF
 ac_cs_config=`printf "%s\n" "$ac_configure_args" | sed "$ac_safe_unquote"`

@@ -21,11 +21,11 @@ CC		=	@CC@
 CFLAGS		=	$(CPPFLAGS) @CFLAGS@ $(OPTIM) $(WARNINGS)
 CODE_SIGN	=	@CODE_SIGN@
 CODESIGN_IDENTITY =	-
-CPPFLAGS	=	-I.. -I../libcups @CPPFLAGS@
+CPPFLAGS	=	-I.. @CPPFLAGS@
 CSFLAGS		=	-s "$(CODESIGN_IDENTITY)" @CSFLAGS@ --timestamp --prefix org.msweet.
 INSTALL		=	@INSTALL@
 LDFLAGS		=	-L../moauth @LDFLAGS@ $(OPTIM)
-LIBS		=	-L../libcups/cups $$(PKG_CONFIG_PATH=../libcups pkg-config --libs cups3) @LIBS@
+LIBS		=	@LIBS@
 MKDIR           =       @MKDIR@ -p
 OPTIM		=	@OPTIM@
 RANLIB		=	@RANLIB@
@@ -56,6 +56,7 @@ sysconfdir	=	@sysconfdir@
 top_srcdir	=	@top_srcdir@
 
 BUILDROOT	=	$(DSTROOT)$(RPM_BUILD_ROOT)$(DESTDIR)
+LIBCUPS		=	@LIBCUPS@
 
 
 # Install commands...

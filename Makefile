@@ -12,7 +12,7 @@ include Makedefs
 
 
 # Subdirectories...
-SUBDIRS	=	libcups/cups moauth moauthd
+SUBDIRS	=	$(LIBCUPS) moauth moauthd
 
 
 # Make everything...
